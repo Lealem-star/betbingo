@@ -42,7 +42,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
 
                 if (isHttpsWebApp) {
                     await bot.telegram.setChatMenuButton({
-                        menu_button: { type: 'web_app', text: 'Play', web_app: { url: webAppUrl } }
+                        menu_button: { type: 'web_app', text: 'Play', web_app: { url: `${webAppUrl}?stake=50` } }
                     });
                 } else {
                     await bot.telegram.setChatMenuButton({ menu_button: { type: 'commands' } });
@@ -283,7 +283,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                     const keyboard = {
                         reply_markup: {
                             inline_keyboard: [
-                                [{ text: '🎮 Open Game', web_app: { url: webAppUrl } }],
+                                [{ text: '🎮 Open Game', web_app: { url: `${webAppUrl}?stake=50` } }],
                                 [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
                             ]
                         }
@@ -308,7 +308,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 }
                 const w = userData.wallet;
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl } }]);
+                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: `${webAppUrl}?stake=50` } }]);
                 ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
@@ -326,7 +326,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
 
         bot.command('instruction', (ctx) => {
             const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl } }]);
+            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: `${webAppUrl}?stake=50` } }]);
             ctx.reply('📖 How to Play Love Bingo:\n\n1️⃣ Choose your stake (ETB 10, 25, 50, or 100)\n2️⃣ Select a bingo card\n3️⃣ Wait for numbers to be called\n4️⃣ Mark numbers on your card\n5️⃣ Call "BINGO!" when you win\n\n🎯 Win by getting 5 in a row (horizontal, vertical, or diagonal)\n\n💰 Prizes are shared among all winners!', { reply_markup: keyboard });
         });
 
@@ -363,7 +363,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
         }
         function buildBroadcastMarkup(caption) {
             const kb = { inline_keyboard: [] };
-            if (isHttpsWebApp) { kb.inline_keyboard.push([{ text: 'Play', web_app: { url: webAppUrl } }]); }
+            if (isHttpsWebApp) { kb.inline_keyboard.push([{ text: 'Play', web_app: { url: `${webAppUrl}?stake=50` } }]); }
             const base = kb.inline_keyboard.length ? { reply_markup: kb } : {};
             if (caption !== undefined) return { ...base, caption, parse_mode: 'HTML' };
             return { ...base, parse_mode: 'HTML' };
@@ -436,7 +436,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 const w = userData.wallet;
                 ctx.answerCbQuery('💵 Balance checked');
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl } }]);
+                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: `${webAppUrl}?stake=50` } }]);
                 ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
@@ -458,7 +458,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
         bot.action('instruction', (ctx) => {
             ctx.answerCbQuery('📖 Instructions...');
             const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl } }]);
+            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: `${webAppUrl}?stake=50` } }]);
             ctx.reply('📖 How to Play Love Bingo:\n\n1️⃣ Choose your stake (ETB 10, 25, 50, or 100)\n2️⃣ Select a bingo card\n3️⃣ Wait for numbers to be called\n4️⃣ Mark numbers on your card\n5️⃣ Call "BINGO!" when you win\n\n🎯 Win by getting 5 in a row (horizontal, vertical, or diagonal)\n\n💰 Prizes are shared among all winners!', { reply_markup: keyboard });
         });
 

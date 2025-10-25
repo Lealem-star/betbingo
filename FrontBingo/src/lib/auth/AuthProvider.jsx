@@ -61,16 +61,15 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         (async () => {
-            // Check for Telegram bot URL parameters first
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const telegramId = urlParams.get('telegramId');
-                const stake = urlParams.get('stake');
+            // Check for Telegram WebApp user data first (with retry mechanism)
+            for (let attempt = 0; attempt < 5; attempt++) {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const stake = urlParams.get('stake');
+                    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
-                if (telegramId && window.Telegram?.WebApp) {
-                    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-                    if (tgUser && tgUser.id.toString() === telegramId) {
-                        console.log('Telegram bot authentication detected:', { telegramId, stake, tgUser });
+                    if (tgUser) {
+                        console.log('Telegram WebApp user detected:', { telegramId: tgUser.id, stake, tgUser, attempt });
                         const authResult = await authenticateTelegramUser(tgUser, stake);
                         if (authResult.success) {
                             setSessionId(authResult.token);
@@ -94,10 +93,17 @@ export function AuthProvider({ children }) {
                             setIsLoading(false);
                             return;
                         }
+                    } else if (attempt < 4) {
+                        // Wait a bit for Telegram WebApp to initialize
+                        console.log(`Telegram WebApp not ready, waiting... (attempt ${attempt + 1}/5)`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                } catch (error) {
+                    console.error('Telegram WebApp auth failed:', error);
+                    if (attempt < 4) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
                 }
-            } catch (error) {
-                console.error('Telegram bot auth failed:', error);
             }
 
             // If Telegram initData is present, ALWAYS re-verify and refresh session to avoid stale local sessions
