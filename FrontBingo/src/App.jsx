@@ -119,6 +119,18 @@ function AppContent() {
     };
   }, []);
 
+  // Trigger smart navigation when stake is set from URL parameters
+  useEffect(() => {
+    if (selectedStake && currentPage === 'game') {
+      console.log('Stake set from URL, triggering smart navigation:', selectedStake);
+      const targetPage = determineGamePage();
+      if (targetPage !== 'game') {
+        console.log('Auto-navigating to:', targetPage);
+        setCurrentPage(targetPage);
+      }
+    }
+  }, [selectedStake, currentPage]);
+
   const handleStakeSelected = (stake) => {
     setSelectedStake(stake);
     setCurrentPage('cartela-selection');
@@ -172,6 +184,7 @@ function AppContent() {
   };
 
   const renderPage = () => {
+    console.log('Rendering page:', currentPage, 'with stake:', selectedStake);
     switch (currentPage) {
       case 'game':
         return <Game onNavigate={handleNavigate} onStakeSelected={handleStakeSelected} selectedStake={selectedStake} />;
@@ -212,6 +225,7 @@ function AppContent() {
       case 'winner':
         return <Winner onNavigate={handleNavigate} />;
       default:
+        console.log('Default case - rendering Game component');
         return <Game onNavigate={handleNavigate} onStakeSelected={handleStakeSelected} selectedStake={selectedStake} />;
     }
   };
@@ -219,6 +233,19 @@ function AppContent() {
   return (
     <div className="App">
       {renderPage()}
+
+      {/* Debug Panel - Temporary for debugging */}
+      {true && (
+        <div className="fixed bottom-4 right-4 bg-black/80 text-white text-xs p-2 rounded max-w-xs z-50">
+          <div><strong>Debug Info:</strong></div>
+          <div>Page: {currentPage}</div>
+          <div>Stake: {selectedStake || 'none'}</div>
+          <div>Cartela: {selectedCartela || 'none'}</div>
+          <div>WS Connected: {connected ? 'yes' : 'no'}</div>
+          <div>Game Phase: {gameState.phase}</div>
+          <div>Game ID: {gameState.gameId || 'none'}</div>
+        </div>
+      )}
 
       {/* Navigation Loading Overlay */}
       {isNavigating && (
