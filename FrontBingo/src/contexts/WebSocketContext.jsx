@@ -373,6 +373,13 @@ export function WebSocketProvider({ children }) {
                 console.error('General WebSocket error:', error);
                 setIsConnecting(false);
                 connecting = false;
+                // Set a timeout to retry connection if it fails
+                setTimeout(() => {
+                    if (!stopped && !connected) {
+                        console.log('Retrying WebSocket connection after error...');
+                        connect();
+                    }
+                }, 5000);
             };
         };
 

@@ -23,10 +23,24 @@ function AppContent() {
   const [selectedCartela, setSelectedCartela] = useState(null);
   const [currentGameId, setCurrentGameId] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [connectionTimeout, setConnectionTimeout] = useState(false);
 
   // Access WebSocket context for smart navigation
   const { gameState, connected } = useWebSocket();
   const { showSuccess } = useToast();
+
+  // Set a timeout for WebSocket connection
+  useEffect(() => {
+    if (selectedStake && !connected) {
+      const timeout = setTimeout(() => {
+        setConnectionTimeout(true);
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    } else {
+      setConnectionTimeout(false);
+    }
+  }, [selectedStake, connected]);
 
   // Smart navigation function to determine the correct game page based on current state
   const determineGamePage = () => {
@@ -233,6 +247,50 @@ function AppContent() {
   // Fallback to ensure something always renders
   const pageContent = renderPage();
 
+  // Add loading state while WebSocket is connecting
+  if (!connected && selectedStake) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="relative mb-6 mx-auto w-fit">
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto">
+              <img
+                src="/lb.png"
+                alt="Love Bingo Logo"
+                className="w-full h-full object-contain animate-pulse"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 border-3 border-pink-400/20 border-t-pink-400 rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
+          <div className="text-lg font-semibold mb-3">
+            {connectionTimeout ? 'Connection taking longer than expected...' : 'Connecting to game...'}
+          </div>
+          <div className="text-sm text-white/60 mb-4">
+            {connectionTimeout
+              ? 'Please check your internet connection and try again'
+              : 'Please wait while we establish your connection'
+            }
+          </div>
+          <div className="flex justify-center space-x-2">
+            <div className="w-2 h-2 bg-pink-400/70 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-pink-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-pink-400/70 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+          {connectionTimeout && (
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold hover:bg-pink-700 transition-colors"
+            >
+              Retry Connection
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       {pageContent || (
@@ -252,7 +310,7 @@ function AppContent() {
       )}
 
       {/* Debug Panel - Temporary for debugging */}
-      {true && (
+      {false && (
         <div className="fixed bottom-4 right-4 bg-black/80 text-white text-xs p-2 rounded max-w-xs z-50">
           <div><strong>Debug Info:</strong></div>
           <div>Page: {currentPage}</div>
