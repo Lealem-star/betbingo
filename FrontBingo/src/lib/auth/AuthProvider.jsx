@@ -57,6 +57,7 @@ export function AuthProvider({ children }) {
         return raw ? JSON.parse(raw) : null;
     });
     const [isLoading, setIsLoading] = useState(true);
+    const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
         (async () => {
@@ -343,6 +344,71 @@ export function AuthProvider({ children }) {
         const urlParams = new URLSearchParams(window.location.search);
         const stake = urlParams.get('stake');
 
+        // Check if we have Telegram WebApp data in URL (even if SDK isn't fully loaded)
+        const hasTelegramData = window.location.href.includes('tgWebAppData') ||
+            window.location.href.includes('tgWebAppVersion') ||
+            window.location.hash.includes('tgWebAppData');
+
+        // If we have Telegram data in URL but authentication failed, show a different message
+        if (hasTelegramData) {
+            // Add a retry mechanism for Telegram WebApp initialization
+            useEffect(() => {
+                if (retryCount < 3) {
+                    const timer = setTimeout(() => {
+                        console.log(`Retrying Telegram WebApp initialization (attempt ${retryCount + 1})`);
+                        setRetryCount(prev => prev + 1);
+                        // Force a re-render to retry authentication
+                        window.location.reload();
+                    }, 2000);
+                    return () => clearTimeout(timer);
+                }
+            }, [retryCount]);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
+                    <div className="text-center max-w-md mx-auto p-6">
+                        <div className="text-yellow-400 text-6xl mb-4">🔄</div>
+                        <h1 className="text-white text-2xl font-bold mb-4">Initializing...</h1>
+                        <p className="text-white/80 mb-6">
+                            Telegram WebApp is loading. Please wait a moment...
+                        </p>
+                        <div className="bg-white/10 rounded-lg p-4 mb-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+                            <p className="text-white text-sm">
+                                If this takes too long, try refreshing the page.
+                            </p>
+                            {retryCount > 0 && (
+                                <p className="text-yellow-300 text-xs mt-2">
+                                    Retrying... (Attempt {retryCount}/3)
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Debug Information */}
+                        <details className="mt-4 text-left">
+                            <summary className="text-white/60 text-sm cursor-pointer mb-2">🔍 Debug Information (click to expand)</summary>
+                            <div className="bg-black/30 rounded-lg p-3 mt-2 text-xs text-white/80 space-y-1">
+                                <div><strong>Telegram SDK:</strong> {hasTelegram ? '✅ Available' : '❌ Not found'}</div>
+                                <div><strong>WebApp API:</strong> {hasWebApp ? '✅ Available' : '❌ Not found'}</div>
+                                <div><strong>Init Data:</strong> {hasInitData ? '✅ Available' : '❌ Missing'}</div>
+                                <div><strong>Stake Parameter:</strong> {stake ? `✅ ${stake}` : '❌ Not provided'}</div>
+                                <div><strong>User Agent:</strong> {
+                                    navigator.userAgent.includes('Telegram') ||
+                                        window.location.href.includes('tgWebAppData') ||
+                                        window.location.href.includes('tgWebAppVersion') ?
+                                        '✅ Telegram' : '❌ Not Telegram'
+                                }</div>
+                                <div><strong>URL:</strong> {window.location.href}</div>
+                                <div className="mt-2 text-yellow-300">
+                                    💡 Telegram WebApp data detected in URL. The app is initializing...
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto p-6">
@@ -368,7 +434,12 @@ export function AuthProvider({ children }) {
                             <div><strong>WebApp API:</strong> {hasWebApp ? '✅ Available' : '❌ Not found'}</div>
                             <div><strong>Init Data:</strong> {hasInitData ? '✅ Available' : '❌ Missing'}</div>
                             <div><strong>Stake Parameter:</strong> {stake ? `✅ ${stake}` : '❌ Not provided'}</div>
-                            <div><strong>User Agent:</strong> {navigator.userAgent.includes('Telegram') ? '✅ Telegram' : '❌ Not Telegram'}</div>
+                            <div><strong>User Agent:</strong> {
+                                navigator.userAgent.includes('Telegram') ||
+                                    window.location.href.includes('tgWebAppData') ||
+                                    window.location.href.includes('tgWebAppVersion') ?
+                                    '✅ Telegram' : '❌ Not Telegram'
+                            }</div>
                             <div><strong>URL:</strong> {window.location.href}</div>
                             <div className="mt-2 text-yellow-300">
                                 💡 If you see this screen, it means the Telegram WebApp SDK did not initialize properly.
