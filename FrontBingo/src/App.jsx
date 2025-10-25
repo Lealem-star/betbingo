@@ -29,6 +29,47 @@ function AppContent() {
   const { gameState, connected } = useWebSocket();
   const { showSuccess } = useToast();
 
+  // Error monitoring and debugging
+  useEffect(() => {
+    const logState = () => {
+      console.log('🔍 App State Debug:', {
+        currentPage,
+        selectedStake,
+        selectedCartela,
+        currentGameId,
+        connected,
+        gameState: {
+          phase: gameState.phase,
+          gameId: gameState.gameId,
+          playersCount: gameState.playersCount,
+          yourCard: gameState.yourCard ? 'present' : 'none',
+          yourCardNumber: gameState.yourCardNumber
+        },
+        timestamp: new Date().toISOString()
+      });
+    };
+
+    // Log state every 5 seconds for debugging
+    const interval = setInterval(logState, 5000);
+
+    // Also log on state changes
+    logState();
+
+    return () => clearInterval(interval);
+  }, [currentPage, selectedStake, selectedCartela, currentGameId, connected, gameState]);
+
+  // Specific check for authentication and initial load
+  useEffect(() => {
+    console.log('🚀 App initialized with:', {
+      currentPage,
+      selectedStake,
+      connected,
+      hasGameState: !!gameState,
+      gamePhase: gameState?.phase,
+      timestamp: new Date().toISOString()
+    });
+  }, []); // Run only once on mount
+
   // Set a timeout for WebSocket connection
   useEffect(() => {
     if (selectedStake && !connected) {
@@ -247,8 +288,14 @@ function AppContent() {
   // Fallback to ensure something always renders
   const pageContent = renderPage();
 
-  // Add loading state while WebSocket is connecting
-  if (!connected && selectedStake) {
+  // If no stake is selected, always show the main game page
+  if (!selectedStake && currentPage === 'game') {
+    console.log('🎮 No stake selected, showing main game page');
+  }
+
+  // Add loading state while WebSocket is connecting - but only if we're trying to connect to a specific stake
+  // Don't block the main game page if no stake is selected
+  if (!connected && selectedStake && currentPage !== 'game') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
         <div className="text-center text-white">
@@ -291,6 +338,19 @@ function AppContent() {
     );
   }
 
+  // Safety check - ensure we always have content to render
+  if (!pageContent) {
+    console.error('❌ No page content to render!', {
+      currentPage,
+      selectedStake,
+      connected,
+      gameState: {
+        phase: gameState.phase,
+        gameId: gameState.gameId
+      }
+    });
+  }
+
   return (
     <div className="App">
       {pageContent || (
@@ -299,6 +359,12 @@ function AppContent() {
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold mb-4">Loading Error</h1>
             <p className="text-white/80 mb-6">Something went wrong. Please refresh the page.</p>
+            <div className="bg-red-900/30 rounded-lg p-4 mb-4 text-left text-sm">
+              <p><strong>Current Page:</strong> {currentPage}</p>
+              <p><strong>Selected Stake:</strong> {selectedStake || 'none'}</p>
+              <p><strong>Connected:</strong> {connected ? 'yes' : 'no'}</p>
+              <p><strong>Game Phase:</strong> {gameState.phase}</p>
+            </div>
             <button
               onClick={() => window.location.reload()}
               className="px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold hover:bg-pink-700 transition-colors"
