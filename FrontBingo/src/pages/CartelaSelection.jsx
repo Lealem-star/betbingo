@@ -213,10 +213,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         const fetchCards = async () => {
             try {
                 console.log('Fetching cartellas from /api/cartellas...');
+                console.log('API Base URL:', import.meta.env.VITE_API_URL || 'https://fikirbingo.com');
+                console.log('Session ID:', sessionId ? 'present' : 'missing');
                 setLoading(true);
 
 
-                const response = await apiFetch('/api/cartellas');
+                const response = await apiFetch('/api/cartellas', { sessionId });
                 console.log('Cartellas API response:', response);
                 if (response.success) {
                     console.log('Cartellas loaded successfully:', response.cards?.length, 'cards');
@@ -227,6 +229,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 }
             } catch (err) {
                 console.error('Error fetching cards:', err);
+                console.error('Error details:', {
+                    message: err.message,
+                    status: err.status,
+                    url: '/api/cartellas',
+                    sessionId: sessionId ? 'present' : 'missing'
+                });
                 setError('Failed to load cards from server');
             } finally {
                 setLoading(false);
