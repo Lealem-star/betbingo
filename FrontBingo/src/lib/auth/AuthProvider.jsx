@@ -61,6 +61,16 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         (async () => {
+            // Check if we're in Telegram WebApp context but don't have initData yet
+            // This happens when backend redirects us with admin=true parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdmin = urlParams.get('admin') === 'true';
+
+            if (isAdmin && window.Telegram?.WebApp && !window.Telegram.WebApp.initData) {
+                console.log('⚠️ Admin panel access but no initData - waiting for Telegram initData');
+                // Will be handled by the retry loop below
+            }
+
             // Check for Telegram WebApp user data first (with retry mechanism)
             for (let attempt = 0; attempt < 5; attempt++) {
                 try {
@@ -304,7 +314,14 @@ export function AuthProvider({ children }) {
     const value = useMemo(() => ({ sessionId, user, setSessionId, isLoading }), [sessionId, user, isLoading]);
 
     // Debug logging
-    console.log('AuthProvider render:', { sessionId: !!sessionId, user: !!user, isLoading });
+    console.log('AuthProvider render:', {
+        sessionId: !!sessionId,
+        user: !!user,
+        isLoading,
+        urlParams: window.location.search,
+        hasTelegram: !!window.Telegram,
+        hasInitData: !!window.Telegram?.WebApp?.initData
+    });
 
     // Show loading state while authenticating
     if (isLoading) {
@@ -343,121 +360,11 @@ export function AuthProvider({ children }) {
     // Show error message if no valid Telegram data
     if (!sessionId || !user) {
         console.log('AuthProvider: No valid session - checking for fallback options');
-        
-        console.log('AuthProvider: Showing access restricted screen - Authentication Required');
-        // Get debug information
-        const hasTelegram = !!window?.Telegram;
-        const hasWebApp = !!window?.Telegram?.WebApp;
-        const hasInitData = !!window?.Telegram?.WebApp?.initData;
-        const urlParams = new URLSearchParams(window.location.search);
-        const stake = urlParams.get('stake');
 
-        // Check if we have Telegram WebApp data in URL (even if SDK isn't fully loaded)
-        const hasTelegramData = window.location.href.includes('tgWebAppData') ||
-            window.location.href.includes('tgWebAppVersion') ||
-            window.location.hash.includes('tgWebAppData');
-
-        // If we have Telegram data in URL but authentication failed, show a different message
-        if (hasTelegramData) {
-            // Add a retry mechanism for Telegram WebApp initialization
-            useEffect(() => {
-                if (retryCount < 3) {
-                    const timer = setTimeout(() => {
-                        console.log(`Retrying Telegram WebApp initialization (attempt ${retryCount + 1})`);
-                        setRetryCount(prev => prev + 1);
-                        // Force a re-render to retry authentication
-                        window.location.reload();
-                    }, 2000);
-                    return () => clearTimeout(timer);
-                }
-            }, [retryCount]);
-
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
-                    <div className="text-center max-w-md mx-auto p-6">
-                        <div className="text-yellow-400 text-6xl mb-4">🔄</div>
-                        <h1 className="text-white text-2xl font-bold mb-4">Initializing...</h1>
-                        <p className="text-white/80 mb-6">
-                            Telegram WebApp is loading. Please wait a moment...
-                        </p>
-                        <div className="bg-white/10 rounded-lg p-4 mb-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-                            <p className="text-white text-sm">
-                                If this takes too long, try refreshing the page.
-                            </p>
-                            {retryCount > 0 && (
-                                <p className="text-yellow-300 text-xs mt-2">
-                                    Retrying... (Attempt {retryCount}/3)
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Debug Information */}
-                        <details className="mt-4 text-left">
-                            <summary className="text-white/60 text-sm cursor-pointer mb-2">🔍 Debug Information (click to expand)</summary>
-                            <div className="bg-black/30 rounded-lg p-3 mt-2 text-xs text-white/80 space-y-1">
-                                <div><strong>Telegram SDK:</strong> {hasTelegram ? '✅ Available' : '❌ Not found'}</div>
-                                <div><strong>WebApp API:</strong> {hasWebApp ? '✅ Available' : '❌ Not found'}</div>
-                                <div><strong>Init Data:</strong> {hasInitData ? '✅ Available' : '❌ Missing'}</div>
-                                <div><strong>Stake Parameter:</strong> {stake ? `✅ ${stake}` : '❌ Not provided'}</div>
-                                <div><strong>User Agent:</strong> {
-                                    navigator.userAgent.includes('Telegram') ||
-                                        window.location.href.includes('tgWebAppData') ||
-                                        window.location.href.includes('tgWebAppVersion') ?
-                                        '✅ Telegram' : '❌ Not Telegram'
-                                }</div>
-                                <div><strong>URL:</strong> {window.location.href}</div>
-                                <div className="mt-2 text-yellow-300">
-                                    💡 Telegram WebApp data detected in URL. The app is initializing...
-                                </div>
-                            </div>
-                        </details>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center">
-                <div className="text-center max-w-md mx-auto p-6">
-                    <div className="text-red-400 text-6xl mb-4">⚠️</div>
-                    <h1 className="text-white text-2xl font-bold mb-4">Access Restricted</h1>
-                    <p className="text-white/80 mb-6">
-                        This application can only be accessed through Telegram. Please open this app from within the Telegram bot.
-                    </p>
-                    <div className="bg-white/10 rounded-lg p-4 mb-4">
-                        <p className="text-white text-sm">
-                            <strong>How to access:</strong><br />
-                            1. Open the Love Bingo bot in Telegram<br />
-                            2. Click the "Play" button<br />
-                            3. The web app will open automatically
-                        </p>
-                    </div>
-
-                    {/* Debug Information */}
-                    <details className="mt-4 text-left">
-                        <summary className="text-white/60 text-sm cursor-pointer mb-2">🔍 Debug Information (click to expand)</summary>
-                        <div className="bg-black/30 rounded-lg p-3 mt-2 text-xs text-white/80 space-y-1">
-                            <div><strong>Telegram SDK:</strong> {hasTelegram ? '✅ Available' : '❌ Not found'}</div>
-                            <div><strong>WebApp API:</strong> {hasWebApp ? '✅ Available' : '❌ Not found'}</div>
-                            <div><strong>Init Data:</strong> {hasInitData ? '✅ Available' : '❌ Missing'}</div>
-                            <div><strong>Stake Parameter:</strong> {stake ? `✅ ${stake}` : '❌ Not provided'}</div>
-                            <div><strong>User Agent:</strong> {
-                                navigator.userAgent.includes('Telegram') ||
-                                    window.location.href.includes('tgWebAppData') ||
-                                    window.location.href.includes('tgWebAppVersion') ?
-                                    '✅ Telegram' : '❌ Not Telegram'
-                            }</div>
-                            <div><strong>URL:</strong> {window.location.href}</div>
-                            <div className="mt-2 text-yellow-300">
-                                💡 If you see this screen, it means the Telegram WebApp SDK did not initialize properly.
-                                Try refreshing the page or reopening from the Telegram bot.
-                            </div>
-                        </div>
-                    </details>
-                </div>
-            </div>
-        );
+        // CRITICAL FIX: Still render children even without auth
+        // Let the app components handle their own access control
+        console.log('AuthProvider: Rendering with limited auth - sessionId:', !!sessionId, 'user:', !!user);
+        return <AuthContext.Provider value={{ sessionId, user, setSessionId, isLoading: false }}>{children}</AuthContext.Provider>;
     }
 
     console.log('AuthProvider: Rendering children (authenticated)');
