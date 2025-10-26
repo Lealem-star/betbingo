@@ -10,6 +10,16 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_here_change_this';
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 
+// Log all requests to this router
+router.use((req, res, next) => {
+    console.log('📥 Auth request:', {
+        method: req.method,
+        path: req.path,
+        timestamp: new Date().toISOString()
+    });
+    next();
+});
+
 // Telegram initData verification
 function verifyTelegramInitData(initData) {
     if (!initData || !BOT_TOKEN) return null;
