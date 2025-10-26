@@ -23,7 +23,7 @@ async function verifyTelegram(initData) {
         initDataPreview: initData ? initData.substring(0, 100) : 'NO_DATA'
     });
 
-    const res = await fetch(`${apiBase}/auth/telegram/verify`, {
+    const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
 
         method: 'POST',
 

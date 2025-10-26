@@ -9,7 +9,7 @@ async function reauthenticateAndGetSession() {
         // Try Telegram auth first
         if (initData) {
             console.log('Attempting Telegram auth...');
-            const res = await fetch(`${apiBase}/auth/telegram/verify`, {
+            const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ initData })
@@ -54,7 +54,8 @@ export async function apiFetch(path, { method = 'GET', body, sessionId, headers 
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
         try {
-            return await fetch(`${apiBase}${path}`, {
+            const url = path.startsWith('/api') ? `${apiBase}${path}` : `${apiBase}/api${path}`;
+            return await fetch(url, {
                 method,
                 headers: requestHeaders,
                 body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
