@@ -9,10 +9,10 @@ router.post('/incoming', async (req, res) => {
     try {
         const { phoneNumber, message, timestamp, source = 'forwarder' } = req.body;
 
-        if (!phoneNumber || !message) {
+        if (!phoneNumber || !message || typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({
                 success: false,
-                error: 'Missing required fields: phoneNumber, message'
+                error: 'Missing required fields: phoneNumber, message (non-empty)'
             });
         }
 

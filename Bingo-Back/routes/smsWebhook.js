@@ -16,10 +16,20 @@ router.post('/webhook', async (req, res) => {
 
         console.log('SMS Webhook received:', { from, to, body: typeof body === 'string' ? body.substring(0, 100) + '...' : typeof body });
 
-        // Determine if this is from a user or receiver based on phone number
-        // You'll need to configure which numbers are your agent numbers
+        // Validate that we have a non-empty message
+        if (!body || typeof body !== 'string' || !body.trim()) {
+            console.log('SMS Webhook: Empty or invalid message body, skipping processing');
+            return res.status(400).json({
+                success: false,
+                error: 'Empty or invalid message body'
+            });
+        }
+
+        // Determine if this is from a user or receiver based on phone number or service name
+        // You'll need to configure which numbers and services are your agent identifiers
         const agentNumbers = process.env.AGENT_PHONE_NUMBERS?.split(',') || [];
-        const isFromAgent = agentNumbers.includes(from);
+        const agentServices = process.env.AGENT_SERVICES?.split(',') || [];
+        const isFromAgent = agentNumbers.includes(from) || agentServices.includes(from);
 
         const source = isFromAgent ? 'receiver' : 'user';
 

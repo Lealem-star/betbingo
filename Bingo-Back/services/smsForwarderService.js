@@ -8,9 +8,14 @@ class SmsForwarderService {
     // Store incoming SMS from forwarder
     static async storeIncomingSMS(smsData) {
         try {
+            // Additional validation to prevent empty messages
+            if (!smsData.message || typeof smsData.message !== 'string' || !smsData.message.trim()) {
+                throw new Error('Message cannot be empty or invalid');
+            }
+
             const smsRecord = new SMSRecord({
                 phoneNumber: smsData.phoneNumber,
-                message: smsData.message,
+                message: smsData.message.trim(), // Ensure trimmed message
                 timestamp: smsData.timestamp || new Date(),
                 source: smsData.source || 'forwarder',
                 parsedData: this.parseSMSContent(smsData.message),
