@@ -363,10 +363,95 @@ class SmsForwarderService {
             });
 
             await verification.save();
+
+            // Auto-credit funds if verification passed automatically
+            if (matchResult.isVerified) {
+                try {
+                    await this.autoApproveVerification(verification._id);
+                } catch (autoApproveError) {
+                    console.error('Error auto-approving verified deposit:', autoApproveError);
+                    // Don't throw - verification is saved, admin can approve manually
+                }
+            }
+
             return verification;
         } catch (error) {
             console.error('Error creating deposit verification:', error);
             throw error;
+        }
+    }
+
+    // Auto-approve and credit funds for verified deposits
+    static async autoApproveVerification(verificationId) {
+        try {
+            const verification = await DepositVerification.findById(verificationId)
+                .populate('userId')
+                .populate('userSMS')
+                .populate('receiverSMS');
+
+            if (!verification) {
+                throw new Error('Verification not found');
+            }
+
+            // Only auto-approve if still in verified status (not already processed)
+            if (verification.status !== 'verified') {
+                return verification;
+            }
+
+            // Process the deposit
+            const WalletService = require('./walletService');
+            const result = await WalletService.processDeposit(
+                verification.userId._id,
+                verification.amount,
+                {
+                    userSMS: verification.userSMS.parsedData,
+                    receiverSMS: verification.receiverSMS.parsedData,
+                    verificationId: verification._id
+                }
+            );
+
+            // Update verification status
+            verification.status = 'approved';
+            verification.approvedBy = null; // System auto-approved
+            verification.approvedAt = new Date();
+            await verification.save();
+
+            // Notify user on Telegram
+            await this.notifyUserDepositApproved(verification, result, true);
+
+            console.log(`Auto-approved and credited deposit: ${verificationId} - Amount: ETB ${verification.amount}`);
+            return result;
+        } catch (error) {
+            console.error('Error auto-approving verification:', error);
+            throw error;
+        }
+    }
+
+    // Helper to notify user about deposit approval
+    static async notifyUserDepositApproved(verification, depositResult, isAutoApproved = false) {
+        try {
+            const BOT_TOKEN = process.env.BOT_TOKEN;
+            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://fikirbingo.com';
+            const userTelegramId = verification.userId?.telegramId;
+
+            if (BOT_TOKEN && userTelegramId) {
+                const playBonus = Math.floor(Number(verification.amount) * 0.1);
+                const header = isAutoApproved ? '✅ Deposit Auto-Approved!' : '✅ Deposit Approved';
+                const text = `${header}\n\n💰 Amount: ETB ${Number(verification.amount).toFixed(2)}\n🎁 Bonus: +${playBonus} play wallet\n\nYour balance has been updated. Good luck!`;
+                const reply_markup = {
+                    inline_keyboard: [
+                        [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }],
+                        [{ text: '💼 Check Balance', callback_data: 'balance' }]
+                    ]
+                };
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: String(userTelegramId), text, reply_markup })
+                }).catch(() => { });
+            }
+        } catch (e) {
+            // Silent fail for notifications
         }
     }
 
@@ -400,7 +485,8 @@ class SmsForwarderService {
                 throw new Error('Verification not found');
             }
 
-            if (verification.status !== 'pending_review') {
+            // Allow approval of both 'verified' (auto-verified) and 'pending_review' (manual review)
+            if (verification.status === 'approved' || verification.status === 'rejected') {
                 throw new Error('Verification already processed');
             }
 
@@ -422,28 +508,8 @@ class SmsForwarderService {
             verification.approvedAt = new Date();
             await verification.save();
 
-            // Notify user on Telegram about approval (if possible)
-            try {
-                const BOT_TOKEN = process.env.BOT_TOKEN;
-                const WEBAPP_URL = process.env.WEBAPP_URL || 'https://fikirbingo.com';
-                const userTelegramId = verification.userId?.telegramId;
-                if (BOT_TOKEN && userTelegramId) {
-                    const text = `✅ Deposit Approved\n\n💰 Amount: ETB ${Number(verification.amount).toFixed(2)}\n🎁 Bonus: +${Math.floor(Number(verification.amount) * 0.1)} play wallet\n\nYour balance has been updated. Good luck!`;
-                    const reply_markup = {
-                        inline_keyboard: [
-                            [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }],
-                            [{ text: '💼 Check Balance', callback_data: 'balance' }]
-                        ]
-                    };
-                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: String(userTelegramId), text, reply_markup })
-                    }).catch(() => { });
-                }
-            } catch (e) {
-                // Silent fail for notifications
-            }
+            // Notify user on Telegram about approval
+            await this.notifyUserDepositApproved(verification, result, false);
 
             return result;
         } catch (error) {
