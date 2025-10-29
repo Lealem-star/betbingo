@@ -19,7 +19,8 @@ class SmsForwarderService {
                 timestamp: smsData.timestamp || new Date(),
                 source: smsData.source || 'forwarder',
                 parsedData: this.parseSMSContent(smsData.message),
-                status: 'pending'
+                status: 'pending',
+                userId: smsData.userId || null
             });
 
             await smsRecord.save();
@@ -48,28 +49,35 @@ class SmsForwarderService {
                 /ETB\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
                 /(\d+(?:\.\d{1,2})?)\s*ETB/i,
                 /(\d+(?:\.\d{1,2})?)\s*ብር/i,
+                /(\d+(?:\.\d{1,2})?)\s*Br\.?/i,
+                /(\d+(?:\.\d{1,2})?)\s*Birr/i,
                 /(\d+(?:\.\d{1,2})?)/i
             ],
-            // Reference/Transaction ID patterns
+            // Reference/Transaction ID patterns (more specific first)
             reference: [
+                /\b(FT[0-9A-Z]{6,})\b/i, // CBE FT code
+                /\bref\s*no\s*[:\-]?\s*([A-Z0-9]+)/i, // Ref No ABC123
+                /\btxn\s*id\s*[:\-]?\s*([A-Z0-9]+)/i, // CBEBirr: "Txn ID CJS8X0WT0Y"
+                /your\s+transaction\s+number\s+is\s*([A-Z0-9]+)/i,
+                /transaction\s+number\s+is\s*([A-Z0-9]+)/i,
                 /id=([A-Z0-9]+)/i,
                 /ref[:\s]*([A-Z0-9]+)/i,
-                /transaction[:\s]*([A-Z0-9]+)/i,
-                /txn[:\s]*([A-Z0-9]+)/i,
-                /reference[:\s]*([A-Z0-9]+)/i
+                /reference[:\s]*([A-Z0-9]+)/i,
+                /\btxn[:\s]*([A-Z0-9]+)/i
             ],
             // Date/Time patterns
             datetime: [
                 /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+at\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,
                 /([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i,
-                /time[:\s]*([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i
+                /time[:\s]*([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i,
+                /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,
+                /\b([0-9]{2}\/[0-9]{2}\/[0-9]{2})\s+([0-9]{2}:[0-9]{2})\b/i  // CBEBirr: "28/10/25 13:21"
             ],
             // Payment method patterns
             paymentMethod: [
                 /telebirr/i,
-                /commercial/i,
-                /cbe/i,
-                /birr/i,
+                /cbebirr/i,
+                /commercial\s+bank|cbe\s*birr|\bCBE\b/i,
                 /awash/i,
                 /dashen/i
             ],
@@ -83,13 +91,14 @@ class SmsForwarderService {
             ],
             // CBE specific patterns
             cbeRecipient: [
-                /to\s+([A-Za-z\s]+)\s+on/i,  // "to Tadesse Meseret on"
-                /transferred\s+ETB\s+[\d.]+?\s+to\s+([A-Za-z\s]+)\s+on/i
+                /to\s+([A-Za-z\s]+)\s+on/i,  // transfers: "to Name on"
+                /transferred\s+ETB\s+[\d.]+?\s+to\s+([A-Za-z\s]+)\s+on/i,
+                /from\s+([A-Za-z\s]+)[,\s]/i  // credits: "from Name,"
             ],
             // Account number patterns
             accountNumber: [
-                /account\s+(\*?\d+)/i,  // "account 1*7959"
-                /from\s+your\s+account\s+(\*?\d+)/i
+                /account\s+([\d\*]+)/i,  // allows masks like 1*********7959
+                /from\s+your\s+account\s+([\d\*]+)/i
             ],
             // Transaction reference patterns (CBE specific)
             cbeReference: [
@@ -136,12 +145,35 @@ class SmsForwarderService {
             }
         }
 
-        // Extract payment method
+        // Extract payment method - map to stable labels (CBE vs CBEBirr are distinct)
         for (const pattern of patterns.paymentMethod) {
             if (pattern.test(message)) {
-                parsed.paymentMethod = pattern.source.replace(/[\/i]/g, '');
+                if (/telebirr/i.test(message)) {
+                    parsed.paymentMethod = 'telebirr';
+                } else if (/cbebirr|cbe\s*birr/i.test(message)) {
+                    // Brand: CBE Birr (mobile money)
+                    parsed.paymentMethod = 'cbebirr';
+                } else if (/\bCBE\b|commercial\s+bank/i.test(message)) {
+                    // Bank SMS (not CBE Birr)
+                    parsed.paymentMethod = 'cbe';
+                } else if (/awash/i.test(message)) {
+                    parsed.paymentMethod = 'awash';
+                } else if (/dashen/i.test(message)) {
+                    parsed.paymentMethod = 'dashen';
+                } else {
+                    parsed.paymentMethod = 'unknown';
+                }
                 break;
             }
+        }
+
+        // Extract transaction type for banks (credited/debited/transferred)
+        if (/\bcredited\b/i.test(message)) {
+            parsed.transactionType = 'credit';
+        } else if (/\bdebited\b/i.test(message)) {
+            parsed.transactionType = 'debit';
+        } else if (/\btransferred\b/i.test(message)) {
+            parsed.transactionType = 'transfer';
         }
 
         // Extract phone number from SMS content
@@ -239,8 +271,8 @@ class SmsForwarderService {
             }
 
             // Enhanced scoring with weighted criteria
-            const criticalMatches = [matches.phoneMatch, matches.amountMatch];
-            const optionalMatches = [matches.referenceMatch, matches.timeMatch, matches.paymentMethodMatch, matches.recipientMatch, matches.accountMatch];
+            const criticalMatches = [matches.amountMatch];
+            const optionalMatches = [matches.referenceMatch, matches.timeMatch, matches.paymentMethodMatch, matches.recipientMatch, matches.accountMatch, matches.phoneMatch];
 
             const criticalScore = criticalMatches.filter(Boolean).length;
             const optionalScore = optionalMatches.filter(Boolean).length;
@@ -248,10 +280,15 @@ class SmsForwarderService {
             // Weighted confidence calculation
             const totalPossibleScore = (criticalMatches.length * 2) + optionalMatches.length;
             const actualScore = (criticalScore * 2) + optionalScore;
-            const confidence = (actualScore / totalPossibleScore) * 100;
+            const confidence = totalPossibleScore > 0 ? (actualScore / totalPossibleScore) * 100 : 0;
 
-            // Enhanced verification logic
-            const isVerified = criticalScore >= 2 && (criticalScore + optionalScore) >= 3;
+            // Enhanced verification logic:
+            // Verify if amount matches AND either reference matches OR (time + payment method) match.
+            // If both have real phone numbers and they match, that also suffices.
+            const hasStrongTemporal = matches.timeMatch && matches.paymentMethodMatch;
+            const hasStrongReference = matches.referenceMatch;
+            const hasStrongPhone = matches.phoneMatch;
+            const isVerified = matches.amountMatch && (hasStrongReference || hasStrongTemporal || hasStrongPhone);
 
             return {
                 matches,
@@ -384,6 +421,29 @@ class SmsForwarderService {
             verification.approvedBy = adminId;
             verification.approvedAt = new Date();
             await verification.save();
+
+            // Notify user on Telegram about approval (if possible)
+            try {
+                const BOT_TOKEN = process.env.BOT_TOKEN;
+                const WEBAPP_URL = process.env.WEBAPP_URL || 'https://fikirbingo.com';
+                const userTelegramId = verification.userId?.telegramId;
+                if (BOT_TOKEN && userTelegramId) {
+                    const text = `✅ Deposit Approved\n\n💰 Amount: ETB ${Number(verification.amount).toFixed(2)}\n🎁 Bonus: +${Math.floor(Number(verification.amount) * 0.1)} play wallet\n\nYour balance has been updated. Good luck!`;
+                    const reply_markup = {
+                        inline_keyboard: [
+                            [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }],
+                            [{ text: '💼 Check Balance', callback_data: 'balance' }]
+                        ]
+                    };
+                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: String(userTelegramId), text, reply_markup })
+                    }).catch(() => { });
+                }
+            } catch (e) {
+                // Silent fail for notifications
+            }
 
             return result;
         } catch (error) {
