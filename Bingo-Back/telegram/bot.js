@@ -139,7 +139,9 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 if (!registered) {
                     const regKeyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
                     const regText = '👋 Welcome to Love Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
-                    return ctx.reply(regText, regKeyboard);
+                    const photoPath = path.join(__dirname, '..', 'static', 'lb.png');
+                    const photo = fs.existsSync(photoPath) ? { source: fs.createReadStream(photoPath) } : (WEBAPP_URL || '').replace(/\/$/, '') + '/lb.png';
+                    return ctx.replyWithPhoto(photo, { caption: regText, reply_markup: regKeyboard.reply_markup });
                 }
                 const welcomeText = `👋 Welcome to Love Bingo! Choose an Option below.`;
                 const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🎮 Play', callback_data: 'play' }], [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }], [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }], [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]] } };
@@ -396,7 +398,9 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             if (ok) return true;
             try { await ctx.answerCbQuery('Registration required'); } catch { }
             const keyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
-            await ctx.reply('📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.', keyboard);
+            const photoPath = path.join(__dirname, '..', 'static', 'lb.png');
+            const photo = fs.existsSync(photoPath) ? { source: fs.createReadStream(photoPath) } : (WEBAPP_URL || '').replace(/\/$/, '') + '/lb.png';
+            await ctx.replyWithPhoto(photo, { caption: '📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.', reply_markup: keyboard.reply_markup });
             return false;
         }
 

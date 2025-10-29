@@ -103,6 +103,9 @@ function makeRoom(stake) {
         winners: [],
         takenCards: new Set(), // numbers chosen during registration (1-100)
         userCardSelections: new Map(), // userId -> cardNumber
+        // Prevent duplicate announce/payout and manage call timer lifecycle
+        announceProcessed: false,
+        callTimerId: null,
         startTime: Date.now(),
         registrationEndTime: Date.now() + 60000, // 60 seconds from now
         gameEndTime: null,
@@ -171,6 +174,12 @@ async function startRegistration(room) {
     room.phase = 'registration';
     room.registrationEndTime = Date.now() + 60000; // 60 seconds
     room.startTime = Date.now();
+    room.announceProcessed = false;
+    // Clear any pending number-calling timer when restarting registration
+    if (room.callTimerId) {
+        clearTimeout(room.callTimerId);
+        room.callTimerId = null;
+    }
     room.takenCards.clear();
     room.userCardSelections.clear();
     room.selectedPlayers.clear(); // Clear previous selections
@@ -461,7 +470,7 @@ function callNextNumber(room) {
     checkWinners(room);
 
     // Call next number after delay (maintains consistent timing)
-    setTimeout(() => callNextNumber(room), 3000);
+    room.callTimerId = setTimeout(() => callNextNumber(room), 3000);
 }
 
 async function checkWinners(room) {
@@ -479,6 +488,17 @@ async function checkWinners(room) {
 }
 
 async function toAnnounce(room) {
+    // Idempotency guard to avoid duplicate payouts/announcements
+    if (room.announceProcessed) {
+        return;
+    }
+    room.announceProcessed = true;
+
+    // Stop any pending scheduled number calls
+    if (room.callTimerId) {
+        clearTimeout(room.callTimerId);
+        room.callTimerId = null;
+    }
     room.phase = 'announce';
 
     // Populate winner data with user names
