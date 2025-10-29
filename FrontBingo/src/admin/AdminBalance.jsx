@@ -12,8 +12,8 @@ export default function AdminBalance() {
             try {
                 setLoading(true);
                 const [w, d] = await Promise.all([
-                    apiFetch('/admin/balances/withdrawals?status=pending'),
-                    apiFetch('/admin/balances/deposits')
+                    apiFetch('/api/admin/balances/withdrawals?status=pending'),
+                    apiFetch('/api/admin/balances/deposits')
                 ]);
                 setWithdrawals(w.withdrawals || []);
                 setDeposits(d.deposits || []);
@@ -25,8 +25,8 @@ export default function AdminBalance() {
 
     const refresh = async () => {
         const [w, d] = await Promise.all([
-            apiFetch('/admin/balances/withdrawals?status=pending'),
-            apiFetch('/admin/balances/deposits')
+            apiFetch('/api/admin/balances/withdrawals?status=pending'),
+            apiFetch('/api/admin/balances/deposits')
         ]);
         setWithdrawals(w.withdrawals || []);
         setDeposits(d.deposits || []);
@@ -152,8 +152,8 @@ export default function AdminBalance() {
                                             </span>
                                             {w.status === 'pending' && (
                                                 <>
-                                                    <button className="px-2 py-1 text-xs bg-green-600 text-white rounded" onClick={async () => { await apiFetch(`/admin/withdrawals/${w._id}/approve`, { method: 'POST' }); refresh(); }}>Approve</button>
-                                                    <button className="px-2 py-1 text-xs bg-red-600 text-white rounded" onClick={async () => { await apiFetch(`/admin/withdrawals/${w._id}/deny`, { method: 'POST' }); refresh(); }}>Deny</button>
+                                                    <button className="px-2 py-1 text-xs bg-green-600 text-white rounded" onClick={async () => { await apiFetch(`/api/admin/withdrawals/${w._id}/approve`, { method: 'POST' }); refresh(); }}>Approve</button>
+                                                    <button className="px-2 py-1 text-xs bg-red-600 text-white rounded" onClick={async () => { await apiFetch(`/api/admin/withdrawals/${w._id}/deny`, { method: 'POST' }); refresh(); }}>Deny</button>
                                                 </>
                                             )}
                                         </div>
