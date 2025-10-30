@@ -43,6 +43,9 @@ router.post('/convert', authMiddleware, async (req, res) => {
         return res.json({ wallet: result.wallet });
     } catch (error) {
         console.error('Convert error:', error);
+        if (error.message === 'MIN_CONVERSION_NOT_MET') {
+            return res.status(400).json({ error: 'MIN_CONVERSION_NOT_MET' });
+        }
         res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
     }
 });

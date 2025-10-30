@@ -139,7 +139,11 @@ export default function Wallet({ onNavigate }) {
             }
         } catch (error) {
             console.error('Coin conversion failed:', error);
-            alert('Coin conversion failed. Please try again.');
+            if (error?.error === 'MIN_CONVERSION_NOT_MET' || error?.message === 'MIN_CONVERSION_NOT_MET') {
+                alert('Minimum conversion is 100 coins.');
+            } else {
+                alert('Coin conversion failed. Please try again.');
+            }
         }
     };
 
