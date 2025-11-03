@@ -21,6 +21,8 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
         // Ensure MongoDB is connected for bot-only PM2 runs
         (async () => {
             try {
+                const hasUri = !!process.env.MONGODB_URI;
+                console.log('🧪 Bot DB env check:', { hasUri });
                 await connectDB();
                 console.log('🗄️  MongoDB Connected (bot)');
             } catch (e) {
