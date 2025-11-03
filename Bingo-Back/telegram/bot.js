@@ -1502,3 +1502,18 @@ Thank you for your dedication! 🙏`;
 }
 
 module.exports = { startTelegramBot };
+
+// Allow running this file directly via PM2/node
+if (require.main === module) {
+    const BOT_TOKEN = process.env.BOT_TOKEN;
+    const WEBAPP_URL = process.env.WEBAPP_URL || 'https://fikirbingo.com';
+    try {
+        startTelegramBot({ BOT_TOKEN, WEBAPP_URL });
+        if (typeof process.send === 'function') {
+            process.send('ready');
+        }
+    } catch (e) {
+        console.error('Bot launcher error:', e);
+        process.exit(1);
+    }
+}
