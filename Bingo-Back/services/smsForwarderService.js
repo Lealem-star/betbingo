@@ -364,6 +364,11 @@ class SmsForwarderService {
 
             await verification.save();
 
+            // Notify admins that a new verification was created (both verified and pending)
+            try {
+                await this.notifyAdminsNewVerification(verification);
+            } catch (_) { }
+
             // Auto-credit funds if verification passed automatically
             if (matchResult.isVerified) {
                 try {
@@ -537,6 +542,32 @@ class SmsForwarderService {
         } catch (error) {
             console.error('Error rejecting verification:', error);
             throw error;
+        }
+    }
+
+    // Notify admins on Telegram about a new deposit verification
+    static async notifyAdminsNewVerification(verification) {
+        try {
+            const BOT_TOKEN = process.env.BOT_TOKEN;
+            if (!BOT_TOKEN) return;
+            const User = require('../models/User');
+            const user = await require('../models/User').findById(verification.userId);
+            const adminUsers = await User.find({ role: 'admin', telegramId: { $ne: null } }, { telegramId: 1 });
+            if (!adminUsers || adminUsers.length === 0) return;
+
+            const amount = Number(verification.amount).toFixed(2);
+            const status = verification.status === 'verified' ? 'verified (auto)' : 'pending review';
+            const text = `🆕 New Deposit Verification\n\n👤 User: ${user?.firstName || ''} ${user?.lastName || ''}\n📱 Phone: ${user?.phone || user?._id}\n💰 Amount: ETB ${amount}\n📋 Verification ID: ${String(verification._id)}\n🔄 Status: ${status}`;
+
+            await Promise.all(
+                adminUsers.map(a => fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: String(a.telegramId), text })
+                }).catch(() => { }))
+            );
+        } catch (_) {
+            // silent
         }
     }
 }

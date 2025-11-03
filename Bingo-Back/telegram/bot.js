@@ -1081,7 +1081,11 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                             } catch { }
                         }
 
-                        return ctx.reply(`📱 SMS Received!\n\n✅ Your payment receipt has been received and is being verified.\n\n💰 Amount: ETB ${parsed.amount.toFixed(2)}\n🔄 Status: verified\n\n⏳ now you can play the game by backing to menu!`, {
+                        const statusText = result.isVerified ? 'verified' : 'pending review';
+                        const nextStep = result.isVerified
+                            ? '✅ Deposit matched and will be credited shortly.'
+                            : '⏳ Awaiting admin approval. You will be notified when approved.';
+                        return ctx.reply(`📱 SMS Received!\n\n✅ Your payment receipt has been received.\n\n💰 Amount: ETB ${parsed.amount.toFixed(2)}\n🔄 Status: ${statusText}\n\n${nextStep}`, {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     } else {

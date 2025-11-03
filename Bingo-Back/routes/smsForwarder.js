@@ -69,7 +69,9 @@ router.post('/user-sms', async (req, res) => {
             success: true,
             message: 'User SMS received and processed',
             smsId: userSMS._id,
-            verificationId: verification ? verification._id : null
+            verificationId: verification ? verification._id : null,
+            status: verification ? verification.status : null,
+            isVerified: verification ? verification.status === 'verified' : false
         });
     } catch (error) {
         console.error('User SMS error:', error);
