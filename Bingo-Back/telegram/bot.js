@@ -6,6 +6,7 @@ const WalletService = require('../services/walletService');
 const Game = require('../models/Game');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const connectDB = require('../config/database');
 
 function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
     try {
@@ -16,6 +17,16 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
         }
 
         const bot = new Telegraf(BOT_TOKEN);
+
+        // Ensure MongoDB is connected for bot-only PM2 runs
+        (async () => {
+            try {
+                await connectDB();
+                console.log('🗄️  MongoDB Connected (bot)');
+            } catch (e) {
+                console.error('Mongo connect error (bot):', e?.message || e);
+            }
+        })();
         const isHttpsWebApp = typeof WEBAPP_URL === 'string' && WEBAPP_URL.startsWith('https://');
         const webAppUrl = WEBAPP_URL;
 
