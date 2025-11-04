@@ -303,13 +303,12 @@ class SmsForwarderService {
             const actualScore = (criticalScore * 2) + optionalScore;
             const confidence = totalPossibleScore > 0 ? (actualScore / totalPossibleScore) * 100 : 0;
 
-            // Enhanced verification logic:
-            // Verify if amount matches AND either reference matches OR (time + payment method) match.
-            // If both have real phone numbers and they match, that also suffices.
-            const hasStrongTemporal = matches.timeMatch && matches.paymentMethodMatch;
+            // Relaxed verification logic:
+            // Verify if amount matches AND (reference matches OR time matches within window).
+            // No payment-method or phone required for verification.
             const hasStrongReference = matches.referenceMatch;
-            const hasStrongPhone = matches.phoneMatch;
-            const isVerified = matches.amountMatch && (hasStrongReference || hasStrongTemporal || hasStrongPhone);
+            const hasStrongTime = matches.timeMatch;
+            const isVerified = matches.amountMatch && (hasStrongReference || hasStrongTime);
 
             return {
                 matches,

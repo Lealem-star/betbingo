@@ -197,8 +197,8 @@ router.get('/stats', async (req, res) => {
 // Helper function to attempt automatic matching
 async function attemptAutoMatching(newSMS) {
     try {
-        // Find potential matches based on amount and time window
-        const timeWindow = 10 * 60 * 1000; // 10 minutes
+        // Find potential matches based on amount and time window (widened)
+        const timeWindow = 15 * 60 * 1000; // 15 minutes
         const startTime = new Date(newSMS.timestamp.getTime() - timeWindow);
         const endTime = new Date(newSMS.timestamp.getTime() + timeWindow);
 
