@@ -1860,7 +1860,7 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 40px;
+    height: 25px;
     border-radius: 8px;
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2066,8 +2066,8 @@ body {
     }
 
     .cartela-number-btn {
-        height: 36px;
-        font-size: 12px;
+        height: 30px;
+        font-size: 10px;
     }
 
     .wallet-info {

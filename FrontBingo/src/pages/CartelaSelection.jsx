@@ -716,7 +716,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
                 {/* Number Selection Grid - Inside Scrollable Box */}
                 <div className="mb-4">
-                    <div className="bg-gray-800 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                    <div className="bg-gray-800 rounded-lg p-4 max-h-[200px] overflow-y-auto">
                         <div className="cartela-numbers-grid">
                             {Array.from({ length: cards.length }, (_, i) => i + 1).map((cartelaNumber) => {
                                 const isTaken = gameState.takenCards.includes(cartelaNumber);
