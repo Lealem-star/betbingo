@@ -7,20 +7,21 @@ const SmsForwarderService = require('../services/smsForwarderService');
 router.post('/webhook', async (req, res) => {
     try {
         const raw = req.body || {};
+
+        // Optional webhook secret enforcement
+        const configuredSecret = process.env.SMS_WEBHOOK_SECRET;
+        if (configuredSecret) {
+            const providedSecret = req.headers['x-webhook-secret'];
+            if (!providedSecret || providedSecret !== configuredSecret) {
+                return res.status(401).json({ success: false, error: 'Unauthorized: invalid webhook secret' });
+            }
+        }
         // Normalize various possible payload keys from different forwarder apps
         const from = raw.from || raw.sender || raw.number || raw.phone || raw['in-number'] || raw.msisdn || 'unknown';
         const to = raw.to || raw.receiver || raw['in-sim'] || raw.sim || null;
         const body = raw.body || raw.message || raw.msg || raw.text || raw.key || '';
         const timestamp = raw.timestamp || raw.time || raw.receivedTime || raw.date || null;
         const messageId = raw.messageId || raw.id || raw['message-id'] || null;
-
-        console.log('📨 SMS Webhook received:', {
-            from,
-            to,
-            source: isFromAgent ? 'receiver' : 'user',
-            bodyPreview: typeof body === 'string' ? body.substring(0, 150) + (body.length > 150 ? '...' : '') : typeof body,
-            timestamp: parsedAt
-        });
 
         // Validate that we have a non-empty message
         if (!body || typeof body !== 'string' || !body.trim()) {
@@ -51,6 +52,14 @@ router.post('/webhook', async (req, res) => {
                 parsedAt = Number.isNaN(parsed) ? new Date() : new Date(parsed);
             }
         }
+
+        console.log('📨 SMS Webhook received:', {
+            from,
+            to,
+            source,
+            bodyPreview: typeof body === 'string' ? body.substring(0, 150) + (body.length > 150 ? '...' : '') : typeof body,
+            timestamp: parsedAt
+        });
 
         const smsRecord = await SmsForwarderService.storeIncomingSMS({
             phoneNumber: from || 'unknown',
