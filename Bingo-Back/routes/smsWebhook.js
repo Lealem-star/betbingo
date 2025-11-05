@@ -14,7 +14,13 @@ router.post('/webhook', async (req, res) => {
         const timestamp = raw.timestamp || raw.time || raw.receivedTime || raw.date || null;
         const messageId = raw.messageId || raw.id || raw['message-id'] || null;
 
-        console.log('SMS Webhook received:', { from, to, body: typeof body === 'string' ? body.substring(0, 100) + '...' : typeof body });
+        console.log('📨 SMS Webhook received:', {
+            from,
+            to,
+            source: isFromAgent ? 'receiver' : 'user',
+            bodyPreview: typeof body === 'string' ? body.substring(0, 150) + (body.length > 150 ? '...' : '') : typeof body,
+            timestamp: parsedAt
+        });
 
         // Validate that we have a non-empty message
         if (!body || typeof body !== 'string' || !body.trim()) {
@@ -95,6 +101,19 @@ async function attemptAutoMatching(newSMS) {
                 status: 'pending',
                 source: { $ne: newSMS.source } // Only different sources
             }).session(session);
+
+            console.log(`🔎 Webhook Auto-matching: Found ${potentialMatches.length} potential matches for SMS ${newSMS._id?.toString()?.substring(0, 8)}`, {
+                newSMSSource: newSMS.source,
+                newSMSAmount: newSMS.parsedData?.amount,
+                newSMSTimestamp: newSMS.timestamp,
+                searchWindow: `${Math.round(timeWindow / 60000)} minutes`,
+                potentialMatches: potentialMatches.map(m => ({
+                    id: m._id?.toString()?.substring(0, 8),
+                    source: m.source,
+                    amount: m.parsedData?.amount,
+                    timestamp: m.timestamp
+                }))
+            });
 
             // Sort by timestamp and phone number for consistent matching
             potentialMatches.sort((a, b) => {

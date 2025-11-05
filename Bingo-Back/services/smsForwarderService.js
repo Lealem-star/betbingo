@@ -53,6 +53,19 @@ class SmsForwarderService {
             });
 
             await smsRecord.save();
+            
+            // Log parsed data for debugging
+            console.log(`💾 SMS Stored:`, {
+                id: smsRecord._id?.toString()?.substring(0, 8),
+                source: smsRecord.source,
+                phoneNumber: smsRecord.phoneNumber,
+                amount: parsedData?.amount,
+                reference: parsedData?.reference,
+                datetime: parsedData?.datetime,
+                timestamp: smsRecord.timestamp,
+                userId: smsRecord.userId?.toString()?.substring(0, 8) || null
+            });
+            
             return smsRecord;
         } catch (error) {
             console.error('Error storing SMS:', error);
@@ -94,12 +107,13 @@ class SmsForwarderService {
                 /reference[:\s]*([A-Z0-9]+)/i,
                 /\btxn[:\s]*([A-Z0-9]+)/i
             ],
-            // Date/Time patterns
+            // Date/Time patterns (order matters - most specific first)
             datetime: [
-                /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+at\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,
-                /([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i,
+                /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+at\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,  // "on 04/11/2025 at 13:18:47"
+                /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,  // "on 04/11/2025 13:18:47" (telebirr format)
+                /([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,  // "04/11/2025 13:18:47"
+                /([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i,  // "04/11/2025 13:18"
                 /time[:\s]*([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2})/i,
-                /on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i,
                 /\b([0-9]{2}\/[0-9]{2}\/[0-9]{2})\s+([0-9]{2}:[0-9]{2})\b/i  // CBEBirr: "28/10/25 13:21"
             ],
             // Payment method patterns
@@ -165,10 +179,15 @@ class SmsForwarderService {
             }
         }
 
-        // Extract datetime
+        // Extract datetime (combine date and time groups)
         for (const pattern of patterns.datetime) {
             const match = message.match(pattern);
-            if (match) {
+            if (match && match.length >= 3) {
+                // Combine date (group 1) and time (group 2) into full datetime string
+                parsed.datetime = `${match[1]} ${match[2]}`;
+                break;
+            } else if (match && match[0]) {
+                // Fallback: use full match if no groups
                 parsed.datetime = match[0];
                 break;
             }
@@ -276,12 +295,36 @@ class SmsForwarderService {
                 matches.referenceMatch = userParsed.reference === receiverParsed.reference;
             }
 
-            // Time matching (reduced to 2 minutes for simultaneous deposits)
+            // Time matching (using proper DD/MM/YYYY parsing)
             if (userParsed.datetime && receiverParsed.datetime) {
-                const userTime = new Date(userParsed.datetime);
-                const receiverTime = new Date(receiverParsed.datetime);
-                const timeDiff = Math.abs(userTime - receiverTime);
-                matches.timeMatch = timeDiff <= 2 * 60 * 1000; // 2 minutes
+                // Use the same datetime parsing logic as in storeIncomingSMS
+                function parseDatetimeString(dtString) {
+                    if (!dtString || typeof dtString !== 'string') return null;
+                    // Try DD/MM/YYYY HH:MM(:SS)
+                    let m = dtString.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+                    if (m) {
+                        const [_, dd, mm, yyyy, HH, MM, SS] = m;
+                        const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(HH), Number(MM), Number(SS || 0));
+                        if (!isNaN(date.getTime())) return date;
+                    }
+                    // Try DD/MM/YY HH:MM (assume 20YY)
+                    m = dtString.match(/(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+                    if (m) {
+                        const [_, dd, mm, yy, HH, MM, SS] = m;
+                        const yyyy = 2000 + Number(yy);
+                        const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(HH), Number(MM), Number(SS || 0));
+                        if (!isNaN(date.getTime())) return date;
+                    }
+                    return null;
+                }
+                
+                const userTime = parseDatetimeString(userParsed.datetime);
+                const receiverTime = parseDatetimeString(receiverParsed.datetime);
+                
+                if (userTime && receiverTime) {
+                    const timeDiff = Math.abs(userTime.getTime() - receiverTime.getTime());
+                    matches.timeMatch = timeDiff <= 15 * 60 * 1000; // 15 minutes window (aligned with search window)
+                }
             }
 
             // Payment method matching
@@ -317,6 +360,23 @@ class SmsForwarderService {
             const hasStrongReference = matches.referenceMatch;
             const hasStrongTime = matches.timeMatch;
             const isVerified = matches.amountMatch && (hasStrongReference || hasStrongTime);
+
+            // Enhanced logging for debugging
+            console.log(`🔍 SMS Matching Debug:`, {
+                userSMSId: userSMS._id?.toString()?.substring(0, 8),
+                receiverSMSId: receiverSMS._id?.toString()?.substring(0, 8),
+                amountMatch: matches.amountMatch,
+                referenceMatch: matches.referenceMatch,
+                timeMatch: matches.timeMatch,
+                userAmount: userParsed.amount,
+                receiverAmount: receiverParsed.amount,
+                userReference: userParsed.reference,
+                receiverReference: receiverParsed.reference,
+                userDatetime: userParsed.datetime,
+                receiverDatetime: receiverParsed.datetime,
+                isVerified,
+                confidence: confidence.toFixed(1) + '%'
+            });
 
             return {
                 matches,

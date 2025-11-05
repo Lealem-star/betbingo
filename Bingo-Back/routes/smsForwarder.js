@@ -215,7 +215,21 @@ async function attemptAutoMatching(newSMS) {
             _id: { $ne: newSMS._id },
             'parsedData.amount': newSMS.parsedData.amount,
             timestamp: { $gte: startTime, $lte: endTime },
-            status: 'pending'
+            status: 'pending',
+            source: { $ne: newSMS.source } // Only match different sources
+        });
+
+        console.log(`🔎 Auto-matching: Found ${potentialMatches.length} potential matches for SMS ${newSMS._id?.toString()?.substring(0, 8)}`, {
+            newSMSSource: newSMS.source,
+            newSMSAmount: newSMS.parsedData?.amount,
+            newSMSTimestamp: newSMS.timestamp,
+            searchWindow: `${Math.round(timeWindow / 60000)} minutes`,
+            potentialMatches: potentialMatches.map(m => ({
+                id: m._id?.toString()?.substring(0, 8),
+                source: m.source,
+                amount: m.parsedData?.amount,
+                timestamp: m.timestamp
+            }))
         });
 
         for (const potentialMatch of potentialMatches) {
