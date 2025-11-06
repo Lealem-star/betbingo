@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const SmsForwarderService = require('../services/smsForwarderService');
 const SMSRecord = require('../models/SMSRecord');
-const DepositVerification = require('../models/DeposiitVerification');
+const DepositVerification = require('../models/DepositVerification');
 
 // POST /sms-forwarder/incoming - Receive SMS from forwarder
 router.post('/incoming', async (req, res) => {

@@ -1,11 +1,34 @@
 // Wrap startup in try-catch to catch any errors
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
 try {
 console.log('🚀 Starting application...');
+process.stdout.write('🚀 Starting application...\n');
+process.stderr.write('🚀 Starting application...\n');
 
+console.log('Step 1: Loading express...');
 const express = require('express');
+console.log('✅ Express loaded');
+process.stderr.write('✅ Express loaded\n');
+
+console.log('Step 2: Loading cors...');
 const cors = require('cors');
+console.log('✅ CORS loaded');
+process.stderr.write('✅ CORS loaded\n');
+
+console.log('Step 3: Loading dotenv...');
 require('dotenv').config();
 console.log('✅ Environment loaded');
+process.stderr.write('✅ Environment loaded\n');
 
 const http = require('http');
 const { WebSocketServer } = require('ws');
