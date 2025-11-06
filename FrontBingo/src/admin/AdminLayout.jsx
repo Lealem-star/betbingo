@@ -67,7 +67,7 @@ export default function AdminLayout({ onNavigate }) {
                         const initData = window.Telegram.WebApp.initData;
                         console.log('📤 Sending Telegram auth request...');
                         const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-                        const res = await fetch(`${apiBase}/auth/telegram/verify`, {
+                        const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ initData })

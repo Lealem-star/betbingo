@@ -69,7 +69,8 @@ app.get('/health', (req, res) => {
 });
 
 // Use routes
-app.use('/auth', authRoutes);
+app.use('/auth', authRoutes); // Keep for backward compatibility
+app.use('/api/auth', authRoutes); // Mount under /api/auth to match frontend apiFetch behavior
 app.use('/wallet', walletRoutes);
 app.use('/user', userRoutes);
 app.use('/api/admin', adminRoutes); // Mount under /api/admin to match frontend apiFetch behavior

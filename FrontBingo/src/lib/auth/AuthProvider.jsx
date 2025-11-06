@@ -234,12 +234,27 @@ export function AuthProvider({ children }) {
             }
 
             // If we're in Telegram but initData isn't ready, wait a bit more
-            if (window?.Telegram?.WebApp && !window?.Telegram?.WebApp?.initData) {
-                console.log('⚠️ Telegram WebApp detected but initData not ready, waiting...');
-                // Wait up to 3 more seconds for initData to populate
-                for (let i = 0; i < 6; i++) {
+            // Check initDataUnsafe to confirm we're actually in Telegram
+            const isInTelegram = window?.Telegram?.WebApp && (
+                window?.Telegram?.WebApp?.initDataUnsafe?.user ||
+                window?.Telegram?.WebApp?.platform === 'tdesktop' ||
+                window?.Telegram?.WebApp?.platform === 'android' ||
+                window?.Telegram?.WebApp?.platform === 'ios' ||
+                window?.Telegram?.WebApp?.platform === 'web' ||
+                navigator.userAgent.includes('Telegram')
+            );
+
+            if (isInTelegram && (!window?.Telegram?.WebApp?.initData || window.Telegram.WebApp.initData.trim() === '')) {
+                console.log('⚠️ Telegram WebApp detected but initData not ready, waiting longer...', {
+                    platform: window?.Telegram?.WebApp?.platform,
+                    hasInitDataUnsafe: !!window?.Telegram?.WebApp?.initDataUnsafe,
+                    userAgent: navigator.userAgent
+                });
+                // Wait up to 5 more seconds for initData to populate (if we're clearly in Telegram)
+                for (let i = 0; i < 10; i++) {
                     await new Promise(resolve => setTimeout(resolve, 500));
-                    if (window?.Telegram?.WebApp?.initData && window.Telegram.WebApp.initData.trim() !== '') {
+                    const currentInitData = window?.Telegram?.WebApp?.initData;
+                    if (currentInitData && currentInitData.trim() !== '') {
                         console.log('✅ initData populated after waiting');
                         break;
                     }
@@ -296,53 +311,79 @@ export function AuthProvider({ children }) {
             // No bypasses - require proper Telegram authentication
             // Check if initData is missing or empty
             if (!initData || initData.trim() === '') {
+                // Final check: if we're clearly in Telegram but initData is still missing,
+                // try one more time with a longer wait
+                const definitelyInTelegram = window?.Telegram?.WebApp && (
+                    window?.Telegram?.WebApp?.initDataUnsafe?.user ||
+                    window?.Telegram?.WebApp?.platform ||
+                    navigator.userAgent.includes('Telegram')
+                );
+
+                if (definitelyInTelegram) {
+                    console.log('🔄 Final attempt: Waiting 2 more seconds for initData in Telegram environment...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Re-check initData after final wait
+                    const finalInitDataFromWebApp = window?.Telegram?.WebApp?.initData;
+                    const finalInitDataFromHash = new URLSearchParams(window.location.hash.substring(1)).get('tgWebAppData');
+                    const finalInitDataFromSearch = new URLSearchParams(window.location.search).get('tgWebAppData');
+                    
+                    const finalInitData = (finalInitDataFromWebApp && finalInitDataFromWebApp.trim()) ||
+                        (finalInitDataFromHash && finalInitDataFromHash.trim()) ||
+                        (finalInitDataFromSearch && finalInitDataFromSearch.trim()) ||
+                        null;
+
+                    if (finalInitData && finalInitData.trim() !== '') {
+                        console.log('✅ initData found after final wait, proceeding with authentication');
+                        try {
+                            const out = await verifyTelegram(finalInitData);
+                            setSessionId(out.sessionId);
+                            localStorage.setItem('sessionId', out.sessionId);
+                            let mergedUser = out.user;
+                            try {
+                                const prof = await fetchProfileWithSession(out.sessionId);
+                                if (prof?.user) {
+                                    mergedUser = { ...mergedUser, ...{ firstName: prof.user.firstName, lastName: prof.user.lastName, phone: prof.user.phone, isRegistered: prof.user.isRegistered } };
+                                }
+                            } catch { }
+                            setUser(mergedUser);
+                            localStorage.setItem('user', JSON.stringify(mergedUser));
+                            setIsLoading(false);
+                            return;
+                        } catch (e) {
+                            console.error('Telegram authentication failed after final wait:', e);
+                        }
+                    }
+                }
 
                 console.error('No Telegram initData available - this should only happen when not accessed through Telegram');
 
                 console.error('Debug info:', {
-
                     windowTelegram: !!window?.Telegram,
-
                     windowWebApp: !!window?.Telegram?.WebApp,
-
                     initDataFromWebApp: window?.Telegram?.WebApp?.initData,
-
+                    initDataUnsafe: window?.Telegram?.WebApp?.initDataUnsafe,
+                    platform: window?.Telegram?.WebApp?.platform,
                     initDataFromHash: hashParams.get('tgWebAppData'),
-
                     initDataFromSearch: searchParams.get('tgWebAppData'),
-
                     currentURL: window.location.href,
-
                     urlHash: window.location.hash,
-
                     urlSearch: window.location.search,
-
                     referrer: document.referrer,
-
                     userAgent: navigator.userAgent
-
                 });
 
-
-
                 // No hash bypasses - require proper Telegram WebApp initData
-
                 // No test sessions - require real Telegram authentication
-
                 console.log('No Telegram initData found - authentication required');
 
                 setSessionId(null);
-
                 setUser(null);
-
                 localStorage.removeItem('sessionId');
-
                 localStorage.removeItem('user');
-
                 setIsLoading(false);
 
                 return;
-
             }
 
             try {
