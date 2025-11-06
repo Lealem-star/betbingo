@@ -3,13 +3,11 @@ import { apiFetch } from '../lib/api/client';
 import AdminHome from './AdminHome';
 import AdminBalance from './AdminBalance';
 import AdminStats from './AdminStats';
-import AdminDepositVerification from './AdminDepositVerification';
 
 function AdminNav({ current, onNavigate }) {
     const tabs = [
         { key: 'home', label: 'Home', icon: '🏠' },
         { key: 'balance', label: 'Balance', icon: '💵' },
-        { key: 'verifications', label: 'Deposits', icon: '📱' },
         { key: 'stats', label: 'Stats', icon: '📊' }
     ];
     return (
@@ -210,7 +208,6 @@ export default function AdminLayout({ onNavigate }) {
             <main>
                 {tab === 'home' && <AdminHome />}
                 {tab === 'balance' && <AdminBalance />}
-                {tab === 'verifications' && <AdminDepositVerification />}
                 {tab === 'stats' && <AdminStats />}
             </main>
             <AdminNav current={tab} onNavigate={setTab} />

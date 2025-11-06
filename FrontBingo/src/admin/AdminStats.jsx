@@ -22,22 +22,53 @@ export default function AdminStats() {
                 setToday(t);
             } catch { }
             try {
-                // Fetch daily game statistics - this would need a new endpoint
-                // For now, we'll use the existing revenue endpoint and simulate game data
-                const r = await apiFetch('/admin/stats/revenue/by-day?days=14');
-                const revenueData = r.revenueByDay || [];
+                // Fetch real daily game statistics
+                const gamesData = await apiFetch('/admin/stats/games?days=14');
+                const games = gamesData?.games || [];
 
-                // Simulate daily game statistics with the available data
-                const simulatedStats = revenueData.map((item, index) => ({
-                    day: item.day,
-                    gameId: `LB${Date.now() - (index * 86400000)}`,
-                    stake: index % 2 === 0 ? 10 : 50,
-                    noPlayed: Math.floor(Math.random() * 20) + 5,
-                    systemRevenue: item.revenue
-                }));
+                // Group games by day and format for display
+                const statsByDay = {};
+                games.forEach(game => {
+                    if (game.finishedAt) {
+                        const day = new Date(game.finishedAt).toISOString().slice(0, 10);
+                        if (!statsByDay[day]) {
+                            statsByDay[day] = {
+                                day: day,
+                                games: []
+                            };
+                        }
+                        statsByDay[day].games.push(game);
+                    }
+                });
 
-                setDailyStats(simulatedStats);
-            } catch { }
+                // Convert to array format and calculate totals per day
+                const dailyStatsList = Object.values(statsByDay)
+                    .map(dayData => {
+                        const dayGames = dayData.games;
+                        const totalRevenue = dayGames.reduce((sum, g) => sum + (g.systemCut || 0), 0);
+                        const totalPlayers = dayGames.reduce((sum, g) => sum + (g.playersCount || 0), 0);
+                        // Get the most recent game for that day as representative
+                        const latestGame = dayGames.sort((a, b) =>
+                            new Date(b.finishedAt) - new Date(a.finishedAt)
+                        )[0];
+
+                        return {
+                            day: dayData.day,
+                            gameId: latestGame?.gameId || 'N/A',
+                            stake: latestGame?.stake || 0,
+                            noPlayed: totalPlayers,
+                            systemRevenue: totalRevenue,
+                            totalGames: dayGames.length
+                        };
+                    })
+                    .sort((a, b) => a.day.localeCompare(b.day))
+                    .reverse(); // Most recent first
+
+                setDailyStats(dailyStatsList);
+            } catch (error) {
+                console.error('Error fetching daily game stats:', error);
+                setDailyStats([]);
+            }
             try {
                 // Today's totals: games played, deposits, withdrawals
                 const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -169,9 +200,9 @@ export default function AdminStats() {
                 {/* Table Header */}
                 <div className="admin-stats-table-header">
                     <div className="admin-stats-table-header-item">Day</div>
-                    <div className="admin-stats-table-header-item">Game ID</div>
+                    <div className="admin-stats-table-header-item">Games</div>
                     <div className="admin-stats-table-header-item">Stake</div>
-                    <div className="admin-stats-table-header-item">No Played</div>
+                    <div className="admin-stats-table-header-item">Total Players</div>
                     <div className="admin-stats-table-header-item">System Revenue</div>
                 </div>
 
@@ -180,11 +211,11 @@ export default function AdminStats() {
                     {dailyStats.length > 0 ? (
                         dailyStats.map((stat, index) => (
                             <div key={index} className="admin-stats-table-row">
-                                <div className="admin-stats-table-cell">{stat.day}</div>
-                                <div className="admin-stats-table-cell admin-stats-table-cell-mono">{stat.gameId}</div>
+                                <div className="admin-stats-table-cell">{new Date(stat.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                <div className="admin-stats-table-cell admin-stats-table-cell-center">{stat.totalGames || 0}</div>
                                 <div className="admin-stats-table-cell admin-stats-table-cell-center">ETB {stat.stake}</div>
                                 <div className="admin-stats-table-cell admin-stats-table-cell-center">{stat.noPlayed}</div>
-                                <div className="admin-stats-table-cell admin-stats-table-cell-right">ETB {stat.systemRevenue}</div>
+                                <div className="admin-stats-table-cell admin-stats-table-cell-right">ETB {stat.systemRevenue.toFixed(2)}</div>
                             </div>
                         ))
                     ) : (

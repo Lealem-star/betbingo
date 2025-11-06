@@ -116,7 +116,10 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
 
         const result = await WalletService.processWithdrawal(user._id, parseFloat(amount), destination.trim());
         if (!result.success) {
-            return res.status(400).json({ error: result.error });
+            return res.status(400).json({ 
+                error: result.error,
+                message: result.message || null
+            });
         }
 
         res.json({

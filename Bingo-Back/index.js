@@ -107,7 +107,7 @@ function makeRoom(stake) {
         announceProcessed: false,
         callTimerId: null,
         startTime: Date.now(),
-        registrationEndTime: Date.now() + 60000, // 60 seconds from now
+        registrationEndTime: Date.now() + 30000, // 30 seconds from now
         gameEndTime: null,
         onJoin: async (ws) => {
             console.log('Room onJoin called:', { userId: ws.userId, roomStake: room.stake, roomPhase: room.phase });
@@ -172,7 +172,7 @@ function broadcast(type, payload, targetRoom = null) {
 async function startRegistration(room) {
     console.log('startRegistration called for room:', room.stake);
     room.phase = 'registration';
-    room.registrationEndTime = Date.now() + 60000; // 60 seconds
+    room.registrationEndTime = Date.now() + 30000; // 30 seconds
     room.startTime = Date.now();
     room.announceProcessed = false;
     // Clear any pending number-calling timer when restarting registration
@@ -198,7 +198,7 @@ async function startRegistration(room) {
         gameId: room.currentGameId,
         stake: room.stake,
         playersCount: 0, // Start with 0, will update as players join
-        duration: 60000, // 60 seconds
+        duration: 30000, // 30 seconds
         endsAt: room.registrationEndTime,
         availableCards: Array.from({ length: 100 }, (_, i) => i + 1), // Generate 1-100 available cards
         takenCards: [],
@@ -210,7 +210,7 @@ async function startRegistration(room) {
             broadcast('registration_closed', { gameId: room.currentGameId }, room);
             startGame(room);
         }
-    }, 60000); // 60 seconds
+    }, 30000); // 30 seconds
 }
 
 function startGame(room) {

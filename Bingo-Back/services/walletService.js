@@ -351,6 +351,26 @@ class WalletService {
                 return { success: false, error: 'INSUFFICIENT_FUNDS' };
             }
 
+            // Check if user has deposit history
+            const depositHistory = await Transaction.find({
+                userId,
+                type: 'deposit',
+                status: { $in: ['completed', 'pending'] }
+            }).limit(1);
+
+            const hasDepositHistory = depositHistory.length > 0;
+
+            // If no deposit history, user must have at least 300 birr in main wallet
+            if (!hasDepositHistory) {
+                if (wallet.main < 300) {
+                    return { 
+                        success: false, 
+                        error: 'NO_DEPOSIT_HISTORY_MIN_300',
+                        message: 'You can only request withdrawal when your main wallet reaches 300 birr. Please make a deposit first to request withdrawal in any amount.'
+                    };
+                }
+            }
+
             // Create pending withdrawal transaction
             const transaction = new Transaction({
                 userId,

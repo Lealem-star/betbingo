@@ -175,6 +175,24 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             return true;
         }
 
+        // Helper function to notify other admins about admin actions
+        async function notifyOtherAdmins(excludingTelegramId, message) {
+            try {
+                const adminUsers = await User.find({ role: 'admin', telegramId: { $ne: null } });
+                for (const admin of adminUsers) {
+                    // Skip the admin who performed the action
+                    if (String(admin.telegramId) === String(excludingTelegramId)) continue;
+
+                    await bot.telegram.sendMessage(
+                        admin.telegramId,
+                        message
+                    ).catch(e => console.log(`Failed to notify admin ${admin.telegramId}:`, e?.message));
+                }
+            } catch (error) {
+                console.error('Error notifying other admins:', error);
+            }
+        }
+
         bot.command('admin', async (ctx) => {
             if (!(await isAdminByDB(ctx.from.id))) { return ctx.reply('Unauthorized'); }
             const adminText = '🛠️ Admin Panel';
@@ -244,9 +262,27 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             const targetId = parts[1];
             if (!targetId) return ctx.reply('Usage: /promote <telegramId>');
             try {
+                const adminTelegramId = String(ctx.from.id);
+                const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
+
                 const User = require('../models/User');
+                const targetUser = await User.findOne({ telegramId: String(targetId) });
+                if (!targetUser) return ctx.reply('User not found.');
+
                 const user = await User.findOneAndUpdate({ telegramId: String(targetId) }, { $set: { role: 'admin' } }, { new: true });
                 if (!user) return ctx.reply('User not found.');
+
+                // Notify other admins
+                const targetName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.phone || targetId;
+                await notifyOtherAdmins(
+                    adminTelegramId,
+                    `👤 Admin Action: User Promoted to Admin\n\n` +
+                    `👤 Target User: ${targetName}\n` +
+                    `📱 Telegram ID: ${targetId}\n` +
+                    `✅ Promoted by: ${adminName}\n` +
+                    `🕐 Time: ${new Date().toLocaleString()}`
+                );
+
                 return ctx.reply(`✅ Promoted ${targetId} to admin.`);
             } catch { return ctx.reply('Failed to promote.'); }
         });
@@ -257,9 +293,27 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             const targetId = parts[1];
             if (!targetId) return ctx.reply('Usage: /demote <telegramId>');
             try {
+                const adminTelegramId = String(ctx.from.id);
+                const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
+
                 const User = require('../models/User');
+                const targetUser = await User.findOne({ telegramId: String(targetId) });
+                if (!targetUser) return ctx.reply('User not found.');
+
                 const user = await User.findOneAndUpdate({ telegramId: String(targetId) }, { $set: { role: 'user' } }, { new: true });
                 if (!user) return ctx.reply('User not found.');
+
+                // Notify other admins
+                const targetName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.phone || targetId;
+                await notifyOtherAdmins(
+                    adminTelegramId,
+                    `👤 Admin Action: Admin Demoted to User\n\n` +
+                    `👤 Target User: ${targetName}\n` +
+                    `📱 Telegram ID: ${targetId}\n` +
+                    `❌ Demoted by: ${adminName}\n` +
+                    `🕐 Time: ${new Date().toLocaleString()}`
+                );
+
                 return ctx.reply(`✅ Demoted ${targetId} to user.`);
             } catch { return ctx.reply('Failed to demote.'); }
         });
@@ -507,13 +561,45 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             try {
                 const userId = String(ctx.from.id);
                 const userData = await UserService.getUserWithWallet(userId);
-                if (!userData || !userData.wallet) {
+                if (!userData || !userData.wallet || !userData.user) {
                     return ctx.reply('❌ Wallet not found. Please try again later.');
                 }
 
                 const w = userData.wallet;
+                const dbUserId = userData.user._id;
+
+                // Check if user has deposit history
+                const depositHistory = await Transaction.find({
+                    userId: dbUserId,
+                    type: 'deposit',
+                    status: { $in: ['completed', 'pending'] }
+                }).limit(1);
+
+                const hasDepositHistory = depositHistory.length > 0;
                 const keyboard = { inline_keyboard: [] };
 
+                // If user has NO deposit history, check if they have 300 birr minimum
+                if (!hasDepositHistory) {
+                    if (w.main < 300) {
+                        // Block withdrawal - show error message
+                        keyboard.inline_keyboard.push([{ text: '❌ Insufficient Requirements', callback_data: 'back_to_menu' }]);
+                        keyboard.inline_keyboard.push([{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]);
+
+                        return ctx.reply(
+                            `🤑 Withdraw Funds:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n\n` +
+                            `❌ ያለምንም ተቀመጭ ታሪክ (deposit history) ለማውጣት ቢያንስ 300 ብር የmain wallet ተቀማጭዎ መድረስ አለበት።\n` +
+                            `በማንኛውም መጠን ማውጣት ለመጠየቅ እባክዎ መጀመሪያ ተቀማጭ ያድርጉ?\n` +
+                            `ይህን የምናደርገው የጭዋታውን መድረክ ፍትሃዊ ለማድረግ ነው።\n\n` +
+                            `💡 You need either:\n` +
+                            `• Reach 300 birr in main wallet, OR\n` +
+                            `• Make a deposit first to withdraw any amount`,
+                            { reply_markup: keyboard }
+                        );
+                    }
+                    // User has >= 300 birr but no deposit history - allow withdrawal
+                }
+
+                // Normal flow: user has deposit history OR has >= 300 birr with no deposit history
                 if (w.main >= 50) {
                     keyboard.inline_keyboard.push([{ text: '💰 Request Withdrawal', callback_data: 'request_withdrawal' }]);
                 } else {
@@ -630,6 +716,28 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
 
                     await ctx.answerCbQuery('✅ Withdrawal approved');
                     await ctx.reply(`✅ Withdrawal has been approved and processed.\n\n💰 Amount: ETB ${amountDisplay}\n👤 Approved by: ${adminNameDisplay}`);
+
+                    // Notify other admins about this action
+                    try {
+                        const transaction = await Transaction.findById(withdrawalId).populate('userId', 'firstName lastName phone telegramId');
+                        const user = transaction.userId;
+                        const userDisplay = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || 'Unknown' : 'Unknown';
+                        const destination = transaction.metadata?.destination || 'N/A';
+
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Withdrawal Approved\n\n` +
+                            `💰 Amount: ETB ${amountDisplay}\n` +
+                            `👤 User: ${userDisplay}\n` +
+                            `📱 Phone: ${user?.phone || 'N/A'}\n` +
+                            `🏦 Destination: ${destination}\n` +
+                            `✅ Approved by: ${adminNameDisplay}\n` +
+                            `📋 Transaction ID: ${withdrawalId}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
+                    } catch (notifyError) {
+                        console.error('Error notifying other admins:', notifyError);
+                    }
                 } else {
                     await ctx.answerCbQuery('❌ Failed to approve');
                     await ctx.reply('❌ Failed to approve withdrawal. Please try again.');
@@ -646,6 +754,10 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             const withdrawalId = ctx.match[1];
 
             try {
+                // Get admin info
+                const adminTelegramId = String(ctx.from.id);
+                const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
+
                 const apiBase = process.env.API_BASE_URL || 'http://localhost:3001';
                 const response = await fetch(`${apiBase}/admin/internal/withdrawals/${withdrawalId}/deny`, {
                     method: 'POST',
@@ -655,6 +767,29 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 if (response.ok) {
                     await ctx.answerCbQuery('❌ Withdrawal denied');
                     await ctx.reply('❌ Withdrawal has been denied.');
+
+                    // Notify other admins about this action
+                    try {
+                        const transaction = await Transaction.findById(withdrawalId).populate('userId', 'firstName lastName phone telegramId');
+                        const user = transaction.userId;
+                        const userDisplay = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || 'Unknown' : 'Unknown';
+                        const destination = transaction.metadata?.destination || 'N/A';
+                        const amount = transaction.amount || 0;
+
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Withdrawal Denied\n\n` +
+                            `💰 Amount: ETB ${amount.toLocaleString()}\n` +
+                            `👤 User: ${userDisplay}\n` +
+                            `📱 Phone: ${user?.phone || 'N/A'}\n` +
+                            `🏦 Destination: ${destination}\n` +
+                            `❌ Denied by: ${adminName}\n` +
+                            `📋 Transaction ID: ${withdrawalId}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
+                    } catch (notifyError) {
+                        console.error('Error notifying other admins:', notifyError);
+                    }
                 } else {
                     await ctx.answerCbQuery('❌ Failed to deny');
                     await ctx.reply('❌ Failed to deny withdrawal. Please try again.');
@@ -671,6 +806,10 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             if (!(await ensureAdmin(ctx))) return;
             const verificationId = ctx.match[1];
             try {
+                // Get admin info
+                const adminTelegramId = String(ctx.from.id);
+                const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
+
                 const apiBase = process.env.API_BASE_URL || 'http://localhost:3001';
                 const response = await fetch(`${apiBase}/sms-forwarder/approve/${verificationId}`, {
                     method: 'POST',
@@ -680,6 +819,29 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 if (response.ok) {
                     await ctx.answerCbQuery('✅ Deposit approved');
                     await ctx.reply('✅ Deposit has been approved and credited.');
+
+                    // Notify other admins about this action
+                    try {
+                        const DepositVerification = require('../models/DeposiitVerification');
+                        const verification = await DepositVerification.findById(verificationId)
+                            .populate('userId', 'firstName lastName phone telegramId');
+                        const user = verification.userId;
+                        const userDisplay = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || 'Unknown' : 'Unknown';
+                        const amount = verification.amount || 0;
+
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Deposit Approved\n\n` +
+                            `💰 Amount: ETB ${amount.toLocaleString()}\n` +
+                            `👤 User: ${userDisplay}\n` +
+                            `📱 Phone: ${user?.phone || 'N/A'}\n` +
+                            `✅ Approved by: ${adminName}\n` +
+                            `📋 Verification ID: ${verificationId}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
+                    } catch (notifyError) {
+                        console.error('Error notifying other admins:', notifyError);
+                    }
                 } else {
                     const err = await response.json().catch(() => ({}));
                     await ctx.answerCbQuery('❌ Failed to approve');
@@ -696,6 +858,10 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             if (!(await ensureAdmin(ctx))) return;
             const verificationId = ctx.match[1];
             try {
+                // Get admin info
+                const adminTelegramId = String(ctx.from.id);
+                const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
+
                 const apiBase = process.env.API_BASE_URL || 'http://localhost:3001';
                 const response = await fetch(`${apiBase}/sms-forwarder/reject/${verificationId}`, {
                     method: 'POST',
@@ -705,6 +871,31 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 if (response.ok) {
                     await ctx.answerCbQuery('❌ Deposit denied');
                     await ctx.reply('❌ Deposit has been denied.');
+
+                    // Notify other admins about this action
+                    try {
+                        const DepositVerification = require('../models/DeposiitVerification');
+                        const verification = await DepositVerification.findById(verificationId)
+                            .populate('userId', 'firstName lastName phone telegramId');
+                        const user = verification.userId;
+                        const userDisplay = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || 'Unknown' : 'Unknown';
+                        const amount = verification.amount || 0;
+                        const reason = verification.rejectionReason || 'Denied via Telegram';
+
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Deposit Denied\n\n` +
+                            `💰 Amount: ETB ${amount.toLocaleString()}\n` +
+                            `👤 User: ${userDisplay}\n` +
+                            `📱 Phone: ${user?.phone || 'N/A'}\n` +
+                            `❌ Denied by: ${adminName}\n` +
+                            `📝 Reason: ${reason}\n` +
+                            `📋 Verification ID: ${verificationId}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
+                    } catch (notifyError) {
+                        console.error('Error notifying other admins:', notifyError);
+                    }
                 } else {
                     const err = await response.json().catch(() => ({}));
                     await ctx.answerCbQuery('❌ Failed to deny');
@@ -845,6 +1036,8 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 // Handle broadcast mode for text messages
                 if (state && state.mode === 'broadcast' && isAdmin) {
                     adminStates.delete(adminId);
+                    const adminTelegramId = String(ctx.from.id);
+                    const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
                     try {
                         const targets = await getBroadcastTargets();
                         const options = buildBroadcastMarkup(ctx.message.text);
@@ -852,6 +1045,19 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                             await bot.telegram.sendMessage(id, ctx.message.text, options);
                         });
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins about broadcast
+                        const messagePreview = ctx.message.text.length > 100
+                            ? ctx.message.text.substring(0, 100) + '...'
+                            : ctx.message.text;
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent\n\n` +
+                            `📝 Message Preview: ${messagePreview}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     } catch (error) {
                         console.error('Broadcast error:', error);
                         await ctx.reply(`❌ Failed to broadcast: ${error.message || 'Unknown error'}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
@@ -862,10 +1068,24 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 // Handle caption for media
                 if (state && state.mode === 'await_caption_media' && isAdmin) {
                     adminStates.delete(adminId);
+                    const adminTelegramId = String(ctx.from.id);
+                    const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
                     try {
                         const result = await sendPendingMediaToAll(state.pending, ctx.message.text || '');
                         const { success, failed, total } = result;
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins about broadcast
+                        const mediaType = state.pending?.kind || 'media';
+                        const captionPreview = ctx.message.text ? (ctx.message.text.length > 100 ? ctx.message.text.substring(0, 100) + '...' : ctx.message.text) : 'No caption';
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent (${mediaType})\n\n` +
+                            `📝 Caption: ${captionPreview}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     } catch {
                         await ctx.reply('❌ Failed to broadcast.', { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
                     }
@@ -1035,6 +1255,9 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                             else if (error.error === 'INVALID_AMOUNT') errorMsg = '❌ Invalid amount. Minimum is ETB 50, maximum is ETB 10,000.';
                             else if (error.error === 'DESTINATION_REQUIRED') errorMsg = '❌ Destination information is required.';
                             else if (error.error === 'USER_NOT_FOUND') errorMsg = '❌ User not found. Please try again.';
+                            else if (error.error === 'NO_DEPOSIT_HISTORY_MIN_300') {
+                                errorMsg = error.message || '❌  ያለምንም ተቀመጭ ታሪክ (deposit history) ለማውጣት ቢያንስ 300 ብር የmain wallet ተቀማጭዎ መድረስ አለበት። በማንኛውም መጠን ማውጣት ለመጠየቅ እባክዎ መጀመሪያ ተቀማጭ ያድርጉ? ይህን የምናደርገው የጭዋታውን መድረክ ፍትሃዊ ለማድረግ ነው። ';
+                            }
                             else if (error.error === 'INTERNAL_ERROR') errorMsg = '❌ Internal server error. Please try again later.';
 
                             ctx.reply(errorMsg, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] } });
@@ -1155,6 +1378,8 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             if (!state || (state.mode !== 'broadcast' && state.mode !== 'await_caption_media')) return;
             const isAdmin = await isAdminByDB(adminId);
             if (!isAdmin) return;
+            const adminTelegramId = String(ctx.from.id);
+            const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
             try {
                 let targets = [];
                 targets = await getBroadcastTargets();
@@ -1170,6 +1395,17 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                         const options = buildBroadcastMarkup(caption);
                         const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendPhoto(id, fileId, options); });
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins
+                        const captionPreview = caption.length > 100 ? caption.substring(0, 100) + '...' : caption;
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent (photo)\n\n` +
+                            `📝 Caption: ${captionPreview || 'No caption'}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     }
                 } else if (ctx.message.video) {
                     const fileId = ctx.message.video.file_id;
@@ -1182,6 +1418,17 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                         const options = buildBroadcastMarkup(caption);
                         const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendVideo(id, fileId, options); });
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins
+                        const captionPreview = caption.length > 100 ? caption.substring(0, 100) + '...' : caption;
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent (video)\n\n` +
+                            `📝 Caption: ${captionPreview || 'No caption'}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     }
                 } else if (ctx.message.document) {
                     const fileId = ctx.message.document.file_id;
@@ -1194,21 +1441,59 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                         const options = buildBroadcastMarkup(caption);
                         const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendDocument(id, fileId, options); });
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins
+                        const captionPreview = caption.length > 100 ? caption.substring(0, 100) + '...' : caption;
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent (document)\n\n` +
+                            `📝 Caption: ${captionPreview || 'No caption'}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     }
                 } else if (ctx.message.audio) {
                     const fileId = ctx.message.audio.file_id;
                     const options = buildBroadcastMarkup('');
                     const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendAudio(id, fileId, options); });
                     await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                    // Notify other admins
+                    await notifyOtherAdmins(
+                        adminTelegramId,
+                        `👤 Admin Action: Broadcast Sent (audio)\n\n` +
+                        `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                        `📣 Broadcast by: ${adminName}\n` +
+                        `🕐 Time: ${new Date().toLocaleString()}`
+                    );
                 } else if (ctx.message.voice) {
                     const fileId = ctx.message.voice.file_id;
                     const options = buildBroadcastMarkup('');
                     const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendVoice(id, fileId, options); });
                     await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                    // Notify other admins
+                    await notifyOtherAdmins(
+                        adminTelegramId,
+                        `👤 Admin Action: Broadcast Sent (voice)\n\n` +
+                        `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                        `📣 Broadcast by: ${adminName}\n` +
+                        `🕐 Time: ${new Date().toLocaleString()}`
+                    );
                 } else if (ctx.message.sticker) {
                     const fileId = ctx.message.sticker.file_id;
                     const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendSticker(id, fileId); });
                     await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                    // Notify other admins
+                    await notifyOtherAdmins(
+                        adminTelegramId,
+                        `👤 Admin Action: Broadcast Sent (sticker)\n\n` +
+                        `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                        `📣 Broadcast by: ${adminName}\n` +
+                        `🕐 Time: ${new Date().toLocaleString()}`
+                    );
                 } else if (ctx.message.animation) {
                     const fileId = ctx.message.animation.file_id;
                     const caption = ctx.message.caption || '';
@@ -1220,6 +1505,17 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                         const options = buildBroadcastMarkup(caption);
                         const { success, failed, total } = await sendToAll(targets, async (id) => { await bot.telegram.sendAnimation(id, fileId, options); });
                         await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                        // Notify other admins
+                        const captionPreview = caption.length > 100 ? caption.substring(0, 100) + '...' : caption;
+                        await notifyOtherAdmins(
+                            adminTelegramId,
+                            `👤 Admin Action: Broadcast Sent (animation)\n\n` +
+                            `📝 Caption: ${captionPreview || 'No caption'}\n` +
+                            `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                            `📣 Broadcast by: ${adminName}\n` +
+                            `🕐 Time: ${new Date().toLocaleString()}`
+                        );
                     }
                 }
             } catch (e) {
@@ -1235,10 +1531,23 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             const state = adminStates.get(adminId);
             if (!state || state.mode !== 'await_caption_media') return;
             adminStates.delete(adminId);
+            const adminTelegramId = String(ctx.from.id);
+            const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
             try {
                 const result = await sendPendingMediaToAll(state.pending, '');
                 const { success, failed, total } = result;
                 await ctx.reply(`📣 Broadcast result: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+
+                // Notify other admins
+                const mediaType = state.pending?.kind || 'media';
+                await notifyOtherAdmins(
+                    adminTelegramId,
+                    `👤 Admin Action: Broadcast Sent (${mediaType})\n\n` +
+                    `📝 Caption: No caption\n` +
+                    `📊 Results: ✅ ${success} / ${total} delivered${failed ? `, ❌ ${failed} failed` : ''}\n` +
+                    `📣 Broadcast by: ${adminName}\n` +
+                    `🕐 Time: ${new Date().toLocaleString()}`
+                );
             } catch {
                 await ctx.reply('❌ Failed to broadcast.', { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
             }
