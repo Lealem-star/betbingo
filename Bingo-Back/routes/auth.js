@@ -123,7 +123,7 @@ router.post('/telegram/verify', async (req, res) => {
                 hasTelegramUser: !!telegramUser,
                 telegramId: telegramUser?.id
             });
-            
+
             if (!telegramUser) {
                 console.error('❌ INVALID_TELEGRAM_DATA - verification failed');
                 return res.status(400).json({ error: 'INVALID_TELEGRAM_DATA' });

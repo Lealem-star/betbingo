@@ -373,7 +373,7 @@ export function AuthProvider({ children }) {
                     userAgent: navigator.userAgent
                 });
 
-                // No hash bypasses - require proper Telegram WebApp initData
+                // No bypasses - require proper Telegram WebApp initData
                 // No test sessions - require real Telegram authentication
                 console.log('No Telegram initData found - authentication required');
 
