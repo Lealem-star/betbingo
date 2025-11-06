@@ -1007,12 +1007,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                     }
 
                     let message = `✅ Registration completed!\n\n📱 Phone: ${phoneDisplay}\n👤 Name: ${fullName}`;
-
-                    if (isNewRegistration) {
-                        message += `\n\n🎁 Welcome Bonus: You've been awarded 10 birr in your play wallet!\n\n🎮 You can now start playing!`;
-                    } else {
-                        message += `\n\n🎮 You can now start playing!`;
-                    }
+                    message += `\n\n🎮 You can now start playing!`;
 
                     ctx.reply(message, { reply_markup: { remove_keyboard: true } });
                 } catch (dbError) {

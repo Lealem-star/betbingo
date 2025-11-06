@@ -137,43 +137,7 @@ class UserService {
             user.isRegistered = true;
             await user.save();
 
-            // Give 10 birr welcome bonus to play wallet for new registrations
-            if (isFirstRegistration) {
-                try {
-                    const WalletService = require('./walletService');
-                    const wallet = await WalletService.getWallet(user._id);
-                    
-                    // Add 10 birr to play wallet
-                    await WalletService.updateBalance(user._id, { play: 10 });
-
-                    // Create transaction record
-                    const Transaction = require('../models/Transaction');
-                    const transaction = new Transaction({
-                        userId: user._id,
-                        type: 'registration_bonus',
-                        amount: 10,
-                        description: 'Welcome bonus: 10 birr added to play wallet',
-                        balanceBefore: {
-                            balance: wallet.balance,
-                            main: wallet.main,
-                            play: wallet.play,
-                            coins: wallet.coins
-                        },
-                        balanceAfter: {
-                            balance: wallet.balance,
-                            main: wallet.main,
-                            play: wallet.play + 10,
-                            coins: wallet.coins
-                        }
-                    });
-                    await transaction.save();
-
-                    console.log(`Welcome bonus added: User ${user._id} - 10 birr to play wallet`);
-                } catch (bonusError) {
-                    console.error('Error adding welcome bonus:', bonusError);
-                    // Don't fail registration if bonus fails
-                }
-            }
+            // No monetary welcome bonus awarded on first registration
 
             return { user, isNewRegistration: isFirstRegistration };
         } catch (error) {
