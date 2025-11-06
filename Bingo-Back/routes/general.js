@@ -26,6 +26,20 @@ router.get('/debug', (req, res) => {
     });
 });
 
+// GET /api/test - Test endpoint to verify server is accessible
+router.get('/test', (req, res) => {
+    res.json({
+        status: 'ok',
+        message: 'Backend server is accessible',
+        timestamp: new Date().toISOString(),
+        path: req.path,
+        method: req.method,
+        host: req.headers.host,
+        origin: req.headers.origin,
+        userAgent: req.headers['user-agent']
+    });
+});
+
 // GET /api/bingo/status
 router.get('/bingo/status', (req, res) => {
     res.json({

@@ -80,8 +80,10 @@ app.use('/sms-webhook', smsWebhookRoutes);
 app.use('/', generalRoutes);
 
 // Initialize database connection
-connectDB().catch(() => {
-    console.log('⚠️  MongoDB connection failed. The service requires a database.');
+connectDB().catch((error) => {
+    console.error('⚠️  MongoDB connection failed:', error.message);
+    // Don't exit - let the server start even if DB connection fails initially
+    // It will retry on actual database operations
 });
 
 // WebSocket server at /ws
@@ -925,14 +927,23 @@ server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌐 WebSocket available at ws://localhost:${PORT}/ws`);
 
+    // Signal PM2 that the app is ready
+    if (typeof process.send === 'function') {
+        process.send('ready');
+    }
+
     // Initialize rooms with registration phase active
     stakes.forEach(async (stake) => {
-        if (!rooms.has(stake)) {
-            rooms.set(stake, makeRoom(stake));
+        try {
+            if (!rooms.has(stake)) {
+                rooms.set(stake, makeRoom(stake));
+            }
+            const room = rooms.get(stake);
+            // Start registration immediately
+            await startRegistration(room);
+        } catch (error) {
+            console.error(`Error initializing room for stake ${stake}:`, error);
         }
-        const room = rooms.get(stake);
-        // Start registration immediately
-        await startRegistration(room);
     });
 });
 
