@@ -128,18 +128,26 @@ export function AuthProvider({ children }) {
                 
                 const hashParamsEarly = new URLSearchParams(window.location.hash.substring(1));
                 const searchParamsEarly = new URLSearchParams(window.location.search);
-                const initDataEarly = window?.Telegram?.WebApp?.initData ||
-                    hashParamsEarly.get('tgWebAppData') ||
-                    searchParamsEarly.get('tgWebAppData');
+                
+                // Get initData from various sources, handling empty strings
+                const initDataFromWebAppEarly = window?.Telegram?.WebApp?.initData;
+                const initDataFromHashEarly = hashParamsEarly.get('tgWebAppData');
+                const initDataFromSearchEarly = searchParamsEarly.get('tgWebAppData');
+                
+                // Use the first non-empty initData source
+                const initDataEarly = (initDataFromWebAppEarly && initDataFromWebAppEarly.trim()) ||
+                    (initDataFromHashEarly && initDataFromHashEarly.trim()) ||
+                    (initDataFromSearchEarly && initDataFromSearchEarly.trim()) ||
+                    null;
 
                 console.log('🔍 InitData sources checked:', {
-                    fromWebApp: !!window?.Telegram?.WebApp?.initData,
-                    fromHash: !!hashParamsEarly.get('tgWebAppData'),
-                    fromSearch: !!searchParamsEarly.get('tgWebAppData'),
+                    fromWebApp: !!initDataFromWebAppEarly && initDataFromWebAppEarly.trim() !== '',
+                    fromHash: !!initDataFromHashEarly && initDataFromHashEarly.trim() !== '',
+                    fromSearch: !!initDataFromSearchEarly && initDataFromSearchEarly.trim() !== '',
                     finalResult: !!initDataEarly
                 });
 
-                if (initDataEarly) {
+                if (initDataEarly && initDataEarly.trim() !== '') {
                     console.log('✅ Fresh Telegram initData detected, refreshing session...', {
                         initDataLength: initDataEarly.length,
                         source: window?.Telegram?.WebApp?.initData ? 'WebApp' : 
@@ -217,85 +225,77 @@ export function AuthProvider({ children }) {
                     }
                 }
             }
-            // Wait a bit for Telegram WebApp to initialize
+            // Wait for Telegram WebApp SDK to initialize (with polling)
+            let attempts = 0;
+            const maxAttempts = 10; // Wait up to 5 seconds (10 * 500ms)
+            while (attempts < maxAttempts && !window?.Telegram?.WebApp) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                attempts++;
+            }
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // If we're in Telegram but initData isn't ready, wait a bit more
+            if (window?.Telegram?.WebApp && !window?.Telegram?.WebApp?.initData) {
+                console.log('⚠️ Telegram WebApp detected but initData not ready, waiting...');
+                // Wait up to 3 more seconds for initData to populate
+                for (let i = 0; i < 6; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (window?.Telegram?.WebApp?.initData && window.Telegram.WebApp.initData.trim() !== '') {
+                        console.log('✅ initData populated after waiting');
+                        break;
+                    }
+                }
+            }
 
-
+            // Additional wait to ensure initData is populated
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Support both SDK initData and URL param fallback (tgWebAppData)
-
             // Check URL hash first, then search params, then WebApp initData
-
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
-
             const searchParams = new URLSearchParams(window.location.search);
-
-            const initData = window?.Telegram?.WebApp?.initData ||
-
-                hashParams.get('tgWebAppData') ||
-
-                searchParams.get('tgWebAppData');
-
-
+            
+            // Get initData from various sources, handling empty strings
+            const initDataFromWebApp = window?.Telegram?.WebApp?.initData;
+            const initDataFromHash = hashParams.get('tgWebAppData');
+            const initDataFromSearch = searchParams.get('tgWebAppData');
+            
+            // Use the first non-empty initData source
+            const initData = (initDataFromWebApp && initDataFromWebApp.trim()) ||
+                (initDataFromHash && initDataFromHash.trim()) ||
+                (initDataFromSearch && initDataFromSearch.trim()) ||
+                null;
 
             console.log('Telegram WebApp check:', {
-
                 hasTelegram: !!window?.Telegram,
-
                 hasWebApp: !!window?.Telegram?.WebApp,
-
                 initData: initData ? 'present' : 'missing',
-
                 initDataLength: initData?.length || 0,
-
                 urlParams: window.location.search,
-
                 urlHash: window.location.hash,
-
-                initDataFromWebApp: window?.Telegram?.WebApp?.initData,
-
-                initDataFromHash: hashParams.get('tgWebAppData'),
-
-                initDataFromSearch: searchParams.get('tgWebAppData'),
-
+                initDataFromWebApp: initDataFromWebApp,
+                initDataFromHash: initDataFromHash,
+                initDataFromSearch: initDataFromSearch,
                 fullInitData: initData,
-
                 telegramWebApp: window?.Telegram?.WebApp,
-
                 isExpanded: window?.Telegram?.WebApp?.isExpanded,
-
                 version: window?.Telegram?.WebApp?.version,
-
                 userAgent: navigator.userAgent,
-
-                isTelegramWebApp: window?.Telegram?.WebApp?.platform === 'web'
-
+                isTelegramWebApp: window?.Telegram?.WebApp?.platform === 'web',
+                platform: window?.Telegram?.WebApp?.platform,
+                initDataUnsafe: window?.Telegram?.WebApp?.initDataUnsafe
             });
-
-
 
             console.log('initData check result:', {
-
                 initData: initData,
-
                 initDataType: typeof initData,
-
                 initDataLength: initData?.length,
-
-                isEmpty: !initData,
-
+                isEmpty: !initData || initData.trim() === '',
                 isFalsy: !initData
-
             });
 
-
-
             // No bypasses - require proper Telegram authentication
-
-
-
-            if (!initData) {
+            // Check if initData is missing or empty
+            if (!initData || initData.trim() === '') {
 
                 console.error('No Telegram initData available - this should only happen when not accessed through Telegram');
 
