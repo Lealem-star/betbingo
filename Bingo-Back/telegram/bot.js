@@ -193,6 +193,108 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             }
         }
 
+        // Helper: generate report message for a given local-day (start inclusive, end exclusive)
+        async function generateDailyReportMessage(start, end) {
+            // Fetch stats
+            const gamesByFinished = await Game.find({
+                finishedAt: { $gte: start, $lt: end },
+                status: 'finished'
+            }).lean();
+            const gamesByCreated = await Game.find({
+                finishedAt: { $exists: false },
+                createdAt: { $gte: start, $lt: end },
+                status: 'finished'
+            }).lean();
+            const gameMap = new Map();
+            [...gamesByFinished, ...gamesByCreated].forEach(g => {
+                if (!gameMap.has(g.gameId)) gameMap.set(g.gameId, g);
+            });
+            const games = Array.from(gameMap.values());
+            const totalGames = games.length;
+            const totalRevenue = games.reduce((s, g) => s + (g.systemCut || 0), 0);
+
+            const deposits = await Transaction.find({
+                type: 'deposit',
+                createdAt: { $gte: start, $lt: end },
+                status: { $ne: 'failed' }
+            }).lean();
+            const totalDeposits = deposits.reduce((s, t) => s + (t.amount || 0), 0);
+
+            const withdrawals = await Transaction.find({
+                type: 'withdrawal',
+                status: 'completed',
+                $or: [
+                    { 'processedBy.processedAt': { $gte: start, $lt: end } },
+                    { 'processedBy.processedAt': null, updatedAt: { $gte: start, $lt: end } }
+                ],
+                'processedBy.adminId': { $exists: true, $ne: null }
+            }).lean();
+            const byAdmin = {};
+            for (const w of withdrawals) {
+                if (w.processedBy && w.processedBy.adminId) {
+                    const key = String(w.processedBy.adminId);
+                    byAdmin[key] = byAdmin[key] || {
+                        adminId: key,
+                        adminName: w.processedBy.adminName || 'Admin',
+                        adminTelegramId: w.processedBy.adminTelegramId,
+                        totalAmount: 0
+                    };
+                    byAdmin[key].totalAmount += (w.amount || 0);
+                }
+            }
+            const adminWithdrawals = Object.values(byAdmin).sort((a, b) => b.totalAmount - a.totalAmount);
+
+            // Format date title using local time
+            const displayDate = start.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const appreciationMessages = [
+                "🎉 Great work today! Your platform continues to grow! 🎉",
+                "🌟 Excellent performance! Keep up the amazing work! 🌟",
+                "💪 Outstanding results! You're building something incredible! 💪",
+                "🚀 Fantastic progress! The platform is thriving! 🚀",
+                "✨ Impressive achievements! Keep pushing forward! ✨",
+                "🏆 Congratulations on another successful day! 🏆"
+            ];
+            const randomAppreciation = appreciationMessages[Math.floor(Math.random() * appreciationMessages.length)];
+
+            let adminWithdrawalsSection = '';
+            if (adminWithdrawals.length > 0) {
+                adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n';
+                for (const admin of adminWithdrawals) {
+                    adminWithdrawalsSection += `👤 *${admin.adminName}:*\n   💰 ETB ${admin.totalAmount.toLocaleString()}\n\n`;
+                }
+            } else {
+                adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n   No withdrawals approved.\n\n';
+            }
+
+            const message = `📊 *Daily Achievement Report*
+${displayDate}
+
+━━━━━━━━━━━━━━━━━━━━
+📈 *Today's Statistics:*
+━━━━━━━━━━━━━━━━━━━━
+
+🎮 *Total Games:* ${totalGames.toLocaleString()}
+💰 *System Revenue:* ${totalRevenue.toLocaleString()} ETB
+💳 *Total Deposits:* ${totalDeposits.toLocaleString()} ETB
+${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
+${randomAppreciation}
+
+📊 *Breakdown:*
+• Games Played: ${totalGames}
+• Revenue Generated: ${totalRevenue.toLocaleString()} ETB
+• Deposits Received: ${totalDeposits.toLocaleString()} ETB
+
+Thank you for your dedication! 🙏`;
+
+            return message;
+        }
+
         bot.command('admin', async (ctx) => {
             if (!(await isAdminByDB(ctx.from.id))) { return ctx.reply('Unauthorized'); }
             const adminText = '🛠️ Admin Panel';
@@ -209,7 +311,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             console.log('Final admin URL:', adminUrl);
 
             const adminOpen = [{ text: '🌐 Open Admin Panel', web_app: { url: adminUrl } }];
-            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }]] } };
+            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }], [{ text: '📊 Daily Report', callback_data: 'admin_daily_report' }]] } };
 
             // Send admin panel with welcome image
             const photoPath = path.join(__dirname, '..', 'static', 'wellcome.jpg');
@@ -422,6 +524,37 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             ctx.reply('📖 How to Play Love Bingo:\n\n1️⃣ Select a bingo card\n2️⃣ Wait for numbers to be called\n3️⃣ Mark numbers on your card\n4️⃣ Call "BINGO!" when you win\n\n🎯 Win by getting 5 in a row (horizontal, vertical, or diagonal)\n\n💰 Prizes are shared among all winners!', { reply_markup: keyboard });
         });
 
+        // Admin: manual daily report trigger (optional date: YYYY-MM-DD)
+        bot.command('daily_report', async (ctx) => {
+            if (!(await isAdminByDB(ctx.from.id))) { return ctx.reply('Unauthorized'); }
+            try {
+                const parts = (ctx.message.text || '').trim().split(/\s+/);
+                let target = null;
+                if (parts[1]) {
+                    const d = new Date(parts[1]);
+                    if (!isNaN(d.getTime())) target = d;
+                }
+                // Build window [start, end) for target date; default yesterday
+                const todayMidnight = new Date();
+                todayMidnight.setHours(0, 0, 0, 0);
+                let start = new Date(todayMidnight);
+                if (target) {
+                    start = new Date(target);
+                    start.setHours(0, 0, 0, 0);
+                } else {
+                    start.setDate(start.getDate() - 1);
+                }
+                const end = new Date(start);
+                end.setDate(end.getDate() + 1);
+
+                const message = await generateDailyReportMessage(start, end);
+                await ctx.reply(message, { parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error('daily_report command error:', e);
+                await ctx.reply('❌ Failed to generate report.');
+            }
+        });
+
 
         bot.action('back_to_admin', async (ctx) => {
             if (!(await ensureAdmin(ctx))) return;
@@ -435,8 +568,28 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             }
 
             const adminOpen = [{ text: '🌐 Open Admin Panel', web_app: { url: adminUrl } }];
-            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }]] } };
+            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }], [{ text: '📊 Daily Report', callback_data: 'admin_daily_report' }]] } };
             await ctx.editMessageText(adminText, keyboard).catch(() => ctx.reply(adminText, keyboard));
+        });
+
+        // Admin inline: generate daily report for yesterday
+        bot.action('admin_daily_report', async (ctx) => {
+            if (!(await ensureAdmin(ctx))) return;
+            try {
+                // Yesterday window
+                const todayMidnight = new Date();
+                todayMidnight.setHours(0, 0, 0, 0);
+                const start = new Date(todayMidnight);
+                start.setDate(start.getDate() - 1);
+                const end = new Date(start);
+                end.setDate(end.getDate() + 1);
+                const message = await generateDailyReportMessage(start, end);
+                await ctx.answerCbQuery().catch(() => { });
+                await ctx.reply(message, { parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error('admin_daily_report error:', e);
+                await ctx.answerCbQuery('Failed to generate report', { show_alert: true }).catch(() => { });
+            }
         });
 
 
@@ -1649,27 +1802,29 @@ function setupDailyAdminNotifications(bot) {
     // Function to get daily statistics
     async function getDailyStats() {
         try {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
+            // Build yesterday's local-day window (assumes TZ is set to Africa/Addis_Ababa in env)
+            const todayLocalMidnight = new Date();
+            todayLocalMidnight.setHours(0, 0, 0, 0);
+            const start = new Date(todayLocalMidnight); // start of local "today"
+            start.setDate(start.getDate() - 1); // move to start of "yesterday"
+            const end = new Date(todayLocalMidnight); // end is start of "today"
 
             console.log('📊 Fetching daily stats for:', {
-                today: today.toISOString(),
-                tomorrow: tomorrow.toISOString()
+                start: start.toISOString(),
+                end: end.toISOString()
             });
 
             // Get today's games - check finishedAt first, fallback to createdAt
             // Games should have finishedAt set when they finish, but check both for reliability
             const todayGamesByFinished = await Game.find({
-                finishedAt: { $gte: today, $lt: tomorrow },
+                finishedAt: { $gte: start, $lt: end },
                 status: 'finished'
             }).lean();
 
             // Also check games that finished today but might use createdAt
             const todayGamesByCreated = await Game.find({
                 finishedAt: { $exists: false },
-                createdAt: { $gte: today, $lt: tomorrow },
+                createdAt: { $gte: start, $lt: end },
                 status: 'finished'
             }).lean();
 
@@ -1698,7 +1853,7 @@ function setupDailyAdminNotifications(bot) {
             // Status defaults to 'completed' but we'll include all deposits created today
             const todayDeposits = await Transaction.find({
                 type: 'deposit',
-                createdAt: { $gte: today, $lt: tomorrow },
+                createdAt: { $gte: start, $lt: end },
                 status: { $ne: 'failed' } // Exclude failed deposits
             }).lean();
 
@@ -1715,7 +1870,11 @@ function setupDailyAdminNotifications(bot) {
             const todayWithdrawals = await Transaction.find({
                 type: 'withdrawal',
                 status: 'completed',
-                'processedBy.processedAt': { $gte: today, $lt: tomorrow },
+                $or: [
+                    { 'processedBy.processedAt': { $gte: start, $lt: end } },
+                    // Fallback in case processedAt was not saved properly; use updatedAt window
+                    { 'processedBy.processedAt': null, updatedAt: { $gte: start, $lt: end } }
+                ],
                 'processedBy.adminId': { $exists: true, $ne: null }
             }).lean();
 
@@ -1745,7 +1904,8 @@ function setupDailyAdminNotifications(bot) {
                 totalRevenue,
                 totalDeposits,
                 adminWithdrawals,
-                date: today.toISOString().split('T')[0] // Format: YYYY-MM-DD
+                // Display the local date for the day being reported (yesterday)
+                date: start.toISOString().split('T')[0] // Format: YYYY-MM-DD
             };
         } catch (error) {
             console.error('Error fetching daily stats:', error);

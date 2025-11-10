@@ -145,7 +145,9 @@ class SmsForwarderService {
             ],
             // Reference/Transaction ID patterns (more specific first)
             reference: [
-                /\b(FT[0-9A-Z]{6,})\b/i, // CBE FT code
+                /id=([A-Z0-9]+)/i,  // CBE: "id=FT25242NR98315847959" or "id=ABC123"
+                /\b(FT[0-9A-Z]{10,})\b/i, // CBE FT code (longer pattern for CBE)
+                /\bFT\d+([A-Z0-9]+)/i, // CBE FT code variant
                 /\bref\s*no\s*[:\-]?\s*([A-Z0-9]+)/i, // Ref No ABC123
                 /\btxn\s*id\s*[:\-]?\s*([A-Z0-9]+)/i, // CBEBirr: "Txn ID CJS8X0WT0Y"
                 /\btransaction\s*id\s*[:\-]?\s*([A-Z0-9]+)/i, // Alternative: "Transaction ID ABC123"
@@ -189,15 +191,13 @@ class SmsForwarderService {
                 /transferred\s+ETB\s+[\d.]+?\s+to\s+([A-Za-z\s]+)\s+on/i,
                 /from\s+([A-Za-z\s]+)[,\s]/i  // credits: "from Name,"
             ],
-            // Account number patterns
+            // Account number patterns (CBE specific)
             accountNumber: [
-                /account\s+([\d\*]+)/i,  // allows masks like 1*********7959
-                /from\s+your\s+account\s+([\d\*]+)/i
-            ],
-            // Transaction reference patterns (CBE specific)
-            cbeReference: [
-                /id=([A-Z0-9]+)/i,  // "id=FT25242NR98315847959"
-                /FT\d+([A-Z0-9]+)/i
+                /account\s+no[:\s]*([\d\*]{10,})/i,  // "account no: 1*********7959" or "account 1000415847959"
+                /account[:\s]*([\d\*]{10,})/i,  // "account: 1000415847959" (CBE account numbers are usually 13 digits)
+                /from\s+your\s+account\s+([\d\*]+)/i,
+                /to\s+account\s+([\d\*]{10,})/i,  // "to account 1000415847959"
+                /account\s+([\d\*]{10,})/i  // Generic account pattern (10+ digits for CBE)
             ]
         };
 
@@ -293,21 +293,17 @@ class SmsForwarderService {
             }
         }
 
-        // Extract account number
+
+        // Extract account number (for CBE matching)
         for (const pattern of patterns.accountNumber) {
             const match = message.match(pattern);
             if (match) {
-                parsed.accountNumber = match[1];
-                break;
-            }
-        }
-
-        // Extract CBE-specific reference
-        for (const pattern of patterns.cbeReference) {
-            const match = message.match(pattern);
-            if (match) {
-                parsed.reference = match[1];
-                break;
+                // Normalize account number (remove masks, keep only digits)
+                const accountNum = match[1].replace(/\*/g, '').replace(/\D/g, '');
+                if (accountNum.length >= 10) {
+                    parsed.accountNumber = accountNum;
+                    break;
+                }
             }
         }
 
@@ -317,6 +313,28 @@ class SmsForwarderService {
     // Match user SMS with receiver SMS
     static async matchSMS(userSMS, receiverSMS) {
         try {
+            // CRITICAL SAFETY CHECK: Ensure SMS are from different sources
+            // This applies to ALL payment methods: Telebirr, CBEBirr, CBE, and others
+            // Matching is only allowed between 'user' and 'receiver' sources
+            if (userSMS.source === receiverSMS.source) {
+                const userPaymentMethod = userSMS.parsedData?.paymentMethod || 'unknown';
+                const receiverPaymentMethod = receiverSMS.parsedData?.paymentMethod || 'unknown';
+                const paymentMethod = userPaymentMethod !== 'unknown' ? userPaymentMethod : receiverPaymentMethod;
+                console.log(`⚠️ Skipping match: Both SMS are from same source (${userSMS.source}) for payment method: ${paymentMethod}`);
+                console.log(`   Matching requires different sources: user ↔ receiver`);
+                console.log(`   This validation applies to: Telebirr, CBEBirr, CBE, and all other payment methods`);
+                return {
+                    matches: {},
+                    criticalScore: 0,
+                    optionalScore: 0,
+                    matchScore: 0,
+                    totalCriteria: 0,
+                    confidence: 0,
+                    isVerified: false,
+                    reason: `Same source (${userSMS.source}) - matching not allowed for ${paymentMethod}. Requires user ↔ receiver.`
+                };
+            }
+
             const userParsed = userSMS.parsedData;
             const receiverParsed = receiverSMS.parsedData;
 
@@ -388,9 +406,19 @@ class SmsForwarderService {
                 matches.recipientMatch = userParsed.recipientName.toLowerCase() === receiverParsed.recipientName.toLowerCase();
             }
 
-            // NEW: Account number matching
+            // NEW: Account number matching (for CBE - handle masked accounts)
             if (userParsed.accountNumber && receiverParsed.accountNumber) {
-                matches.accountMatch = userParsed.accountNumber === receiverParsed.accountNumber;
+                // Account numbers are already normalized (digits only) from parsing
+                // But handle both normalized and raw formats
+                const userAccount = String(userParsed.accountNumber).replace(/\*/g, '').replace(/\D/g, '');
+                const receiverAccount = String(receiverParsed.accountNumber).replace(/\*/g, '').replace(/\D/g, '');
+                // Match if full match or last 4 digits match (common for masked accounts like 1*********7959)
+                if (userAccount === receiverAccount) {
+                    matches.accountMatch = true;
+                } else if (userAccount.length >= 4 && receiverAccount.length >= 4) {
+                    // Check if last 4 digits match (for masked accounts)
+                    matches.accountMatch = userAccount.slice(-4) === receiverAccount.slice(-4);
+                }
             }
 
             // Enhanced scoring with weighted criteria
@@ -405,52 +433,127 @@ class SmsForwarderService {
             const actualScore = (criticalScore * 2) + optionalScore;
             const confidence = totalPossibleScore > 0 ? (actualScore / totalPossibleScore) * 100 : 0;
 
-            // Stricter verification logic:
+            // Enhanced verification logic with special handling for different payment methods
+            // REQUIREMENT: SMS must be from different sources (user vs receiver) - checked at function start
             // - Amount MUST match (critical)
-            // - If BOTH SMS have references, they MUST match for auto-verification
-            // - If one or both lack references, allow time-based matching (within 15 min window)
-            // - Payment method matching is a bonus but not required (helps for mobile money like Telebirr/CBEBirr)
+            // - For mobile money (Telebirr/CBEBirr): References are critical if both have them, must match different sources
+            // - For bank transfers (CBE): Use account number, recipient name, or time-based matching, must match different sources
+            // - Payment method matching helps but is not always required
             const hasStrongReference = matches.referenceMatch;
             const hasStrongTime = matches.timeMatch;
             const bothHaveReferences = userParsed.reference && receiverParsed.reference;
             const isMobileMoney = (userParsed.paymentMethod === 'telebirr' || userParsed.paymentMethod === 'cbebirr') ||
-                                  (receiverParsed.paymentMethod === 'telebirr' || receiverParsed.paymentMethod === 'cbebirr');
-            
+                (receiverParsed.paymentMethod === 'telebirr' || receiverParsed.paymentMethod === 'cbebirr');
+            const isCBE = (userParsed.paymentMethod === 'cbe' || receiverParsed.paymentMethod === 'cbe');
+
+            // Verify sources are different (already checked at function start, but log for clarity)
+            const sourcesAreDifferent = userSMS.source !== receiverSMS.source;
+            if (!sourcesAreDifferent) {
+                // This should not happen due to early return, but log if it does
+                console.warn(`⚠️ WARNING: Matching attempted with same source (${userSMS.source}) - this should have been caught earlier`);
+            }
+
             let isVerified = false;
             if (matches.amountMatch) {
-                if (bothHaveReferences) {
-                    // When both have references, they MUST match (critical for all services including Telebirr/CBEBirr)
-                    isVerified = hasStrongReference;
+                if (isCBE) {
+                    // Special handling for CBE bank transfers - more lenient matching
+                    // CBE can auto-approve with: reference match, recipient name match, time match, or payment method + time
+                    // Account number match is NOT required but helps with confidence
+                    if (bothHaveReferences) {
+                        // If both have references, they should match for auto-approval
+                        isVerified = hasStrongReference;
+                    } else if (matches.recipientMatch && hasStrongTime) {
+                        // Recipient name + time match is strong for CBE
+                        isVerified = true;
+                    } else if (hasStrongTime && matches.paymentMethodMatch) {
+                        // Time match + payment method match for CBE (account number NOT required)
+                        isVerified = true;
+                    } else if (hasStrongTime) {
+                        // Time match alone is sufficient for CBE (most lenient - no account number or reference required)
+                        isVerified = true;
+                    }
+                    // Note: Account number match is optional and only adds to confidence, not required for auto-approval
+                } else if (isMobileMoney) {
+                    // For mobile money (Telebirr/CBEBirr): Strict matching with source validation
+                    // Sources are already validated to be different (user vs receiver)
+                    if (bothHaveReferences) {
+                        // When both have references, they MUST match (sources must be different)
+                        isVerified = hasStrongReference;
+                    } else {
+                        // When one or both lack references, allow time-based matching
+                        // Payment method matching helps but not always required
+                        // Sources must be different (already validated)
+                        isVerified = hasStrongTime;
+                    }
                 } else {
-                    // When one or both lack references, allow time-based matching
-                    // Payment method matching is logged but not required (helps with confidence)
+                    // For other payment methods: Default time-based matching
+                    // Sources must be different (already validated)
                     isVerified = hasStrongTime;
                 }
             }
 
             // Enhanced logging for debugging
+            const verificationReason = isCBE
+                ? (bothHaveReferences
+                    ? (isVerified ? 'CBE: reference match (sources: different)' : 'CBE: reference mismatch')
+                    : matches.recipientMatch && hasStrongTime
+                        ? 'CBE: recipient name + time match (sources: different)'
+                        : hasStrongTime && matches.paymentMethodMatch
+                            ? 'CBE: time + payment method match (sources: different)'
+                            : hasStrongTime
+                                ? 'CBE: time match (sources: different, account number not required)'
+                                : 'CBE: insufficient matching criteria')
+                : isMobileMoney
+                    ? (bothHaveReferences
+                        ? (isVerified ? 'Telebirr/CBEBirr: reference match (sources: different)' : 'Telebirr/CBEBirr: reference mismatch')
+                        : (isVerified ? 'Telebirr/CBEBirr: time match (sources: different)' : 'Telebirr/CBEBirr: time mismatch'))
+                    : (bothHaveReferences
+                        ? (isVerified ? 'reference match (sources: different)' : 'reference mismatch')
+                        : (isVerified ? 'time match (sources: different)' : 'time mismatch'));
+
             console.log(`🔍 SMS Matching Debug:`, {
                 userSMSId: userSMS._id?.toString()?.substring(0, 8),
                 receiverSMSId: receiverSMS._id?.toString()?.substring(0, 8),
+                userSource: userSMS.source,
+                receiverSource: receiverSMS.source,
+                sourcesDifferent: userSMS.source !== receiverSMS.source,
                 amountMatch: matches.amountMatch,
                 referenceMatch: matches.referenceMatch,
                 timeMatch: matches.timeMatch,
                 paymentMethodMatch: matches.paymentMethodMatch,
+                accountMatch: matches.accountMatch,
+                recipientMatch: matches.recipientMatch,
+                phoneMatch: matches.phoneMatch,
                 bothHaveReferences,
                 isMobileMoney,
+                isCBE,
                 userAmount: userParsed.amount,
                 receiverAmount: receiverParsed.amount,
                 userReference: userParsed.reference,
                 receiverReference: receiverParsed.reference,
                 userPaymentMethod: userParsed.paymentMethod,
                 receiverPaymentMethod: receiverParsed.paymentMethod,
+                userAccountNumber: userParsed.accountNumber ? '***' + String(userParsed.accountNumber).slice(-4) : null,
+                receiverAccountNumber: receiverParsed.accountNumber ? '***' + String(receiverParsed.accountNumber).slice(-4) : null,
+                userRecipientName: userParsed.recipientName,
+                receiverRecipientName: receiverParsed.recipientName,
                 userDatetime: userParsed.datetime,
                 receiverDatetime: receiverParsed.datetime,
                 isVerified,
-                verificationReason: bothHaveReferences 
-                    ? (isVerified ? 'reference match' : 'reference mismatch') 
-                    : (isVerified ? 'time match (+payment method match for mobile money)' : 'time mismatch'),
-                confidence: confidence.toFixed(1) + '%'
+                verificationReason,
+                confidence: confidence.toFixed(1) + '%',
+                sourceValidation: {
+                    required: true,
+                    validated: sourcesAreDifferent,
+                    message: sourcesAreDifferent
+                        ? '✅ Sources are different (required for all payment methods)'
+                        : '❌ Sources are the same (matching not allowed)'
+                },
+                note: isCBE
+                    ? 'CBE: Account number match is optional, not required for auto-approval. Sources must be different.'
+                    : isMobileMoney
+                        ? 'Telebirr/CBEBirr: Sources must be different (user vs receiver). References required if both present.'
+                        : 'Sources must be different (user vs receiver) for all payment methods.'
             });
 
             return {

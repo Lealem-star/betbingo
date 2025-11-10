@@ -11,6 +11,7 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 PORT: 3001,
+                TZ: 'Africa/Addis_Ababa',
                 BOT_TOKEN: '7879034950:AAFNKagUiLIBVRgmAPj9czto328dYh72TB8',
                 RUN_TELEGRAM_BOT: 'false',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
@@ -42,6 +43,7 @@ module.exports = {
             max_memory_restart: '512M',
             env: {
                 NODE_ENV: 'production',
+                TZ: 'Africa/Addis_Ababa',
                 BOT_TOKEN: '7879034950:AAFNKagUiLIBVRgmAPj9czto328dYh72TB8',
                 RUN_TELEGRAM_BOT: 'true',
                 WEBAPP_URL: 'https://fikirbingo.com',

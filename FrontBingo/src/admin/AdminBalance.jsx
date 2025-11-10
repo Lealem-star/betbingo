@@ -72,7 +72,7 @@ export default function AdminBalance() {
             </div>
 
             {/* Main Content Area */}
-            <div className="admin-card">
+            <div className="admin-card" style={{ '--table-cols': 3 }}>
 
                 {/* Table Header */}
                 <div className="admin-table-header">

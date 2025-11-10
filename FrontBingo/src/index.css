@@ -831,7 +831,7 @@ body {
 
 .admin-table-header {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--table-cols, 3), minmax(0, 1fr));
     gap: 0.5rem;
     /* Reduced gap */
     margin-bottom: 1.5rem;
@@ -843,7 +843,6 @@ body {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 .admin-table-header-item {
@@ -852,6 +851,10 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    min-width: 0;
 }
 
 .admin-table-content {
@@ -862,7 +865,7 @@ body {
 
 .admin-table-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(var(--table-cols, 3), minmax(0, 1fr));
     gap: 0.5rem;
     /* Reduced gap */
     padding: 0.75rem;
@@ -877,7 +880,6 @@ body {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 .admin-table-row:hover {
@@ -888,9 +890,9 @@ body {
     font-size: 0.75rem;
     /* Reduced font size */
     font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -983,11 +985,19 @@ body {
     font-size: 0.875rem;
     opacity: 0.8;
     margin-bottom: 0.5rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.4;
 }
 
 .admin-stats-value {
     font-size: 1.875rem;
     font-weight: 800;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.2;
 }
 
 .admin-stats-subtitle {
@@ -995,6 +1005,10 @@ body {
     font-size: 0.75rem;
     margin-top: 0.25rem;
     text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.4;
 }
 
 .admin-stats-value-amber {
@@ -1023,6 +1037,10 @@ body {
     padding: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .admin-stats-table-title {
@@ -1034,7 +1052,7 @@ body {
 
 .admin-stats-table-header {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(var(--stats-table-cols, 5), minmax(0, 1fr));
     gap: 0.5rem;
     margin-bottom: 1rem;
     padding: 0.75rem;
@@ -1046,6 +1064,11 @@ body {
     font-weight: 600;
     color: #f59e0b;
     font-size: 0.875rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    min-width: 0;
+    hyphens: auto;
 }
 
 .admin-stats-table-content {
@@ -1058,29 +1081,37 @@ body {
 
 .admin-stats-table-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(var(--stats-table-cols, 5), minmax(0, 1fr));
     gap: 0.5rem;
     padding: 0.75rem;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 0.875rem;
+    align-items: start;
 }
 
 .admin-stats-table-cell {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    overflow: visible;
+    min-width: 0;
+    line-height: 1.5;
 }
 
 .admin-stats-table-cell-center {
     text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .admin-stats-table-cell-right {
     text-align: right;
     font-weight: 500;
     color: #f59e0b;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .admin-stats-table-cell-mono {
