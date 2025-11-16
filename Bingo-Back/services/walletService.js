@@ -620,6 +620,57 @@ class WalletService {
             100: 50   // 50 birr for 100 invites
         };
     }
+
+    // Check if a user is a bot (by checking telegramId pattern)
+    static async isBotUser(userId) {
+        try {
+            const user = await User.findById(userId);
+            if (!user || !user.telegramId) {
+                return false;
+            }
+            // Bots have telegramId starting with "9000000000" (9 billion range)
+            // or contain "bot_user_" pattern
+            const telegramId = String(user.telegramId);
+            return telegramId.startsWith('9000000000') || telegramId.includes('bot_user_');
+        } catch (error) {
+            console.error('Error checking if user is bot:', error);
+            return false;
+        }
+    }
+
+    // Automatically fund a bot account
+    static async autoFundBot(userId, stake) {
+        try {
+            const wallet = await this.getWallet(userId);
+            const currentBalance = wallet.main || 0;
+            const minFunds = stake * 100; // Enough for 100 games
+            
+            if (currentBalance < minFunds) {
+                const neededFunds = minFunds - currentBalance;
+                const result = await this.updateBalance(userId, { main: neededFunds });
+                
+                // Create transaction record
+                const transaction = new Transaction({
+                    userId,
+                    type: 'admin_adjustment',
+                    amount: neededFunds,
+                    description: `Auto-fund bot: Added ${neededFunds} ETB (total: ${minFunds} ETB, enough for ~100 games)`,
+                    balanceBefore: result.balanceBefore,
+                    balanceAfter: result.balanceAfter
+                });
+                await transaction.save();
+                
+                console.log(`🤖 Auto-funded bot ${userId}: Added ${neededFunds} ETB (total: ${minFunds} ETB)`);
+                return { wallet: result.wallet, transaction, funded: true, amount: neededFunds };
+            } else {
+                console.log(`🤖 Bot ${userId} already has sufficient funds (${currentBalance} ETB)`);
+                return { wallet, funded: false, amount: 0 };
+            }
+        } catch (error) {
+            console.error('Error auto-funding bot:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = WalletService;
