@@ -245,6 +245,20 @@ async function startRegistration(room) {
         isWatchMode: false
     }, room);
 
+    // Proactively fund bots when registration opens
+    (async () => {
+        for (const [userId, player] of room.players) {
+            try {
+                const isBot = await WalletService.isBotUser(userId);
+                if (isBot) {
+                    await WalletService.autoFundBot(userId, room.stake);
+                }
+            } catch (error) {
+                console.error(`Error auto-funding bot ${userId} during registration:`, error.message);
+            }
+        }
+    })();
+
     setTimeout(async () => {
         if (room.phase === 'registration') {
             broadcast('registration_closed', { gameId: room.currentGameId }, room);

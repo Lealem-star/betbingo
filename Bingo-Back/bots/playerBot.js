@@ -109,7 +109,7 @@ class PlayerBot {
         this.ws.on('close', (code, reason) => {
             console.log(`🔌 WebSocket closed: ${code} - ${reason}`);
             this.gameState.isConnected = false;
-            
+
             if (code !== 1008 && this.reconnectAttempts < this.maxReconnectAttempts) {
                 this.reconnectAttempts++;
                 const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
@@ -169,11 +169,22 @@ class PlayerBot {
      * Select a random available card
      */
     selectRandomCard() {
+        if (this.gameState.phase !== 'registration') {
+            console.warn('⚠️  Cannot select card - not in registration phase');
+            return false;
+        }
+
         const availableCards = Array.from({ length: 100 }, (_, i) => i + 1)
             .filter(card => !this.gameState.takenCards.includes(card));
-        
+
         if (availableCards.length === 0) {
-            console.warn('⚠️  No available cards');
+            console.warn('⚠️  No available cards, will retry when registration updates');
+            // Retry after a short delay in case cards become available
+            setTimeout(() => {
+                if (this.gameState.phase === 'registration') {
+                    this.selectRandomCard();
+                }
+            }, 1000);
             return false;
         }
 
@@ -241,7 +252,7 @@ class PlayerBot {
      */
     handleMessage(message) {
         const { type, payload } = message;
-        
+
         // Log important events
         if (['game_started', 'game_finished', 'number_called', 'bingo_accepted'].includes(type)) {
             console.log(`📥 ${type}`, payload ? JSON.stringify(payload).substring(0, 150) : '');
@@ -255,7 +266,7 @@ class PlayerBot {
                 this.gameState.calledNumbers = payload.calledNumbers || [];
                 this.gameState.takenCards = payload.takenCards || [];
                 this.gameState.myCardNumber = payload.yourSelection;
-                
+
                 if (this.gameState.phase === 'registration' && !this.gameState.myCardNumber) {
                     setTimeout(() => this.selectRandomCard(), 1000);
                 }
@@ -269,9 +280,15 @@ class PlayerBot {
                 this.gameState.myCardNumber = null;
                 this.gameState.myCard = null;
                 this.gameState.calledNumbers = [];
-                
+
                 console.log(`📋 Registration open for game ${payload.gameId} (${payload.playersCount} players)`);
-                setTimeout(() => this.selectRandomCard(), 500);
+                // Add small random delay to avoid all bots selecting at once
+                const selectDelay = 300 + Math.random() * 700; // 300-1000ms
+                setTimeout(() => {
+                    if (this.gameState.phase === 'registration') {
+                        this.selectRandomCard();
+                    }
+                }, selectDelay);
                 break;
 
             case 'selection_confirmed':
@@ -283,7 +300,20 @@ class PlayerBot {
             case 'selection_rejected':
                 console.warn('⚠️  Card selection rejected:', payload.reason);
                 if (payload.reason === 'TAKEN') {
-                    setTimeout(() => this.selectRandomCard(), 500);
+                    // Update taken cards list if provided
+                    if (payload.takenCards) {
+                        this.gameState.takenCards = payload.takenCards;
+                    }
+                    // Retry with a small random delay to avoid collisions
+                    const retryDelay = 300 + Math.random() * 500; // 300-800ms
+                    setTimeout(() => {
+                        if (this.gameState.phase === 'registration') {
+                            this.selectRandomCard();
+                        }
+                    }, retryDelay);
+                } else if (payload.reason === 'NOT_IN_REGISTRATION') {
+                    // Wait for registration to open
+                    console.log('⏳ Waiting for registration to open...');
                 }
                 break;
 
@@ -295,7 +325,7 @@ class PlayerBot {
                 this.gameState.myCardNumber = payload.cardNumber;
                 this.gameState.calledNumbers = payload.calledNumbers || [];
                 this.stats.gamesPlayed++;
-                
+
                 console.log(`🎮 Game ${payload.gameId} started!`);
                 console.log(`   Card: ${payload.cardNumber}, Players: ${payload.playersCount}, Prize Pool: ${payload.prizePool || 0}`);
                 break;
@@ -306,7 +336,7 @@ class PlayerBot {
                     this.gameState.calledNumbers.push(newNumber);
                 }
                 process.stdout.write(`🔢 ${newNumber} `);
-                
+
                 if (this.checkForWin()) {
                     this.claimBingo();
                 }
@@ -316,8 +346,8 @@ class PlayerBot {
                 this.gameState.phase = 'announce';
                 console.log('\n🏁 Game finished!');
                 if (payload.winners && payload.winners.length > 0) {
-                    const isWinner = payload.winners.some(w => 
-                        String(w.userId) === String(this.gameState.myCardNumber) || 
+                    const isWinner = payload.winners.some(w =>
+                        String(w.userId) === String(this.gameState.myCardNumber) ||
                         w.cartelaNumber === this.gameState.myCardNumber
                     );
                     if (isWinner) {
@@ -327,6 +357,11 @@ class PlayerBot {
                     console.log('🏆 Winners:', payload.winners.map(w => w.name || `User ${w.userId}`));
                 }
                 console.log(`📊 Stats: ${this.stats.gamesPlayed} played, ${this.stats.gamesWon} won`);
+
+                // Reset state for next game
+                this.gameState.myCardNumber = null;
+                this.gameState.myCard = null;
+                this.gameState.calledNumbers = [];
                 break;
 
             case 'game_cancelled':
@@ -342,6 +377,10 @@ class PlayerBot {
 
             case 'registration_update':
                 this.gameState.takenCards = payload.takenCards || [];
+                // If we don't have a card selected yet, try to select one
+                if (this.gameState.phase === 'registration' && !this.gameState.myCardNumber) {
+                    setTimeout(() => this.selectRandomCard(), 200);
+                }
                 break;
 
             case 'error':
