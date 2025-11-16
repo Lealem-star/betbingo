@@ -97,6 +97,12 @@ async function generateTokensForBots() {
                     await WalletService.createWallet(user._id);
                     console.log(`   💰 Wallet created`);
                 }
+                
+                // Fund bot account with enough balance to play many games
+                const stake = getStakeForBot(i);
+                const initialFunds = stake * 100; // Enough for 100 games
+                await WalletService.updateBalance(user._id, { main: initialFunds });
+                console.log(`   💵 Funded with ${initialFunds} ETB (enough for ~100 games)`);
             } else {
                 // Update existing user with Ethiopian name
                 user.firstName = telegramUser.first_name;
@@ -104,6 +110,20 @@ async function generateTokensForBots() {
                 user.lastActive = new Date();
                 await user.save();
                 console.log(`✅ Updated user ${i}: ${user._id} (${user.firstName})`);
+                
+                // Ensure wallet exists and fund it
+                const stake = getStakeForBot(i);
+                const currentWallet = await WalletService.getWallet(user._id);
+                const currentBalance = currentWallet?.main || 0;
+                const minFunds = stake * 100; // Enough for 100 games
+                
+                if (currentBalance < minFunds) {
+                    const neededFunds = minFunds - currentBalance;
+                    await WalletService.updateBalance(user._id, { main: neededFunds });
+                    console.log(`   💵 Added ${neededFunds} ETB (total: ${minFunds} ETB)`);
+                } else {
+                    console.log(`   💵 Already funded (balance: ${currentBalance} ETB)`);
+                }
             }
 
             // Generate JWT token
