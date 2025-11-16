@@ -481,19 +481,6 @@ class SmsForwarderService {
             const actualScore = (criticalScore * 2) + optionalScore;
             const confidence = totalPossibleScore > 0 ? (actualScore / totalPossibleScore) * 100 : 0;
 
-            // Enhanced verification logic with special handling for different payment methods
-            // REQUIREMENT: SMS must be from different sources (user vs receiver) - checked at function start
-            // - Amount MUST match (critical)
-            // - For mobile money (Telebirr/CBEBirr): References are critical if both have them, must match different sources
-            // - For bank transfers (CBE): Use account number, recipient name, or time-based matching, must match different sources
-            // - Payment method matching helps but is not always required
-            const hasStrongReference = matches.referenceMatch;
-            const hasStrongTime = matches.timeMatch;
-            const bothHaveReferences = userParsed.reference && receiverParsed.reference;
-            const isMobileMoney = (userParsed.paymentMethod === 'telebirr' || userParsed.paymentMethod === 'cbebirr') ||
-                (receiverParsed.paymentMethod === 'telebirr' || receiverParsed.paymentMethod === 'cbebirr');
-            const isCBE = (userParsed.paymentMethod === 'cbe' || receiverParsed.paymentMethod === 'cbe');
-
             // Verify sources are different (already checked at function start, but log for clarity)
             const sourcesAreDifferent = userSMS.source !== receiverSMS.source;
             if (!sourcesAreDifferent) {
@@ -501,63 +488,36 @@ class SmsForwarderService {
                 console.warn(`⚠️ WARNING: Matching attempted with same source (${userSMS.source}) - this should have been caught earlier`);
             }
 
+            // STRICT AUTO-APPROVAL: Require ALL fields to match
+            // Amount, reference, datetime, and payment method must ALL be present and match
+            // Phone number is parsed but NOT required for matching (optional field)
             let isVerified = false;
             if (matches.amountMatch) {
-                if (isCBE) {
-                    // Special handling for CBE bank transfers - more lenient matching
-                    // CBE can auto-approve with: reference match, recipient name match, time match, or payment method + time
-                    // Account number match is NOT required but helps with confidence
-                    if (bothHaveReferences) {
-                        // If both have references, they should match for auto-approval
-                        isVerified = hasStrongReference;
-                    } else if (matches.recipientMatch && hasStrongTime) {
-                        // Recipient name + time match is strong for CBE
-                        isVerified = true;
-                    } else if (hasStrongTime && matches.paymentMethodMatch) {
-                        // Time match + payment method match for CBE (account number NOT required)
-                        isVerified = true;
-                    } else if (hasStrongTime) {
-                        // Time match alone is sufficient for CBE (most lenient - no account number or reference required)
-                        isVerified = true;
-                    }
-                    // Note: Account number match is optional and only adds to confidence, not required for auto-approval
-                } else if (isMobileMoney) {
-                    // For mobile money (Telebirr/CBEBirr): Strict matching with source validation
-                    // Sources are already validated to be different (user vs receiver)
-                    if (bothHaveReferences) {
-                        // When both have references, they MUST match (sources must be different)
-                        isVerified = hasStrongReference;
-                    } else {
-                        // When one or both lack references, allow time-based matching
-                        // Payment method matching helps but not always required
-                        // Sources must be different (already validated)
-                        isVerified = hasStrongTime;
-                    }
+                // Check if all required fields are present in both SMS
+                const userHasAllFields = userParsed.amount && userParsed.reference && userParsed.datetime && userParsed.paymentMethod;
+                const receiverHasAllFields = receiverParsed.amount && receiverParsed.reference && receiverParsed.datetime && receiverParsed.paymentMethod;
+                
+                if (userHasAllFields && receiverHasAllFields) {
+                    // All fields present - require ALL to match for auto-approval
+                    isVerified = matches.amountMatch && 
+                                 matches.referenceMatch && 
+                                 matches.timeMatch && 
+                                 matches.paymentMethodMatch;
                 } else {
-                    // For other payment methods: Default time-based matching
-                    // Sources must be different (already validated)
-                    isVerified = hasStrongTime;
+                    // Missing required fields - cannot auto-approve
+                    isVerified = false;
                 }
             }
 
             // Enhanced logging for debugging
-            const verificationReason = isCBE
-                ? (bothHaveReferences
-                    ? (isVerified ? 'CBE: reference match (sources: different)' : 'CBE: reference mismatch')
-                    : matches.recipientMatch && hasStrongTime
-                        ? 'CBE: recipient name + time match (sources: different)'
-                        : hasStrongTime && matches.paymentMethodMatch
-                            ? 'CBE: time + payment method match (sources: different)'
-                            : hasStrongTime
-                                ? 'CBE: time match (sources: different, account number not required)'
-                                : 'CBE: insufficient matching criteria')
-                : isMobileMoney
-                    ? (bothHaveReferences
-                        ? (isVerified ? 'Telebirr/CBEBirr: reference match (sources: different)' : 'Telebirr/CBEBirr: reference mismatch')
-                        : (isVerified ? 'Telebirr/CBEBirr: time match (sources: different)' : 'Telebirr/CBEBirr: time mismatch'))
-                    : (bothHaveReferences
-                        ? (isVerified ? 'reference match (sources: different)' : 'reference mismatch')
-                        : (isVerified ? 'time match (sources: different)' : 'time mismatch'));
+            const userHasAllFields = userParsed.amount && userParsed.reference && userParsed.datetime && userParsed.paymentMethod;
+            const receiverHasAllFields = receiverParsed.amount && receiverParsed.reference && receiverParsed.datetime && receiverParsed.paymentMethod;
+            
+            const verificationReason = isVerified
+                ? 'Auto-approved: All required fields match (amount, reference, datetime, payment method)'
+                : userHasAllFields && receiverHasAllFields
+                    ? 'Cannot auto-approve: Not all fields match (amount, reference, datetime, payment method must all match)'
+                    : 'Cannot auto-approve: Missing required fields (amount, reference, datetime, payment method must all be present)';
 
             console.log(`🔍 SMS Matching Debug:`, {
                 userSMSId: userSMS._id?.toString()?.substring(0, 8),
@@ -572,9 +532,8 @@ class SmsForwarderService {
                 accountMatch: matches.accountMatch,
                 recipientMatch: matches.recipientMatch,
                 phoneMatch: matches.phoneMatch,
-                bothHaveReferences,
-                isMobileMoney,
-                isCBE,
+                userHasAllFields,
+                receiverHasAllFields,
                 userAmount: userParsed.amount,
                 receiverAmount: receiverParsed.amount,
                 userReference: userParsed.reference,
@@ -597,11 +556,7 @@ class SmsForwarderService {
                         ? '✅ Sources are different (required for all payment methods)'
                         : '❌ Sources are the same (matching not allowed)'
                 },
-                note: isCBE
-                    ? 'CBE: Account number match is optional, not required for auto-approval. Sources must be different.'
-                    : isMobileMoney
-                        ? 'Telebirr/CBEBirr: Sources must be different (user vs receiver). References required if both present.'
-                        : 'Sources must be different (user vs receiver) for all payment methods.'
+                note: 'STRICT AUTO-APPROVAL: All fields (amount, reference, datetime, payment method) must be present and match. Phone number is optional.'
             });
 
             return {

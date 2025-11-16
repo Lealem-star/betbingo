@@ -1171,9 +1171,24 @@ Thank you for your dedication! 🙏`;
             ctx.reply(`💳 CBE Birr Deposit ቅደም ተከተል:\n\n📋 Agent Details:\n👤 Name: Lealem Meseret\n💳 CBE Birr: \`0934551781\`\n🏦 Bank: Commercial Bank of Ethiopia\n\n💡 Steps:\n1️⃣ Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2️⃣ Select "Send Money"\n3️⃣ Enter agent number: \`0934551781\`\n4️⃣ Enter amount: ETB ${amount}\n5️⃣ Send the transaction\n6️⃣ ከCBEBirr የሚደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ ሂሳብዎም ወዲያውኑ ይሞላል። \n Your wallet will be credited automatically!`, { reply_markup: { inline_keyboard: [[{ text: '📋 Copy Number', callback_data: 'copy_cbe' }], [{ text: '📱 ደረሰኝ ላክላክ', callback_data: 'send_receipt_cbe' }], [{ text: '🔙 Back to Deposit', callback_data: 'deposit' }]] } });
         });
 
-        bot.action('send_receipt_telebirr', (ctx) => { ctx.answerCbQuery('📱 Ready for Telebirr receipt...'); ctx.reply('📱 Send your Telebirr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!'); });
-        bot.action('send_receipt_commercial', (ctx) => { ctx.answerCbQuery('📱 Ready for Commercial Bank SMS...'); ctx.reply('📱 Send your Commercial Bank SMS receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!'); });
-        bot.action('send_receipt_cbe', (ctx) => { ctx.answerCbQuery('📱 Ready for CBE Birr receipt...'); ctx.reply('📱 Send your CBE Birr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ! \n\n✅ Your wallet will be credited automatically!'); });
+        bot.action('send_receipt_telebirr', (ctx) => {
+            const userId = String(ctx.from.id);
+            depositStates.set(userId, 'awaiting_receipt');
+            ctx.answerCbQuery('📱 Ready for Telebirr receipt...');
+            ctx.reply('📱 Send your Telebirr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!');
+        });
+        bot.action('send_receipt_commercial', (ctx) => {
+            const userId = String(ctx.from.id);
+            depositStates.set(userId, 'awaiting_receipt');
+            ctx.answerCbQuery('📱 Ready for Commercial Bank SMS...');
+            ctx.reply('📱 Send your Commercial Bank SMS receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!');
+        });
+        bot.action('send_receipt_cbe', (ctx) => {
+            const userId = String(ctx.from.id);
+            depositStates.set(userId, 'awaiting_receipt');
+            ctx.answerCbQuery('📱 Ready for CBE Birr receipt...');
+            ctx.reply('📱 Send your CBE Birr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ! \n\n✅ Your wallet will be credited automatically!');
+        });
 
         // Copy button handlers
         bot.action('copy_telebirr', (ctx) => {
@@ -1309,6 +1324,9 @@ Thank you for your dedication! 🙏`;
 
         // Track withdrawal states
         const withdrawalStates = new Map();
+
+        // Track deposit states (awaiting receipt)
+        const depositStates = new Map();
 
         bot.hears(/.*/, async (ctx) => {
             try {
@@ -1490,15 +1508,38 @@ Thank you for your dedication! 🙏`;
                         return ctx.reply('❌ Minimum deposit amount is 50 Birr. Please enter a valid amount.');
                     }
                 }
-                const parsed = parseReceipt(messageText);
-                if (!parsed) {
-                    // Log the message for debugging
-                    console.log('❌ Failed to parse SMS receipt:', {
-                        messagePreview: messageText.substring(0, 200),
-                        messageLength: messageText.length,
-                        userId: userId
-                    });
-                    return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 50).');
+                // Check if user is in deposit receipt flow
+                const depositState = depositStates.get(userId);
+                let parsed = null;
+
+                if (depositState === 'awaiting_receipt') {
+                    // User is in deposit flow - process receipt
+                    parsed = parseReceipt(messageText);
+                    if (!parsed) {
+                        // Log the message for debugging
+                        console.log('❌ Failed to parse SMS receipt:', {
+                            messagePreview: messageText.substring(0, 200),
+                            messageLength: messageText.length,
+                            userId: userId
+                        });
+                        // Close deposit session
+                        depositStates.delete(userId);
+                        return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 50).\n\n🔙 Session closed. Use /deposit to try again.', {
+                            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                        });
+                    }
+                } else {
+                    // NOT in deposit flow - check if it looks like a receipt
+                    parsed = parseReceipt(messageText);
+                    if (parsed) {
+                        // Looks like a receipt but deposit process is finished
+                        // Show "unknown text" message
+                        return ctx.reply('❓ Unknown text. What do you want?\n\n💡 If you want to make a deposit, use /deposit command.\n\n📋 Available commands:\n/deposit - Make a deposit\n/withdraw - Withdraw funds\n/balance - Check balance\n/play - Play game', {
+                            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                        });
+                    }
+                    // Not a receipt and not in deposit flow, continue normal flow
+                    return;
                 }
 
                 // Log successful parsing for debugging
@@ -1573,6 +1614,9 @@ Thank you for your dedication! 🙏`;
                             } catch { }
                         }
 
+                        // Close deposit session
+                        depositStates.delete(userId);
+
                         const statusText = result.isVerified ? 'verified' : 'pending review';
                         const nextStep = result.isVerified
                             ? '✅ Deposit matched and will be credited shortly.'
@@ -1584,6 +1628,9 @@ Thank you for your dedication! 🙏`;
                         throw new Error('Failed to process SMS');
                     }
                 } catch (error) {
+                    // Close deposit session on error
+                    depositStates.delete(userId);
+
                     console.error('❌ Dual SMS verification error:', {
                         message: error.message,
                         stack: error.stack,
@@ -1591,7 +1638,9 @@ Thank you for your dedication! 🙏`;
                         userId: user?._id,
                         hasPhone: !!user?.phone
                     });
-                    return ctx.reply('❌ Failed to process your SMS. Please try again or contact support.');
+                    return ctx.reply('❌ Failed to process your SMS. Please try again or contact support.\n\n🔙 Session closed. Use /deposit to try again.', {
+                        reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                    });
                 }
             } catch (error) {
                 console.error('SMS deposit error:', error);

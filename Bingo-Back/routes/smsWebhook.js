@@ -25,12 +25,36 @@ router.post('/webhook', async (req, res) => {
         }
 
         // Determine if this is from a user or receiver based on phone number or service name
-        // You'll need to configure which numbers and services are your agent identifiers
-        const agentNumbers = process.env.AGENT_PHONE_NUMBERS?.split(',') || [];
-        const agentServices = process.env.AGENT_SERVICES?.split(',') || [];
-        const isFromAgent = agentNumbers.includes(from) || agentServices.includes(from);
+        // The 'from' field can contain:
+        // - Phone numbers (e.g., "127" for short codes)
+        // - Service identifiers (e.g., "CBE", "CBEBirr", "Telebirr")
+        // Configuration from environment variables:
+        // - AGENT_PHONE_NUMBERS: Comma-separated phone numbers (e.g., "127,0934551781")
+        // - AGENT_SERVICES: Comma-separated service names (e.g., "CBE,CBEBirr,Telebirr")
+        const agentNumbers = (process.env.AGENT_PHONE_NUMBERS?.split(',') || []).map(n => n.trim());
+        const agentServices = (process.env.AGENT_SERVICES?.split(',') || []).map(s => s.trim().toLowerCase());
+        
+        // Case-insensitive matching for services, exact match for phone numbers
+        const fromLower = String(from).toLowerCase().trim();
+        const fromTrimmed = String(from).trim();
+        const isFromAgent = agentNumbers.includes(fromTrimmed) || 
+                           agentServices.includes(fromLower);
 
         const source = isFromAgent ? 'receiver' : 'user';
+        
+        // Log source determination for debugging
+        console.log('🔍 Source determination:', {
+            from,
+            fromTrimmed,
+            fromLower,
+            agentNumbers,
+            agentServices,
+            isFromAgent,
+            source,
+            matchedBy: isFromAgent 
+                ? (agentNumbers.includes(fromTrimmed) ? 'phone_number' : 'service_name')
+                : 'none'
+        });
 
         // Store the SMS
         // Robust timestamp parsing with fallback to now
