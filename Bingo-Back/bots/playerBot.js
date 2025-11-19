@@ -210,7 +210,7 @@ class PlayerBot {
             return false;
         }
 
-        const availableCards = Array.from({ length: 100 }, (_, i) => i + 1)
+        const availableCards = Array.from({ length: 400 }, (_, i) => i + 1)
             .filter(card => !this.gameState.takenCards.includes(card));
 
         if (availableCards.length === 0) {
@@ -313,7 +313,12 @@ class PlayerBot {
                 this.gameState.calledNumbers = [];
 
                 console.log(`📋 Registration open for game ${payload.gameId} (${payload.playersCount} players)`);
-                this.scheduleCardSelection();
+                // Ensure we're still connected and ready to select
+                if (this.gameState.isConnected) {
+                    this.scheduleCardSelection();
+                } else {
+                    console.warn('⚠️  Not connected, cannot select card');
+                }
                 break;
 
             case 'selection_confirmed':
@@ -383,7 +388,11 @@ class PlayerBot {
                 this.gameState.myCardNumber = null;
                 this.gameState.myCard = null;
                 this.gameState.calledNumbers = [];
+                this.gameState.takenCards = [];
                 this.clearSelectionTimeout();
+
+                // Wait for next registration to open - the server will send registration_open
+                console.log('⏳ Waiting for next registration to open...');
                 break;
 
             case 'game_cancelled':
