@@ -742,7 +742,12 @@ async function toAnnounce(room) {
 
     // Reset room after delay, then immediately start a new registration round
     setTimeout(async () => {
-        room.players.clear();
+        // Keep player connections but reset their per-game state
+        room.players.forEach(player => {
+            if (player) {
+                player.cartella = null;
+            }
+        });
         room.selectedPlayers.clear();
         room.cartellas.clear();
         room.calledNumbers = [];
