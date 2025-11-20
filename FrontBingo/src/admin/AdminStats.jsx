@@ -170,6 +170,7 @@ export default function AdminStats() {
             </div>
 
             {/* Top Inviters Table */}
+            {/* Top Inviters Table */}
             {inviteStats.topInviters.length > 0 && (
                 <div className="admin-stats-table-container" style={{ '--stats-table-cols': 3 }}>
                     <h3 className="admin-stats-table-title">Top Inviters</h3>
