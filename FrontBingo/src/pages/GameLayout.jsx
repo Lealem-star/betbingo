@@ -12,6 +12,7 @@ export default function GameLayout({
     stake,
     selectedCartela,
     onNavigate,
+    onResetToGame,
 }) {
     const { sessionId } = useAuth();
     const { showSuccess, showError, showWarning } = useToast();
@@ -612,7 +613,11 @@ export default function GameLayout({
                     {/* Leave Button */}
                     <button
                         onClick={() => {
-                            onNavigate?.('cartela-selection');
+                            if (typeof onResetToGame === 'function') {
+                                onResetToGame();
+                            } else {
+                                onNavigate?.('game', true);
+                            }
                         }}
                         className="action-button leave-button"
                     >

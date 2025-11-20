@@ -265,6 +265,7 @@ function AppContent() {
         return (
           <GameLayout
             onNavigate={handleNavigate}
+            onResetToGame={handleResetToGame}
             stake={selectedStake}
             selectedCartela={selectedCartela}
           />

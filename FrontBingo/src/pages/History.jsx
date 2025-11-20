@@ -8,32 +8,55 @@ export default function History({ onNavigate }) {
     const [transactions, setTransactions] = useState([]);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
 
     useEffect(() => {
         if (!sessionId) {
             console.log('No sessionId available for history fetch');
+            setLoading(false);
             return;
         }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort('timeout'), 12000);
+
         const fetchData = async () => {
             try {
                 console.log('Fetching history data with sessionId:', sessionId);
                 setLoading(true);
+                setError(null);
+
                 const [transactionsData, gamesData] = await Promise.all([
-                    apiFetch('/user/transactions', { sessionId }),
-                    apiFetch('/user/games', { sessionId })
+                    apiFetch('/user/transactions', { sessionId, signal: controller.signal }),
+                    apiFetch('/user/games', { sessionId, signal: controller.signal })
                 ]);
+
                 console.log('Transactions data received:', transactionsData);
                 console.log('Games data received:', gamesData);
-                setTransactions(transactionsData.transactions || []);
-                setGames(gamesData.games || []);
+
+                setTransactions(transactionsData?.transactions || []);
+                setGames(gamesData?.games || []);
             } catch (error) {
-                console.error('Failed to fetch history data:', error);
+                if (error?.name === 'AbortError') {
+                    console.error('History fetch timed out');
+                    setError('Request timed out. Please try again.');
+                } else {
+                    console.error('Failed to fetch history data:', error);
+                    setError('Unable to load your history right now.');
+                }
             } finally {
+                clearTimeout(timeoutId);
                 setLoading(false);
             }
         };
+
         fetchData();
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
     }, [sessionId]);
 
     const filteredTransactions = transactions.filter(transaction => {
@@ -73,6 +96,18 @@ export default function History({ onNavigate }) {
             </header>
 
             <main className="p-6 space-y-5">
+                {error && !loading && (
+                    <div className="rounded-2xl p-4 border border-red-500/30 bg-red-900/30 text-red-100 text-sm">
+                        <div>{error}</div>
+                        <button
+                            className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-red-600/80 text-white text-xs font-semibold"
+                            onClick={() => window.location.reload()}
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
+
                 {/* Stats cards */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="wallet-card">
