@@ -339,7 +339,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         const hasCredit = creditAvailable >= stake && totalBalance === 0; // Credit only if no balance
 
         if (!hasBalance && !hasCredit) {
-            const msg = `Insufficient balance and credit.\nYou need ${stake} ETB but have ${totalBalance} ETB balance and ${creditAvailable} ETB credit available.`;
+            const msg = `Insufficient balance and credit. You need ${stake} ETB but have ${totalBalance} ETB balance and ${creditAvailable} ETB credit available.`;
             showError(msg);
             setCenterMessage(msg);
             setTimeout(() => setCenterMessage(null), 3000);
@@ -636,17 +636,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
     return (
         <div className="app-container relative">
-            {/* Center message overlay for important alerts (e.g., insufficient balance) */}
-            {centerMessage && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 max-w-sm w-[90%] text-center">
-                        <div className="text-3xl mb-2">⚠️</div>
-                        <div className="text-gray-900 text-sm font-semibold whitespace-pre-line">
-                            {centerMessage}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <header className="p-4 mb-6">
                 {/* Top Row: Back and Refresh buttons */}
@@ -711,6 +700,18 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             </header>
 
             <main className="p-4 mt-2">
+                {/* Insufficient Balance Notification */}
+                {centerMessage && (
+                    <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
+                        <div className="flex items-center gap-2 text-red-300">
+                            <span className="text-lg">⚠️</span>
+                            <div className="text-sm font-semibold">
+                                {centerMessage}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Status Message */}
                 {gameState.phase === 'waiting' && (
                     <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500 rounded-lg">

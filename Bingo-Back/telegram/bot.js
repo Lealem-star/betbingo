@@ -273,7 +273,22 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             });
             const games = Array.from(gameMap.values());
             const totalGames = games.length;
+            
+            // Calculate total players (unique players across all games)
+            const uniquePlayerIds = new Set();
+            games.forEach(game => {
+                if (game.players && Array.isArray(game.players)) {
+                    game.players.forEach(player => {
+                        if (player.userId) {
+                            uniquePlayerIds.add(player.userId.toString());
+                        }
+                    });
+                }
+            });
+            const totalPlayers = uniquePlayerIds.size;
+            
             const totalRevenue = games.reduce((s, g) => s + (g.systemCut || 0), 0);
+            const totalPrizes = games.reduce((s, g) => s + (g.totalPrizes || 0), 0);
 
             const deposits = await Transaction.find({
                 type: 'deposit',
@@ -281,6 +296,23 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 status: { $ne: 'failed' }
             }).lean();
             const totalDeposits = deposits.reduce((s, t) => s + (t.amount || 0), 0);
+            
+            // Get new users registered
+            const User = require('../models/User');
+            const newUsers = await User.find({
+                registrationDate: { $gte: start, $lt: end },
+                isRegistered: true
+            }).lean();
+            const totalNewUsers = newUsers.length;
+            
+            // Get pending withdrawal requests
+            const pendingWithdrawals = await Transaction.find({
+                type: 'withdrawal',
+                status: 'pending',
+                createdAt: { $gte: start, $lt: end }
+            }).lean();
+            const totalPendingWithdrawals = pendingWithdrawals.length;
+            const totalPendingWithdrawalAmount = pendingWithdrawals.reduce((sum, t) => sum + (t.amount || 0), 0);
 
             const withdrawals = await Transaction.find({
                 type: 'withdrawal',
@@ -342,15 +374,23 @@ ${displayDate}
 ━━━━━━━━━━━━━━━━━━━━
 
 🎮 *Total Games:* ${totalGames.toLocaleString()}
+👥 *Total Players:* ${totalPlayers.toLocaleString()}
 💰 *System Revenue:* ${totalRevenue.toLocaleString()} ETB
+🏆 *Total Prizes:* ${totalPrizes.toLocaleString()} ETB
 💳 *Total Deposits:* ${totalDeposits.toLocaleString()} ETB
+👤 *New Users:* ${totalNewUsers.toLocaleString()}
+⏳ *Pending Withdrawals:* ${totalPendingWithdrawals} (${totalPendingWithdrawalAmount.toLocaleString()} ETB)
 ${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
 ${randomAppreciation}
 
 📊 *Breakdown:*
 • Games Played: ${totalGames}
+• Unique Players: ${totalPlayers}
 • Revenue Generated: ${totalRevenue.toLocaleString()} ETB
+• Prizes Distributed: ${totalPrizes.toLocaleString()} ETB
 • Deposits Received: ${totalDeposits.toLocaleString()} ETB
+• New Registrations: ${totalNewUsers}
+• Pending Withdrawals: ${totalPendingWithdrawals} (${totalPendingWithdrawalAmount.toLocaleString()} ETB)
 
 Thank you for your dedication! 🙏`;
 
@@ -617,6 +657,86 @@ Thank you for your dedication! 🙏`;
             }
         });
 
+        // Admin: manual weekly report trigger
+        bot.command('weekly_report', async (ctx) => {
+            if (!(await isAdminByDB(ctx.from.id))) { return ctx.reply('Unauthorized'); }
+            try {
+                const todayMidnight = new Date();
+                todayMidnight.setHours(0, 0, 0, 0);
+                const end = new Date(todayMidnight);
+                const start = new Date(todayMidnight);
+                start.setDate(start.getDate() - 7); // Last 7 days
+
+                // Use the weekly stats function
+                const stats = await getWeeklyStats();
+                
+                const startDateObj = new Date(stats.startDate);
+                const endDateObj = new Date(stats.endDate);
+                const formattedStartDate = startDateObj.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const formattedEndDate = endDateObj.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+
+                const appreciationMessages = [
+                    "🎉 Outstanding week! Your platform is thriving! 🎉",
+                    "🌟 Incredible performance this week! Keep it up! 🌟",
+                    "💪 Amazing results! You're building something special! 💪",
+                    "🚀 Phenomenal progress! The platform is growing strong! 🚀",
+                    "✨ Exceptional achievements! Keep pushing forward! ✨",
+                    "🏆 Congratulations on a fantastic week! 🏆"
+                ];
+                const randomAppreciation = appreciationMessages[Math.floor(Math.random() * appreciationMessages.length)];
+
+                let adminWithdrawalsSection = '';
+                if (stats.adminWithdrawals && stats.adminWithdrawals.length > 0) {
+                    adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n';
+                    for (const admin of stats.adminWithdrawals) {
+                        adminWithdrawalsSection += `👤 *${admin.adminName}:*\n   💰 ETB ${admin.totalAmount.toLocaleString()}\n\n`;
+                    }
+                } else {
+                    adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n   No withdrawals approved this week.\n\n';
+                }
+
+                const message = `📊 *Weekly Achievement Report*
+${formattedStartDate} - ${formattedEndDate}
+
+━━━━━━━━━━━━━━━━━━━━
+📈 *This Week's Statistics:*
+━━━━━━━━━━━━━━━━━━━━
+
+🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
+👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
+💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🏆 *Total Prizes:* ${stats.totalPrizes.toLocaleString()} ETB
+💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
+👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
+⏳ *Pending Withdrawals:* ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
+${randomAppreciation}
+
+📊 *Weekly Breakdown:*
+• Games Played: ${stats.totalGames}
+• Unique Players: ${stats.totalPlayers}
+• Revenue Generated: ${stats.totalRevenue.toLocaleString()} ETB
+• Prizes Distributed: ${stats.totalPrizes.toLocaleString()} ETB
+• Deposits Received: ${stats.totalDeposits.toLocaleString()} ETB
+• New Registrations: ${stats.totalNewUsers}
+• Pending Withdrawals: ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+
+Thank you for your dedication! 🙏`;
+
+                await ctx.reply(message, { parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error('weekly_report command error:', e);
+                await ctx.reply('❌ Failed to generate weekly report.');
+            }
+        });
+
 
         bot.action('back_to_admin', async (ctx) => {
             if (!(await ensureAdmin(ctx))) return;
@@ -630,7 +750,7 @@ Thank you for your dedication! 🙏`;
             }
 
             const adminOpen = [{ text: '🌐 Open Admin Panel', web_app: { url: adminUrl } }];
-            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }], [{ text: '📊 Daily Report', callback_data: 'admin_daily_report' }]] } };
+            const keyboard = { reply_markup: { inline_keyboard: [adminOpen, [{ text: '📣 Broadcast', callback_data: 'admin_broadcast' }], [{ text: '📊 Daily Report', callback_data: 'admin_daily_report' }], [{ text: '📅 Weekly Report', callback_data: 'admin_weekly_report' }]] } };
             await ctx.editMessageText(adminText, keyboard).catch(() => ctx.reply(adminText, keyboard));
         });
 
@@ -651,6 +771,91 @@ Thank you for your dedication! 🙏`;
             } catch (e) {
                 console.error('admin_daily_report error:', e);
                 await ctx.answerCbQuery('Failed to generate report', { show_alert: true }).catch(() => { });
+            }
+        });
+
+        // Admin inline: generate weekly report
+        bot.action('admin_weekly_report', async (ctx) => {
+            if (!(await ensureAdmin(ctx))) return;
+            try {
+                const todayMidnight = new Date();
+                todayMidnight.setHours(0, 0, 0, 0);
+                const end = new Date(todayMidnight);
+                const start = new Date(todayMidnight);
+                start.setDate(start.getDate() - 7);
+
+                // Use the weekly stats function (need to access it from the closure)
+                // We'll need to make getWeeklyStats accessible or duplicate the logic
+                // For now, let's use the command handler logic
+                await ctx.answerCbQuery('Generating weekly report...').catch(() => { });
+                
+                // Call the weekly report command handler logic
+                const stats = await getWeeklyStats();
+                
+                const startDateObj = new Date(stats.startDate);
+                const endDateObj = new Date(stats.endDate);
+                const formattedStartDate = startDateObj.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const formattedEndDate = endDateObj.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+
+                const appreciationMessages = [
+                    "🎉 Outstanding week! Your platform is thriving! 🎉",
+                    "🌟 Incredible performance this week! Keep it up! 🌟",
+                    "💪 Amazing results! You're building something special! 💪",
+                    "🚀 Phenomenal progress! The platform is growing strong! 🚀",
+                    "✨ Exceptional achievements! Keep pushing forward! ✨",
+                    "🏆 Congratulations on a fantastic week! 🏆"
+                ];
+                const randomAppreciation = appreciationMessages[Math.floor(Math.random() * appreciationMessages.length)];
+
+                let adminWithdrawalsSection = '';
+                if (stats.adminWithdrawals && stats.adminWithdrawals.length > 0) {
+                    adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n';
+                    for (const admin of stats.adminWithdrawals) {
+                        adminWithdrawalsSection += `👤 *${admin.adminName}:*\n   💰 ETB ${admin.totalAmount.toLocaleString()}\n\n`;
+                    }
+                } else {
+                    adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n   No withdrawals approved this week.\n\n';
+                }
+
+                const message = `📊 *Weekly Achievement Report*
+${formattedStartDate} - ${formattedEndDate}
+
+━━━━━━━━━━━━━━━━━━━━
+📈 *This Week's Statistics:*
+━━━━━━━━━━━━━━━━━━━━
+
+🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
+👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
+💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🏆 *Total Prizes:* ${stats.totalPrizes.toLocaleString()} ETB
+💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
+👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
+⏳ *Pending Withdrawals:* ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
+${randomAppreciation}
+
+📊 *Weekly Breakdown:*
+• Games Played: ${stats.totalGames}
+• Unique Players: ${stats.totalPlayers}
+• Revenue Generated: ${stats.totalRevenue.toLocaleString()} ETB
+• Prizes Distributed: ${stats.totalPrizes.toLocaleString()} ETB
+• Deposits Received: ${stats.totalDeposits.toLocaleString()} ETB
+• New Registrations: ${stats.totalNewUsers}
+• Pending Withdrawals: ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+
+Thank you for your dedication! 🙏`;
+
+                await ctx.reply(message, { parse_mode: 'Markdown' });
+            } catch (e) {
+                console.error('admin_weekly_report error:', e);
+                await ctx.answerCbQuery('Failed to generate weekly report', { show_alert: true }).catch(() => { });
             }
         });
 
@@ -1915,6 +2120,140 @@ Thank you for your dedication! 🙏`;
     } catch { }
 }
 
+// Helper function to get weekly stats (accessible to both command handlers and notification system)
+async function getWeeklyStats() {
+    try {
+        // Build last week's window (7 days ago to today)
+        const todayLocalMidnight = new Date();
+        todayLocalMidnight.setHours(0, 0, 0, 0);
+        const end = new Date(todayLocalMidnight); // end is start of "today"
+        const start = new Date(todayLocalMidnight);
+        start.setDate(start.getDate() - 7); // 7 days ago
+
+        console.log('📊 Fetching weekly stats for:', {
+            start: start.toISOString(),
+            end: end.toISOString()
+        });
+
+        // Get games from the week
+        const weekGamesByFinished = await Game.find({
+            finishedAt: { $gte: start, $lt: end },
+            status: 'finished'
+        }).lean();
+
+        const weekGamesByCreated = await Game.find({
+            finishedAt: { $exists: false },
+            createdAt: { $gte: start, $lt: end },
+            status: 'finished'
+        }).lean();
+
+        const gameMap = new Map();
+        [...weekGamesByFinished, ...weekGamesByCreated].forEach(game => {
+            if (!gameMap.has(game.gameId)) {
+                gameMap.set(game.gameId, game);
+            }
+        });
+        const weekGames = Array.from(gameMap.values());
+
+        // Calculate statistics
+        const totalGames = weekGames.length;
+        
+        const uniquePlayerIds = new Set();
+        weekGames.forEach(game => {
+            if (game.players && Array.isArray(game.players)) {
+                game.players.forEach(player => {
+                    if (player.userId) {
+                        uniquePlayerIds.add(player.userId.toString());
+                    }
+                });
+            }
+        });
+        const totalPlayers = uniquePlayerIds.size;
+
+        const totalRevenue = weekGames.reduce((sum, game) => sum + (game.systemCut || 0), 0);
+        const totalPrizes = weekGames.reduce((sum, game) => sum + (game.totalPrizes || 0), 0);
+
+        const weekDeposits = await Transaction.find({
+            type: 'deposit',
+            createdAt: { $gte: start, $lt: end },
+            status: { $ne: 'failed' }
+        }).lean();
+        const totalDeposits = weekDeposits.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const newUsers = await User.find({
+            registrationDate: { $gte: start, $lt: end },
+            isRegistered: true
+        }).lean();
+        const totalNewUsers = newUsers.length;
+
+        const pendingWithdrawals = await Transaction.find({
+            type: 'withdrawal',
+            status: 'pending',
+            createdAt: { $gte: start, $lt: end }
+        }).lean();
+        const totalPendingWithdrawals = pendingWithdrawals.length;
+        const totalPendingWithdrawalAmount = pendingWithdrawals.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const weekWithdrawals = await Transaction.find({
+            type: 'withdrawal',
+            status: 'completed',
+            $or: [
+                { 'processedBy.processedAt': { $gte: start, $lt: end } },
+                { 'processedBy.processedAt': null, updatedAt: { $gte: start, $lt: end } }
+            ],
+            'processedBy.adminId': { $exists: true, $ne: null }
+        }).lean();
+
+        const withdrawalsByAdmin = {};
+        for (const withdrawal of weekWithdrawals) {
+            if (withdrawal.processedBy && withdrawal.processedBy.adminId) {
+                const adminId = withdrawal.processedBy.adminId.toString();
+                if (!withdrawalsByAdmin[adminId]) {
+                    withdrawalsByAdmin[adminId] = {
+                        adminId: adminId,
+                        adminName: withdrawal.processedBy.adminName || 'Admin',
+                        adminTelegramId: withdrawal.processedBy.adminTelegramId,
+                        totalAmount: 0
+                    };
+                }
+                withdrawalsByAdmin[adminId].totalAmount += (withdrawal.amount || 0);
+            }
+        }
+
+        const adminWithdrawals = Object.values(withdrawalsByAdmin)
+            .sort((a, b) => b.totalAmount - a.totalAmount);
+
+        return {
+            totalGames,
+            totalPlayers,
+            totalRevenue,
+            totalPrizes,
+            totalDeposits,
+            totalNewUsers,
+            totalPendingWithdrawals,
+            totalPendingWithdrawalAmount,
+            adminWithdrawals,
+            startDate: start.toISOString().split('T')[0],
+            endDate: end.toISOString().split('T')[0]
+        };
+    } catch (error) {
+        console.error('Error fetching weekly stats:', error);
+        return {
+            totalGames: 0,
+            totalPlayers: 0,
+            totalRevenue: 0,
+            totalPrizes: 0,
+            totalDeposits: 0,
+            totalNewUsers: 0,
+            totalPendingWithdrawals: 0,
+            totalPendingWithdrawalAmount: 0,
+            adminWithdrawals: [],
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0]
+        };
+    }
+}
+
 // Daily Admin Achievement Notification System
 function setupDailyAdminNotifications(bot) {
     // Function to get all admin telegram IDs
@@ -1976,9 +2315,27 @@ function setupDailyAdminNotifications(bot) {
             // Calculate total games
             const totalGames = todayGames.length;
 
+            // Calculate total players (unique players across all games)
+            const uniquePlayerIds = new Set();
+            todayGames.forEach(game => {
+                if (game.players && Array.isArray(game.players)) {
+                    game.players.forEach(player => {
+                        if (player.userId) {
+                            uniquePlayerIds.add(player.userId.toString());
+                        }
+                    });
+                }
+            });
+            const totalPlayers = uniquePlayerIds.size;
+
             // Calculate total system revenue (systemCut)
             const totalRevenue = todayGames.reduce((sum, game) => {
                 return sum + (game.systemCut || 0);
+            }, 0);
+
+            // Calculate total prizes distributed
+            const totalPrizes = todayGames.reduce((sum, game) => {
+                return sum + (game.totalPrizes || 0);
             }, 0);
 
             console.log('📊 Total revenue:', totalRevenue);
@@ -1998,7 +2355,24 @@ function setupDailyAdminNotifications(bot) {
                 return sum + (transaction.amount || 0);
             }, 0);
 
-            console.log('📊 Total deposits:', totalDeposits);
+            // Get pending withdrawal requests
+            const pendingWithdrawals = await Transaction.find({
+                type: 'withdrawal',
+                status: 'pending',
+                createdAt: { $gte: start, $lt: end }
+            }).lean();
+            const totalPendingWithdrawals = pendingWithdrawals.length;
+            const totalPendingWithdrawalAmount = pendingWithdrawals.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+            // Get new users registered
+            const newUsers = await User.find({
+                registrationDate: { $gte: start, $lt: end },
+                isRegistered: true
+            }).lean();
+            const totalNewUsers = newUsers.length;
+
+            // Get active users (users who played at least one game)
+            const activeUsers = uniquePlayerIds.size; // Already calculated above
 
             // Get today's withdrawal approvals by admin
             const todayWithdrawals = await Transaction.find({
@@ -2035,8 +2409,14 @@ function setupDailyAdminNotifications(bot) {
 
             return {
                 totalGames,
+                totalPlayers,
                 totalRevenue,
+                totalPrizes,
                 totalDeposits,
+                totalNewUsers,
+                activeUsers,
+                totalPendingWithdrawals,
+                totalPendingWithdrawalAmount,
                 adminWithdrawals,
                 // Display the local date for the day being reported (yesterday)
                 date: start.toISOString().split('T')[0] // Format: YYYY-MM-DD
@@ -2045,8 +2425,14 @@ function setupDailyAdminNotifications(bot) {
             console.error('Error fetching daily stats:', error);
             return {
                 totalGames: 0,
+                totalPlayers: 0,
                 totalRevenue: 0,
+                totalPrizes: 0,
                 totalDeposits: 0,
+                totalNewUsers: 0,
+                activeUsers: 0,
+                totalPendingWithdrawals: 0,
+                totalPendingWithdrawalAmount: 0,
                 adminWithdrawals: [],
                 date: new Date().toISOString().split('T')[0]
             };
@@ -2108,15 +2494,25 @@ ${formattedDate}
 ━━━━━━━━━━━━━━━━━━━━
 
 🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
+👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
 💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🏆 *Total Prizes:* ${stats.totalPrizes.toLocaleString()} ETB
 💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
+👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
+🔄 *Active Users:* ${stats.activeUsers.toLocaleString()}
+⏳ *Pending Withdrawals:* ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
 ${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
 ${randomAppreciation}
 
 📊 *Breakdown:*
 • Games Played: ${stats.totalGames}
+• Unique Players: ${stats.totalPlayers}
 • Revenue Generated: ${stats.totalRevenue.toLocaleString()} ETB
+• Prizes Distributed: ${stats.totalPrizes.toLocaleString()} ETB
 • Deposits Received: ${stats.totalDeposits.toLocaleString()} ETB
+• New Registrations: ${stats.totalNewUsers}
+• Active Players: ${stats.activeUsers}
+• Pending Withdrawals: ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
 
 Thank you for your dedication! 🙏`;
 
@@ -2147,35 +2543,172 @@ Thank you for your dedication! 🙏`;
         }
     }
 
-    // Function to calculate milliseconds until next midnight
-    function getMsUntilMidnight() {
+    // Function to calculate milliseconds until next 9 AM
+    function getMsUntil9AM() {
         const now = new Date();
-        const midnight = new Date(now);
-        midnight.setHours(24, 0, 0, 0); // Next midnight
-        return midnight.getTime() - now.getTime();
+        const next9AM = new Date(now);
+        next9AM.setHours(9, 0, 0, 0); // Set to 9 AM today
+        
+        // If it's already past 9 AM today, schedule for tomorrow 9 AM
+        if (now.getTime() >= next9AM.getTime()) {
+            next9AM.setDate(next9AM.getDate() + 1);
+        }
+        
+        return next9AM.getTime() - now.getTime();
+    }
+
+
+    // Function to format and send weekly notification
+    async function sendWeeklyNotification() {
+        try {
+            console.log('📊 Preparing weekly admin achievement notification...');
+
+            const adminIds = await getAllAdminTelegramIds();
+            if (adminIds.length === 0) {
+                console.log('⚠️ No admin users found. Skipping weekly notification.');
+                return;
+            }
+
+            const stats = await getWeeklyStats();
+
+            const startDateObj = new Date(stats.startDate);
+            const endDateObj = new Date(stats.endDate);
+            const formattedStartDate = startDateObj.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+            const formattedEndDate = endDateObj.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+
+            const appreciationMessages = [
+                "🎉 Outstanding week! Your platform is thriving! 🎉",
+                "🌟 Incredible performance this week! Keep it up! 🌟",
+                "💪 Amazing results! You're building something special! 💪",
+                "🚀 Phenomenal progress! The platform is growing strong! 🚀",
+                "✨ Exceptional achievements! Keep pushing forward! ✨",
+                "🏆 Congratulations on a fantastic week! 🏆"
+            ];
+            const randomAppreciation = appreciationMessages[Math.floor(Math.random() * appreciationMessages.length)];
+
+            let adminWithdrawalsSection = '';
+            if (stats.adminWithdrawals && stats.adminWithdrawals.length > 0) {
+                adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n';
+                for (const admin of stats.adminWithdrawals) {
+                    adminWithdrawalsSection += `👤 *${admin.adminName}:*\n   💰 ETB ${admin.totalAmount.toLocaleString()}\n\n`;
+                }
+            } else {
+                adminWithdrawalsSection = '\n━━━━━━━━━━━━━━━━━━━━\n💸 *Admin Withdrawal Approvals:*\n━━━━━━━━━━━━━━━━━━━━\n\n   No withdrawals approved this week.\n\n';
+            }
+
+            const message = `📊 *Weekly Achievement Report*
+${formattedStartDate} - ${formattedEndDate}
+
+━━━━━━━━━━━━━━━━━━━━
+📈 *This Week's Statistics:*
+━━━━━━━━━━━━━━━━━━━━
+
+🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
+👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
+💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🏆 *Total Prizes:* ${stats.totalPrizes.toLocaleString()} ETB
+💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
+👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
+⏳ *Pending Withdrawals:* ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+${adminWithdrawalsSection}━━━━━━━━━━━━━━━━━━━━
+${randomAppreciation}
+
+📊 *Weekly Breakdown:*
+• Games Played: ${stats.totalGames}
+• Unique Players: ${stats.totalPlayers}
+• Revenue Generated: ${stats.totalRevenue.toLocaleString()} ETB
+• Prizes Distributed: ${stats.totalPrizes.toLocaleString()} ETB
+• Deposits Received: ${stats.totalDeposits.toLocaleString()} ETB
+• New Registrations: ${stats.totalNewUsers}
+• Pending Withdrawals: ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)
+
+Thank you for your dedication! 🙏`;
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const telegramId of adminIds) {
+                try {
+                    await bot.telegram.sendMessage(telegramId, message, {
+                        parse_mode: 'Markdown'
+                    });
+                    successCount++;
+                    console.log(`✅ Weekly notification sent to admin: ${telegramId}`);
+                } catch (error) {
+                    failCount++;
+                    console.error(`❌ Failed to send weekly notification to ${telegramId}:`, error.message);
+                    if (error.code === 403 || error.code === 400) {
+                        console.log(`   Skipping admin ${telegramId} (bot not started or blocked)`);
+                    }
+                }
+            }
+
+            console.log(`📊 Weekly notification summary: ${successCount} sent, ${failCount} failed`);
+        } catch (error) {
+            console.error('❌ Error sending weekly notification:', error);
+        }
     }
 
     // Schedule daily notification
     function scheduleNextNotification() {
-        const msUntilMidnight = getMsUntilMidnight();
+        const msUntil9AM = getMsUntil9AM();
         const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-        console.log(`⏰ Next daily notification scheduled in ${Math.round(msUntilMidnight / 1000 / 60)} minutes`);
+        console.log(`⏰ Next daily notification scheduled in ${Math.round(msUntil9AM / 1000 / 60)} minutes (at 9 AM)`);
 
-        // Schedule first notification at midnight
+        // Schedule first notification at 9 AM
         setTimeout(() => {
             sendDailyNotification();
 
-            // Then schedule recurring daily notifications
+            // Then schedule recurring daily notifications every 24 hours
             setInterval(() => {
                 sendDailyNotification();
             }, oneDay);
-        }, msUntilMidnight);
+        }, msUntil9AM);
+    }
+
+    // Schedule weekly notification (every Monday at 9 AM)
+    function scheduleWeeklyNotification() {
+        const now = new Date();
+        const nextMonday = new Date(now);
+        
+        // Find next Monday
+        const daysUntilMonday = (8 - now.getDay()) % 7; // 0 = Sunday, 1 = Monday, etc.
+        if (daysUntilMonday === 0 && now.getHours() >= 9) {
+            // If it's Monday and past 9 AM, schedule for next Monday
+            nextMonday.setDate(now.getDate() + 7);
+        } else {
+            nextMonday.setDate(now.getDate() + (daysUntilMonday || 7));
+        }
+        
+        nextMonday.setHours(9, 0, 0, 0);
+        const msUntilMonday = nextMonday.getTime() - now.getTime();
+        const oneWeek = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+        console.log(`⏰ Next weekly notification scheduled in ${Math.round(msUntilMonday / 1000 / 60 / 60)} hours (next Monday at 9 AM)`);
+
+        setTimeout(() => {
+            sendWeeklyNotification();
+
+            // Then schedule recurring weekly notifications every 7 days
+            setInterval(() => {
+                sendWeeklyNotification();
+            }, oneWeek);
+        }, msUntilMonday);
     }
 
     // Start scheduling
     console.log('📅 Daily admin achievement notification system initialized');
     scheduleNextNotification();
+    console.log('📅 Weekly admin achievement notification system initialized');
+    scheduleWeeklyNotification();
 }
 
 module.exports = { startTelegramBot };
