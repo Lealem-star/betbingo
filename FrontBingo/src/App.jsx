@@ -152,7 +152,7 @@ function AppContent() {
         // If stake parameter is provided, store it
         if (stakeParam) {
           const stakeValue = parseInt(stakeParam);
-          if (stakeValue && [10, 25, 50, 100].includes(stakeValue)) {
+          if (stakeValue && [10].includes(stakeValue)) {
             console.log('Setting stake from URL parameter:', stakeValue);
             setSelectedStake(stakeValue);
             localStorage.setItem('selectedStake', stakeValue.toString());

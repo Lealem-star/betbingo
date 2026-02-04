@@ -129,7 +129,7 @@ connectDB().catch((error) => {
 const wss = new WebSocketServer({ noServer: true });
 
 // --- Simple in-memory rooms with auto-cycling phases ---
-const stakes = [10, 25, 50, 100];
+const stakes = [10];
 const rooms = new Map(); // stake -> room
 let currentStakeIndex = 0;
 

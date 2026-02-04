@@ -71,22 +71,10 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                             <div className="play-icon">▶</div>
                             <div className="stake-card__title">Choose Your Stake</div>
                         </div>
-                        <div className="grid grid-cols-2 gap-6 mt-8 max-w-sm mx-auto">
+                        <div className="grid grid-cols-1 gap-6 mt-8 max-w-sm mx-auto">
                             <button onClick={() => joinStake(10)} className="stake-btn stake-green ">
                                 <div className="play-icon-small">▶</div>
                                 <span>Play 10</span>
-                            </button>
-                            <button onClick={() => joinStake(25)} className="stake-btn stake-purple">
-                                <div className="play-icon-small">▶</div>
-                                <span>Play 25</span>
-                            </button>
-                            <button onClick={() => joinStake(50)} className="stake-btn stake-blue">
-                                <div className="play-icon-small">▶</div>
-                                <span>Play 50</span>
-                            </button>
-                            <button onClick={() => joinStake(100)} className="stake-btn stake-gold">
-                                <div className="play-icon-small">▶</div>
-                                <span>Play 100</span>
                             </button>
                         </div>
                     </div>
