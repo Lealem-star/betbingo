@@ -50,8 +50,8 @@
 body {
     background-color: #e6e6fa;
     /* Light lavender/purple background */
-    color: #e2e8f0;
-    /* slate-200 */
+    color: #111827;
+    /* near-black for strong contrast on light background */
 }
 
 .app-container {
