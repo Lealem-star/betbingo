@@ -113,7 +113,10 @@ app.use('/api/admin', adminRoutes); // Mount under /api/admin to match frontend 
 app.use('/admin', adminRoutes); // Also mount at /admin for backward compatibility
 app.use('/sms-forwarder', smsForwarderRoutes);
 app.use('/sms-webhook', smsWebhookRoutes);
+
+// General routes (cartellas, public endpoints) - mount at both / and /api
 app.use('/', generalRoutes);
+app.use('/api', generalRoutes);
 
 // Initialize database connection
 connectDB().catch((error) => {
