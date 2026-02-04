@@ -46,6 +46,7 @@ module.exports = {
                 TZ: 'Africa/Addis_Ababa',
                 BOT_TOKEN: '8497021561:AAFFo5LgBDOrOOSAsZHtSGvyeSBYqSrf2hw',
                 RUN_TELEGRAM_BOT: 'true',
+                ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://fikirbingo.com',
                 API_BASE_URL: 'http://localhost:3001',
                 API_URL: 'http://localhost:3001',
