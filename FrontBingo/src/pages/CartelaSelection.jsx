@@ -699,24 +699,24 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 </div>
             </header>
 
-            {/* Inline toast for balance issues (under header) */}
+            {/* Overlay toast for balance issues - top of page, does not shift layout */}
             {centerMessage && (
-                <div className="px-4 pt-2">
-                    <div className="flex items-center gap-2 rounded-md bg-red-600 text-white px-3 py-2 shadow-md">
+                <div className="fixed inset-x-0 top-0 z-[999] flex justify-center px-2 pointer-events-none">
+                    <div className="mt-1 pointer-events-auto w-full max-w-3xl flex items-center gap-2 bg-red-600 text-white px-3 py-2 shadow-md">
                         <span className="text-lg">!</span>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium truncate">
                             {centerMessage}
                         </span>
                     </div>
                 </div>
             )}
 
-            {/* Inline toast for registration expired (same style) */}
+            {/* Overlay toast for registration expired - same style */}
             {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                <div className="px-4 pt-2">
-                    <div className="flex items-center gap-2 rounded-md bg-red-600 text-white px-3 py-2 shadow-md">
+                <div className="fixed inset-x-0 top-0 z-[998] flex justify-center px-2 pointer-events-none">
+                    <div className="mt-1 pointer-events-auto w-full max-w-3xl flex items-center gap-2 bg-red-600 text-white px-3 py-2 shadow-md">
                         <span className="text-lg">⏰</span>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium truncate">
                             Registration time has ended due to low number of players. Please wait for the next game to start.
                         </span>
                     </div>
