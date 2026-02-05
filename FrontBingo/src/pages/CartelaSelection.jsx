@@ -699,18 +699,61 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 </div>
             </header>
 
-            <main className="p-4 mt-2">
-                {/* Insufficient Balance Notification */}
-                {centerMessage && (
-                    <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
-                        <div className="flex items-center gap-2 text-red-300">
-                            <span className="text-lg">⚠️</span>
-                            <div className="text-sm font-semibold">
-                                {centerMessage}
+            {/* Floating toast for balance issues */}
+            {centerMessage && (
+                <div className="fixed top-4 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
+                    <div className="relative max-w-2xl w-full">
+                        <div className="absolute inset-0 blur-2xl bg-red-500/30 rounded-3xl"></div>
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-700 via-red-600 to-orange-500 border border-white/15 shadow-2xl shadow-red-900/40 backdrop-blur-md text-white px-4 py-3 sm:px-5 sm:py-4 pointer-events-auto">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-lg">
+                                        ⚠️
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-white/20 border border-white/30 uppercase tracking-wide">Balance Alert</span>
+                                        <span className="text-xs text-white/80">Action needed</span>
+                                    </div>
+                                    <div className="text-sm leading-relaxed font-semibold">
+                                        {centerMessage}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* Floating toast for registration expired */}
+            {gameState.phase === 'registration' && gameState.countdown <= 0 && (
+                <div className="fixed top-20 left-0 right-0 z-[55] flex justify-center px-4 pointer-events-none">
+                    <div className="relative max-w-2xl w-full">
+                        <div className="absolute inset-0 blur-2xl bg-purple-500/25 rounded-3xl"></div>
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-800 via-fuchsia-700 to-orange-500 border border-white/12 shadow-2xl shadow-purple-900/40 backdrop-blur-md text-white px-4 py-3 sm:px-5 sm:py-4 pointer-events-auto">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-lg">
+                                        ⏰
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-white/15 border border-white/25 uppercase tracking-wide">Registration Closed</span>
+                                        <span className="text-xs text-white/80">Next round starting soon</span>
+                                    </div>
+                                    <div className="text-sm leading-relaxed font-semibold">
+                                        Registration time has ended due to low number of players. Please wait for the next game to start.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <main className="p-4 mt-2">
 
                 {/* Status Message */}
                 {gameState.phase === 'waiting' && (
@@ -721,51 +764,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                             <div className="mt-2 text-xs">
                                 Debug: Connected={connected ? 'Yes' : 'No'}, WS State={wsReadyState}, Messages={messageCount}
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                    <div className="mb-4 relative overflow-hidden rounded-xl bg-gradient-to-br from-red-900/40 via-red-800/30 to-orange-900/20 border-2 border-red-500/50 shadow-lg shadow-red-500/20">
-                        {/* Animated background pattern */}
-                        <div className="absolute inset-0 opacity-10">
-                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white to-transparent animate-pulse"></div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="relative p-5">
-                            <div className="flex items-start gap-4">
-                                {/* Animated icon */}
-                                <div className="flex-shrink-0 mt-1">
-                                    <div className="relative">
-                                        <div className="text-4xl animate-pulse">⏰</div>
-                                        <div className="absolute inset-0 text-4xl animate-ping opacity-20">⏰</div>
-                                    </div>
-                                </div>
-
-                                {/* Text content */}
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="text-lg font-bold text-red-200 drop-shadow-lg">
-                                            Registration Expired
-                                        </h3>
-                                        <div className="flex gap-1">
-                                            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                            <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                        </div>
-                                    </div>
-                                    <p className="text-red-100 text-sm leading-relaxed">
-                                        Registration time has ended due to low number of players.
-                                        <span className="block mt-1 text-red-200 font-medium">
-                                            Please wait for the next game to start.
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Decorative bottom border */}
-                            <div className="mt-4 h-1 bg-gradient-to-r from-transparent via-red-400/50 to-transparent rounded-full"></div>
                         </div>
                     </div>
                 )}

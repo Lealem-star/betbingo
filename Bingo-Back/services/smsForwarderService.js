@@ -824,7 +824,7 @@ class SmsForwarderService {
                 const text = `${header}\n\n💰 Amount: ETB ${Number(verification.amount).toFixed(2)}\n🎁 Bonus: +${playBonus} play wallet\n\nYour balance has been updated. Good luck!`;
                 const reply_markup = {
                     inline_keyboard: [
-                        [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }],
+                        [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }],
                         [{ text: '💼 Check Balance', callback_data: 'balance' }]
                     ]
                 };

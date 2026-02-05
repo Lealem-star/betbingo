@@ -49,7 +49,7 @@ class NotificationService {
             const reply_markup = {
                 inline_keyboard: [
                     [{ text: '💼 Check Balance', callback_data: 'balance' }],
-                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }]
+                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
 
@@ -86,7 +86,7 @@ class NotificationService {
             const reply_markup = {
                 inline_keyboard: [
                     [{ text: '💬 Contact Support', url: 'https://t.me/haset_life' }],
-                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }]
+                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
             return await this.sendTelegram(user, text, reply_markup);
@@ -112,7 +112,7 @@ class NotificationService {
             const reply_markup = {
                 inline_keyboard: [
                     [{ text: '💬 Contact Support', url: 'https://t.me/haset_life' }],
-                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL } }]
+                    [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
             return await this.sendTelegram(user, text, reply_markup);

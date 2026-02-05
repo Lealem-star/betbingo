@@ -58,7 +58,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
 
                 if (isHttpsWebApp) {
                     await bot.telegram.setChatMenuButton({
-                        menu_button: { type: 'web_app', text: 'Play', web_app: { url: webAppUrl } }
+                        menu_button: { type: 'web_app', text: 'Play-10', web_app: { url: webAppUrl + '?stake=10' } }
                     });
                 } else {
                     await bot.telegram.setChatMenuButton({ menu_button: { type: 'commands' } });
@@ -222,7 +222,19 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                     return ctx.replyWithPhoto(photo, { caption: regText, reply_markup: regKeyboard.reply_markup });
                 }
                 const welcomeText = `👋 Welcome to FUN Bingo! Choose an Option below.`;
-                const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🎮 Play', callback_data: 'play' }], [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }], [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }], [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]] } };
+                const playBtn = isHttpsWebApp
+                    ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
+                    : [{ text: '🎮 Play-10', callback_data: 'play' }];
+                const keyboard = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            playBtn,
+                            [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
+                            [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                            [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
+                        ]
+                    }
+                };
                 const photoPath = path.join(__dirname, '..', 'static', 'lb.png');
                 const photo = fs.existsSync(photoPath) ? { source: fs.createReadStream(photoPath) } : (WEBAPP_URL || '').replace(/\/$/, '') + '/lb.png';
                 return ctx.replyWithPhoto(photo, { caption: welcomeText, reply_markup: keyboard.reply_markup });
@@ -559,7 +571,7 @@ Thank you for your dedication! 🙏`;
                     const keyboard = {
                         reply_markup: {
                             inline_keyboard: [
-                                [{ text: '🎮 Open Game', web_app: { url: webAppUrl } }],
+                                [{ text: '🎮 Open Game', web_app: { url: webAppUrl + '?stake=10' } }],
                                 [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
                             ]
                         }
@@ -584,7 +596,7 @@ Thank you for your dedication! 🙏`;
                 }
                 const w = userData.wallet;
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl } }]);
+                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl + '?stake=10' } }]);
                 ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
@@ -622,7 +634,7 @@ Thank you for your dedication! 🙏`;
 
         bot.command('instruction', (ctx) => {
             const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl } }]);
+            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl + '?stake=10' } }]);
             ctx.reply('📖 How to Play FUN Bingo:\n\n1️⃣ Select a bingo card\n2️⃣ Wait for numbers to be called\n3️⃣ Mark numbers on your card\n4️⃣ Call "BINGO!" when you win\n\n🎯 Win by getting 5 in a row (horizontal, vertical, or diagonal)\n\n💰 Prizes are shared among all winners!', { reply_markup: keyboard });
         });
 
@@ -875,7 +887,7 @@ Thank you for your dedication! 🙏`;
         }
         function buildBroadcastMarkup(caption) {
             const kb = { inline_keyboard: [] };
-            if (isHttpsWebApp) { kb.inline_keyboard.push([{ text: 'Play', web_app: { url: webAppUrl } }]); }
+            if (isHttpsWebApp) { kb.inline_keyboard.push([{ text: 'Play-10', web_app: { url: webAppUrl + '?stake=10' } }]); }
             const base = kb.inline_keyboard.length ? { reply_markup: kb } : {};
             if (caption !== undefined) return { ...base, caption, parse_mode: 'HTML' };
             return { ...base, parse_mode: 'HTML' };
@@ -923,7 +935,7 @@ Thank you for your dedication! 🙏`;
                 const keyboard = {
                     reply_markup: {
                         inline_keyboard: [
-                            [{ text: '🎮 Play', web_app: { url: webAppUrl } }],
+                            [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }],
                             [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
                         ]
                     }
@@ -947,7 +959,7 @@ Thank you for your dedication! 🙏`;
                 const w = userData.wallet;
                 ctx.answerCbQuery('💵 Balance checked');
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl } }]);
+                if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl + '?stake=10' } }]);
                 ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
@@ -969,7 +981,7 @@ Thank you for your dedication! 🙏`;
         bot.action('instruction', (ctx) => {
             ctx.answerCbQuery('📖 Instructions...');
             const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
-            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl } }]);
+            if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🎮 Start Playing', web_app: { url: webAppUrl + '?stake=10' } }]);
             ctx.reply('📖 How to Play FUN Bingo:\n\n1️⃣ Select a bingo card\n2️⃣ Wait for numbers to be called\n3️⃣ Mark numbers on your card\n4️⃣ Call "BINGO!" when you win\n\n🎯 Win by getting 5 in a row (horizontal, vertical, or diagonal)\n\n💰 Prizes are shared among all winners!', { reply_markup: keyboard });
         });
 
@@ -1356,7 +1368,19 @@ Thank you for your dedication! 🙏`;
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('🔙 Back to menu');
             const welcomeText = `👋 Welcome to FUN Bingo! Choose an Option below.`;
-            const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🎮 Play', callback_data: 'play' }], [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }], [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }], [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]] } };
+            const playBtn = isHttpsWebApp
+                ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
+                : [{ text: '🎮 Play-10', callback_data: 'play' }];
+            const keyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        playBtn,
+                        [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
+                        [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                        [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
+                    ]
+                }
+            };
             return ctx.editMessageText(welcomeText, keyboard);
         });
 
@@ -1424,7 +1448,19 @@ Thank you for your dedication! 🙏`;
                     if (existing && (existing.isRegistered || existing.phone)) {
                         await ctx.reply('✅ You are already registered with this account.');
                         await ctx.reply('🎮 You can now continue using the menu.', { reply_markup: { remove_keyboard: true } });
-                        const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🎮 Play', callback_data: 'play' }], [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }], [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }], [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]] } };
+                        const playBtn = isHttpsWebApp
+                            ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
+                            : [{ text: '🎮 Play-10', callback_data: 'play' }];
+                        const keyboard = {
+                            reply_markup: {
+                                inline_keyboard: [
+                                    playBtn,
+                                    [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
+                                    [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                                    [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
+                                ]
+                            }
+                        };
                         setTimeout(() => { ctx.reply('🎮 Choose an option:', keyboard); }, 800);
                         return;
                     }
@@ -1459,7 +1495,19 @@ Thank you for your dedication! 🙏`;
                 console.error('Contact registration error:', error);
                 ctx.reply('❌ Registration failed. Please try again.');
             }
-            const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🎮 Play', callback_data: 'play' }], [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }], [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }], [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]] } };
+            const playBtn = isHttpsWebApp
+                ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
+                : [{ text: '🎮 Play-10', callback_data: 'play' }];
+            const keyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        playBtn,
+                        [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
+                        [{ text: '☎️ Contact Support', callback_data: 'support' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                        [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
+                    ]
+                }
+            };
             setTimeout(() => { ctx.reply('🎮 Choose an option:', keyboard); }, 1000);
         });
 

@@ -76,28 +76,6 @@ export default function AdminUserBalanceAccess() {
         }));
     };
 
-    const adjustBy = (field, delta) => {
-        setAdjustment(prev => {
-            const current = Number(prev[field]) || 0;
-            const next = Math.round((current + delta) * 100) / 100;
-            return {
-                ...prev,
-                [field]: next === 0 ? '' : next.toString()
-            };
-        });
-    };
-
-    const adjustCoinsBy = (delta) => {
-        setAdjustment(prev => {
-            const current = Number.isFinite(Number(prev.coinsDelta)) ? Number(prev.coinsDelta) : 0;
-            const next = current + delta;
-            return {
-                ...prev,
-                coinsDelta: next === 0 ? '' : next.toString()
-            };
-        });
-    };
-
     const getNumber = (value) => {
         if (value === '' || value === null || value === undefined) {
             return 0;
@@ -233,8 +211,6 @@ export default function AdminUserBalanceAccess() {
                             <div className="admin-adjustment-slot">
                                 <label htmlFor="admin-adjust-main">Main Wallet</label>
                                 <div className="admin-adjustment-controls">
-                                    <button type="button" onClick={() => adjustBy('mainDelta', -10)}>−10</button>
-                                    <button type="button" onClick={() => adjustBy('mainDelta', -1)}>−1</button>
                                     <input
                                         id="admin-adjust-main"
                                         type="number"
@@ -243,15 +219,11 @@ export default function AdminUserBalanceAccess() {
                                         onChange={(event) => updateAdjustmentField('mainDelta', event.target.value)}
                                         placeholder="+/- amount"
                                     />
-                                    <button type="button" onClick={() => adjustBy('mainDelta', 1)}>+1</button>
-                                    <button type="button" onClick={() => adjustBy('mainDelta', 10)}>+10</button>
                                 </div>
                             </div>
                             <div className="admin-adjustment-slot">
                                 <label htmlFor="admin-adjust-play">Play Wallet</label>
                                 <div className="admin-adjustment-controls">
-                                    <button type="button" onClick={() => adjustBy('playDelta', -10)}>−10</button>
-                                    <button type="button" onClick={() => adjustBy('playDelta', -1)}>−1</button>
                                     <input
                                         id="admin-adjust-play"
                                         type="number"
@@ -260,15 +232,11 @@ export default function AdminUserBalanceAccess() {
                                         onChange={(event) => updateAdjustmentField('playDelta', event.target.value)}
                                         placeholder="+/- amount"
                                     />
-                                    <button type="button" onClick={() => adjustBy('playDelta', 1)}>+1</button>
-                                    <button type="button" onClick={() => adjustBy('playDelta', 10)}>+10</button>
                                 </div>
                             </div>
                             <div className="admin-adjustment-slot">
                                 <label htmlFor="admin-adjust-coins">Coins</label>
                                 <div className="admin-adjustment-controls">
-                                    <button type="button" onClick={() => adjustCoinsBy(-100)}>−100</button>
-                                    <button type="button" onClick={() => adjustCoinsBy(-10)}>−10</button>
                                     <input
                                         id="admin-adjust-coins"
                                         type="number"
@@ -277,8 +245,6 @@ export default function AdminUserBalanceAccess() {
                                         onChange={(event) => updateAdjustmentField('coinsDelta', event.target.value)}
                                         placeholder="+/- coins"
                                     />
-                                    <button type="button" onClick={() => adjustCoinsBy(10)}>+10</button>
-                                    <button type="button" onClick={() => adjustCoinsBy(100)}>+100</button>
                                 </div>
                             </div>
                         </div>

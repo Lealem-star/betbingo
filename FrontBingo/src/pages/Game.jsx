@@ -65,7 +65,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                     </div>
                 </header>
 
-                <main className="p-4 space-y-4 mb-8">
+                <main className="p-4 mb-8">
                     <div className="stake-card rounded-2xl p-4 mx-auto max-w-md fade-in-up">
                         <div className="stake-card__header">
                             <div className="play-icon">▶</div>
@@ -81,7 +81,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
 
                     {/* Admin Announcement - TV Screen Style */}
                     {adminPost && (
-                        <div className="mx-auto max-w-md w-full px-2 mt-4">
+                        <div className="mx-auto max-w-md w-full px-2 mt-2">
                             {/* TV Screen Container */}
                             <div className="relative">
                                 {/* TV Frame */}
