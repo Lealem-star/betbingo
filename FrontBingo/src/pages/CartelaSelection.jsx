@@ -646,10 +646,10 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 {/* Floating pill/card alerts inside header, above buttons */}
                 {/* Balance / credit alert */}
                 {centerMessage && (
-                    <div className="absolute inset-x-0 -top-3 z-[50] flex justify-center px-4">
-                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">!</span>
-                            <span className="text-sm font-medium text-white text-center">
+                    <div className="absolute inset-x-0 -top-4 z-[50] flex justify-center px-4">
+                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-4 py-2 shadow-[0_8px_16px_rgba(0,0,0,0.35)] border border-red-400">
+                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/20 text-white text-sm font-bold">!</span>
+                            <span className="text-sm font-semibold text-white text-center leading-snug">
                                 {centerMessage}
                             </span>
                         </div>
@@ -658,10 +658,10 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
                 {/* Registration expired alert */}
                 {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                    <div className="absolute inset-x-0 -top-3 z-[40] flex justify-center px-4">
-                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">⏰</span>
-                            <span className="text-sm font-medium text-white text-center">
+                    <div className="absolute inset-x-0 -top-4 z-[40] flex justify-center px-4">
+                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-4 py-2 shadow-[0_8px_16px_rgba(0,0,0,0.35)] border border-red-400">
+                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/20 text-white text-sm font-bold">⏰</span>
+                            <span className="text-sm font-semibold text-white text-center leading-snug">
                                 Registration time has ended due to low number of players. Please wait for the next game to start.
                             </span>
                         </div>
