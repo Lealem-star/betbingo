@@ -642,7 +642,32 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     return (
         <div className="app-container relative">
 
-            <header className="p-4 mb-6">
+            <header className="relative p-4 mb-6">
+                {/* Floating pill/card alerts inside header, above buttons */}
+                {/* Balance / credit alert */}
+                {centerMessage && (
+                    <div className="absolute inset-x-0 -top-3 z-[50] flex justify-center px-4">
+                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
+                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">!</span>
+                            <span className="text-sm font-medium text-white text-center">
+                                {centerMessage}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Registration expired alert */}
+                {gameState.phase === 'registration' && gameState.countdown <= 0 && (
+                    <div className="absolute inset-x-0 -top-3 z-[40] flex justify-center px-4">
+                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
+                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">⏰</span>
+                            <span className="text-sm font-medium text-white text-center">
+                                Registration time has ended due to low number of players. Please wait for the next game to start.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Top Row: Back and Refresh buttons */}
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={() => {
@@ -703,30 +728,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     </div>
                 </div>
             </header>
-
-            {/* Overlay card for balance issues - centered button-like card at top */}
-            {centerMessage && (
-                <div className="fixed inset-x-0 top-2 z-[999] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
-                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">!</span>
-                        <span className="text-sm font-medium text-white text-center">
-                            {centerMessage}
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* Overlay card for registration expired - same style */}
-            {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                <div className="fixed inset-x-0 top-2 z-[998] flex justify-center px-4 pointer-events-none">
-                    <div className="pointer-events-auto inline-flex items-center gap-2 max-w-xl rounded-full bg-red-600 px-4 py-2 shadow-lg border border-red-300">
-                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/15 text-white text-sm">⏰</span>
-                        <span className="text-sm font-medium text-white text-center">
-                            Registration time has ended due to low number of players. Please wait for the next game to start.
-                        </span>
-                    </div>
-                </div>
-            )}
 
             <main className="p-4 mt-4 pb-6">
 
