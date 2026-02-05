@@ -107,8 +107,10 @@ app.get('/health', (req, res) => {
 // Use routes
 app.use('/auth', authRoutes); // Keep for backward compatibility
 app.use('/api/auth', authRoutes); // Mount under /api/auth to match frontend apiFetch behavior
-app.use('/wallet', walletRoutes);
-app.use('/user', userRoutes);
+app.use('/wallet', walletRoutes); // Keep for backward compatibility
+app.use('/api/wallet', walletRoutes); // Mount under /api/wallet to match frontend apiFetch behavior
+app.use('/user', userRoutes); // Keep for backward compatibility
+app.use('/api/user', userRoutes); // Mount under /api/user to match frontend apiFetch behavior
 app.use('/api/admin', adminRoutes); // Mount under /api/admin to match frontend apiFetch behavior
 app.use('/admin', adminRoutes); // Also mount at /admin for backward compatibility
 app.use('/sms-forwarder', smsForwarderRoutes);
