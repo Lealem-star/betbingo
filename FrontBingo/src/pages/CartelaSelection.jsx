@@ -701,20 +701,22 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
             {/* Compact toast for balance issues (top overlay) */}
             {centerMessage && (
-                <div className="fixed top-2 left-0 right-0 z-[70] flex justify-center px-3 pointer-events-none">
-                    <div className="pointer-events-auto w-full max-w-3xl rounded-md bg-white shadow-md border border-gray-200/80 flex items-center gap-3 px-3 py-2">
-                        <span className="text-blue-600 text-lg">ℹ️</span>
-                        <span className="text-sm text-gray-900 font-medium">{centerMessage}</span>
+                <div className="fixed top-0 left-0 right-0 z-[70] flex justify-center px-3 pointer-events-none">
+                    <div className="pointer-events-auto w-full max-w-3xl flex items-center gap-3 px-3 py-2 bg-red-600 text-white border-b border-red-700 shadow-md">
+                        <span className="text-lg">ℹ️</span>
+                        <span className="text-sm font-medium truncate">
+                            {centerMessage}
+                        </span>
                     </div>
                 </div>
             )}
 
             {/* Compact toast for registration expired (top overlay) */}
             {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                <div className="fixed top-2 left-0 right-0 z-[65] flex justify-center px-3 pointer-events-none">
-                    <div className="pointer-events-auto w-full max-w-3xl rounded-md bg-white shadow-md border border-gray-200/80 flex items-center gap-3 px-3 py-2">
-                        <span className="text-orange-600 text-lg">⏰</span>
-                        <span className="text-sm text-gray-900 font-medium">
+                <div className="fixed top-0 left-0 right-0 z-[65] flex justify-center px-3 pointer-events-none">
+                    <div className="pointer-events-auto w-full max-w-3xl flex items-center gap-3 px-3 py-2 bg-red-600 text-white border-b border-red-700 shadow-md">
+                        <span className="text-lg">⏰</span>
+                        <span className="text-sm font-medium truncate">
                             Registration time has ended due to low number of players. Please wait for the next game to start.
                         </span>
                     </div>
