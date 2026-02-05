@@ -304,6 +304,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             wsReadyState: wsReadyState
         });
 
+        // Prevent using stale/empty wallet data while it's still loading
+        if (walletLoading) {
+            showError('Loading wallet information. Please wait a moment and try again.');
+            return;
+        }
+
         // Toggle off if clicking the same selected number during registration
         const alreadySelectedByYou = selectedCardNumber === cardNum || Number(gameState.yourSelection) === cardNum;
         if (alreadySelectedByYou) {
