@@ -7,13 +7,32 @@ class WalletService {
     static async getWallet(userId) {
         try {
             let wallet = await Wallet.findOne({ userId });
+            console.log('WalletService.getWallet - Initial find:', {
+                userId: userId.toString(),
+                found: !!wallet,
+                main: wallet?.main,
+                play: wallet?.play,
+                balance: wallet?.balance
+            });
+
             if (!wallet) {
+                console.log('WalletService.getWallet - Creating new wallet for userId:', userId.toString());
                 wallet = await this.createWallet(userId);
             }
+            
             // Ensure credit availability is set based on deposits (only for users who have deposited)
             await this.ensureCreditAvailability(userId);
+            
             // Refresh wallet to get updated credit fields
             wallet = await Wallet.findOne({ userId });
+            console.log('WalletService.getWallet - Final wallet:', {
+                userId: userId.toString(),
+                main: wallet?.main,
+                play: wallet?.play,
+                balance: wallet?.balance,
+                coins: wallet?.coins
+            });
+            
             return wallet;
         } catch (error) {
             console.error('Error getting wallet:', error);

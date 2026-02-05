@@ -7,27 +7,44 @@ const router = express.Router();
 
 // GET /wallet
 router.get('/', authMiddleware, async (req, res) => {
+    const requestId = Date.now().toString(36) + Math.random().toString(36).substring(2);
     try {
+        console.log(`💰 [${requestId}] Wallet fetch request:`, {
+            userId: req.userId,
+            timestamp: new Date().toISOString()
+        });
+
         const user = await UserService.getUserById(req.userId);
         if (!user) {
-            console.error('Wallet fetch: User not found for userId:', req.userId);
+            console.error(`❌ [${requestId}] Wallet fetch: User not found for userId:`, req.userId);
             return res.status(404).json({ error: 'USER_NOT_FOUND' });
         }
 
+        console.log(`👤 [${requestId}] User found:`, {
+            userId: user._id.toString(),
+            telegramId: user.telegramId
+        });
+
         const wallet = await WalletService.getWallet(user._id);
         if (!wallet) {
-            console.error('Wallet fetch: Wallet not found for userId:', user._id);
+            console.error(`❌ [${requestId}] Wallet fetch: Wallet not found for userId:`, user._id);
             return res.status(404).json({ error: 'WALLET_NOT_FOUND' });
         }
 
         // Debug logging to verify wallet data
-        console.log('Wallet fetch success:', {
+        console.log(`✅ [${requestId}] Wallet fetch success:`, {
             userId: user._id.toString(),
             telegramId: user.telegramId,
             walletMain: wallet.main,
             walletPlay: wallet.play,
             walletBalance: wallet.balance,
-            walletCoins: wallet.coins
+            walletCoins: wallet.coins,
+            walletRaw: {
+                main: wallet.main,
+                play: wallet.play,
+                balance: wallet.balance,
+                coins: wallet.coins
+            }
         });
 
         // Unified wallet response with main/play structure and credit fields
@@ -36,7 +53,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const mainValue = (wallet.main !== null && wallet.main !== undefined) ? wallet.main : (wallet.balance ?? 0);
         const playValue = (wallet.play !== null && wallet.play !== undefined) ? wallet.play : 0;
 
-        res.json({
+        const response = {
             balance: wallet.balance ?? 0,
             main: mainValue,
             play: playValue,
@@ -45,9 +62,18 @@ router.get('/', authMiddleware, async (req, res) => {
             creditAvailable: wallet.creditAvailable ?? 0,
             creditUsed: wallet.creditUsed ?? 0,
             creditOutstanding: wallet.creditOutstanding ?? 0
+        };
+
+        console.log(`📤 [${requestId}] Sending wallet response:`, {
+            main: response.main,
+            play: response.play,
+            balance: response.balance,
+            coins: response.coins
         });
+
+        res.json(response);
     } catch (error) {
-        console.error('Wallet fetch error:', error);
+        console.error(`❌ [${requestId}] Wallet fetch error:`, error);
         res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
     }
 });
