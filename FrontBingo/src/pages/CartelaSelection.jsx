@@ -639,35 +639,27 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
     console.log('Rendering main CartelaSelection interface with', cards.length, 'cards');
 
+    const registrationExpired = gameState.phase === 'registration' && gameState.countdown <= 0;
+    const alertMessage = centerMessage || (registrationExpired
+        ? 'Registration time has ended due to low number of players. Please wait for the next game to start.'
+        : null);
+    const alertIcon = centerMessage ? '!' : '⏰';
+
     return (
-        <div className="app-container relative">
-
-            <header className="relative p-4 mb-6">
-                {/* Floating pill/card alerts inside header, above buttons */}
-                {/* Balance / credit alert */}
-                {centerMessage && (
-                    <div className="absolute inset-x-0 -top-4 z-[50] flex justify-center px-4">
-                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-4 py-2 shadow-[0_8px_16px_rgba(0,0,0,0.35)] border border-red-400">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/20 text-white text-sm font-bold">!</span>
-                            <span className="text-sm font-semibold text-white text-center leading-snug">
-                                {centerMessage}
-                            </span>
-                        </div>
+        <>
+            {/* Fixed top-of-screen alert box (overlay on page) */}
+            {alertMessage && (
+                <div className="fixed top-0 left-0 right-0 z-[9999] flex justify-center px-3 pt-2 pointer-events-none">
+                    <div className="pointer-events-auto w-full max-w-3xl flex items-start gap-2 rounded-lg bg-red-600 text-white border border-red-400 shadow-lg px-3 py-2">
+                        <span className="text-lg mt-0.5">{alertIcon}</span>
+                        <div className="text-sm leading-snug">{alertMessage}</div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Registration expired alert */}
-                {gameState.phase === 'registration' && gameState.countdown <= 0 && (
-                    <div className="absolute inset-x-0 -top-4 z-[40] flex justify-center px-4">
-                        <div className="inline-flex items-center gap-2 max-w-xl rounded-full bg-gradient-to-r from-red-600 via-red-500 to-orange-500 px-4 py-2 shadow-[0_8px_16px_rgba(0,0,0,0.35)] border border-red-400">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-white/20 text-white text-sm font-bold">⏰</span>
-                            <span className="text-sm font-semibold text-white text-center leading-snug">
-                                Registration time has ended due to low number of players. Please wait for the next game to start.
-                            </span>
-                        </div>
-                    </div>
-                )}
+            <div className="app-container relative">
 
+            <header className="p-4 mb-2">
                 {/* Top Row: Back and Refresh buttons */}
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={() => {
@@ -729,7 +721,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 </div>
             </header>
 
-            <main className="p-4 mt-4 pb-6">
+            <main className="p-4 mt-2 pb-6">
 
                 {/* Status Message */}
                 {gameState.phase === 'waiting' && (
@@ -803,5 +795,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
             <BottomNav current="game" onNavigate={onNavigate} />
         </div>
+        </>
     );
 }
