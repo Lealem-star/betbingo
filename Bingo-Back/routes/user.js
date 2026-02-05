@@ -19,11 +19,44 @@ router.get('/profile', authMiddleware, async (req, res) => {
             if (!user) {
                 return res.status(404).json({ error: 'USER_NOT_FOUND' });
             }
-            await UserService.createWallet(user._id);
+            try {
+                await UserService.createWallet(user._id);
+            } catch (walletError) {
+                console.error('Error creating wallet:', walletError);
+                // Continue anyway - wallet might already exist
+            }
             userData = await UserService.getUserWithWalletById(req.userId);
-        } else if (!userData.wallet) {
-            await UserService.createWallet(req.userId);
+            // If still null after wallet creation, something went wrong
+            if (!userData) {
+                console.error('Failed to retrieve user data after wallet creation:', req.userId);
+                return res.status(500).json({ error: 'WALLET_CREATION_FAILED' });
+            }
+        }
+        
+        // If user exists but wallet is missing, create it
+        if (userData && !userData.wallet) {
+            try {
+                await UserService.createWallet(req.userId);
+            } catch (walletError) {
+                console.error('Error creating wallet:', walletError);
+                // Continue anyway - wallet might already exist
+            }
             userData = await UserService.getUserWithWalletById(req.userId);
+            // If wallet is still missing after creation, use default wallet values
+            if (!userData || !userData.wallet) {
+                console.warn('Wallet still missing after creation attempt, using defaults:', req.userId);
+                // Continue with default wallet values
+                userData.wallet = {
+                    balance: 0,
+                    main: 0,
+                    play: 0,
+                    coins: 0,
+                    gamesWon: 0,
+                    creditAvailable: 0,
+                    creditUsed: 0,
+                    creditOutstanding: 0
+                };
+            }
         }
 
         // Get game statistics using Mongo ObjectId

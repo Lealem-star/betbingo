@@ -145,7 +145,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         }
     }, [gameState.gameId, onGameIdUpdate]);
 
-    // Fetch wallet data
+    // Fetch wallet data (use /wallet as source of truth, /user/profile as fallback)
     useEffect(() => {
         const fetchWallet = async () => {
             if (!sessionId) {
@@ -154,31 +154,40 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
             try {
                 setWalletLoading(true);
-                const response = await apiFetch('/user/profile', { sessionId });
-                if (response.wallet) {
-                    setWallet({
-                        main: response.wallet.main || 0,
-                        play: response.wallet.play || 0,
-                        coins: response.wallet.coins || 0,
-                        creditAvailable: response.wallet.creditAvailable || 0,
-                        creditUsed: response.wallet.creditUsed || 0
-                    });
-                }
-            } catch (err) {
-                console.error('Error fetching wallet:', err);
-                // Fallback to direct wallet fetch
+                // Primary source: /wallet (auto-creates wallet and ensures credit fields)
+                const walletResponse = await apiFetch('/wallet', { sessionId });
+                setWallet({
+                    main: walletResponse.main ?? walletResponse.balance ?? 0,
+                    play: walletResponse.play ?? walletResponse.balance ?? 0,
+                    coins: walletResponse.coins ?? 0,
+                    creditAvailable: walletResponse.creditAvailable ?? 0,
+                    creditUsed: walletResponse.creditUsed ?? 0
+                });
+            } catch (walletErr) {
+                console.error('Error fetching wallet from /wallet:', walletErr);
+                // Fallback: try /user/profile to at least get some wallet info
                 try {
-                    const walletResponse = await apiFetch('/wallet', { sessionId });
-                    setWallet({
-                        main: walletResponse.main || 0,
-                        play: walletResponse.play || 0,
-                        coins: walletResponse.coins || 0,
-                        creditAvailable: walletResponse.creditAvailable || 0,
-                        creditUsed: walletResponse.creditUsed || 0
-                    });
-                } catch (walletErr) {
-                    console.error('Error fetching wallet fallback:', walletErr);
-                    // Set default values if all requests fail
+                    const profileResponse = await apiFetch('/user/profile', { sessionId });
+                    if (profileResponse.wallet) {
+                        setWallet({
+                            main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
+                            play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
+                            coins: profileResponse.wallet.coins ?? 0,
+                            creditAvailable: profileResponse.wallet.creditAvailable ?? 0,
+                            creditUsed: profileResponse.wallet.creditUsed ?? 0
+                        });
+                    } else {
+                        setWallet({
+                            main: 0,
+                            play: 0,
+                            coins: 0,
+                            creditAvailable: 0,
+                            creditUsed: 0
+                        });
+                    }
+                } catch (profileErr) {
+                    console.error('Error fetching wallet fallback from /user/profile:', profileErr);
+                    // Set safe defaults if everything fails
                     setWallet({
                         main: 0,
                         play: 0,
@@ -402,36 +411,37 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     };
 
 
-    // Refresh wallet data
+    // Refresh wallet data (same logic as initial fetch: /wallet primary, /user/profile fallback)
     const refreshWallet = async () => {
         if (!sessionId) return;
 
         try {
             setWalletLoading(true);
-            const response = await apiFetch('/user/profile', { sessionId });
-            if (response.wallet) {
-                setWallet({
-                    main: response.wallet.main || 0,
-                    play: response.wallet.play || 0,
-                    coins: response.wallet.coins || 0,
-                    creditAvailable: response.wallet.creditAvailable || 0,
-                    creditUsed: response.wallet.creditUsed || 0
-                });
-            }
-        } catch (err) {
-            console.error('Error refreshing wallet:', err);
-            // Fallback to direct wallet fetch
+            // Primary refresh from /wallet
+            const walletResponse = await apiFetch('/wallet', { sessionId });
+            setWallet({
+                main: walletResponse.main ?? walletResponse.balance ?? 0,
+                play: walletResponse.play ?? walletResponse.balance ?? 0,
+                coins: walletResponse.coins ?? 0,
+                creditAvailable: walletResponse.creditAvailable ?? 0,
+                creditUsed: walletResponse.creditUsed ?? 0
+            });
+        } catch (walletErr) {
+            console.error('Error refreshing wallet from /wallet:', walletErr);
+            // Fallback to /user/profile
             try {
-                const walletResponse = await apiFetch('/wallet', { sessionId });
-                setWallet({
-                    main: walletResponse.main || 0,
-                    play: walletResponse.play || 0,
-                    coins: walletResponse.coins || 0,
-                    creditAvailable: walletResponse.creditAvailable || 0,
-                    creditUsed: walletResponse.creditUsed || 0
-                });
-            } catch (walletErr) {
-                console.error('Error refreshing wallet fallback:', walletErr);
+                const profileResponse = await apiFetch('/user/profile', { sessionId });
+                if (profileResponse.wallet) {
+                    setWallet({
+                        main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
+                        play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
+                        coins: profileResponse.wallet.coins ?? 0,
+                        creditAvailable: profileResponse.wallet.creditAvailable ?? 0,
+                        creditUsed: profileResponse.wallet.creditUsed ?? 0
+                    });
+                }
+            } catch (profileErr) {
+                console.error('Error refreshing wallet fallback from /user/profile:', profileErr);
             }
         } finally {
             setWalletLoading(false);

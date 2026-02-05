@@ -1306,7 +1306,7 @@ Thank you for your dedication! 🙏`;
 
                     // Notify other admins about this action
                     try {
-                        const DepositVerification = require('../models/DeposiitVerification');
+                        const DepositVerification = require('../models/DepositVerification');
                         const verification = await DepositVerification.findById(verificationId)
                             .populate('userId', 'firstName lastName phone telegramId');
                         const user = verification.userId;

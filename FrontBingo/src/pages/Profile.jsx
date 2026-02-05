@@ -53,7 +53,11 @@ export default function Profile({ onNavigate }) {
                     }
                     throw err;
                 }),
-                apiFetch('/wallet', { sessionId }),
+                apiFetch('/wallet', { sessionId }).catch(err => {
+                    // If wallet fetch fails, use default values
+                    console.warn('Wallet fetch failed:', err);
+                    return { balance: 0, main: 0, play: 0, coins: 0, gamesWon: 0, creditAvailable: 0, creditUsed: 0 };
+                }),
                 apiFetch('/user/invite-stats', { sessionId }).catch(() => null)
             ]);
 
