@@ -156,9 +156,27 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 setWalletLoading(true);
                 // Primary source: /wallet (auto-creates wallet and ensures credit fields)
                 const walletResponse = await apiFetch('/wallet', { sessionId });
+                
+                // Debug logging to verify wallet data
+                console.log('CartelaSelection wallet fetch:', {
+                    main: walletResponse.main,
+                    play: walletResponse.play,
+                    balance: walletResponse.balance,
+                    coins: walletResponse.coins,
+                    fullResponse: walletResponse
+                });
+
+                // Use actual wallet values - prioritize main/play fields, fall back to balance only if null/undefined
+                const mainValue = (walletResponse.main !== null && walletResponse.main !== undefined) 
+                    ? walletResponse.main 
+                    : (walletResponse.balance ?? 0);
+                const playValue = (walletResponse.play !== null && walletResponse.play !== undefined) 
+                    ? walletResponse.play 
+                    : 0;
+
                 setWallet({
-                    main: walletResponse.main ?? walletResponse.balance ?? 0,
-                    play: walletResponse.play ?? walletResponse.balance ?? 0,
+                    main: mainValue,
+                    play: playValue,
                     coins: walletResponse.coins ?? 0,
                     creditAvailable: walletResponse.creditAvailable ?? 0,
                     creditUsed: walletResponse.creditUsed ?? 0

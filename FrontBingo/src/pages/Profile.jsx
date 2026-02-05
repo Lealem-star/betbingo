@@ -71,10 +71,27 @@ export default function Profile({ onNavigate }) {
                 registrationDate: new Date()
             };
 
+            // Debug logging to verify wallet data
+            console.log('Profile wallet fetch:', {
+                main: walletRes.main,
+                play: walletRes.play,
+                balance: walletRes.balance,
+                coins: walletRes.coins,
+                fullResponse: walletRes
+            });
+
+            // Use actual wallet values - prioritize main/play fields, fall back to balance only if null/undefined
+            const mainValue = (walletRes.main !== null && walletRes.main !== undefined) 
+                ? walletRes.main 
+                : (walletRes.balance ?? 0);
+            const playValue = (walletRes.play !== null && walletRes.play !== undefined) 
+                ? walletRes.play 
+                : 0;
+
             const walletInfo = {
                 balance: walletRes.balance ?? 0,
-                main: walletRes.main ?? walletRes.balance ?? 0,
-                play: walletRes.play ?? walletRes.balance ?? 0,
+                main: mainValue,
+                play: playValue,
                 coins: walletRes.coins ?? 0,
                 gamesWon: walletRes.gamesWon ?? 0,
                 creditAvailable: walletRes.creditAvailable ?? 0,

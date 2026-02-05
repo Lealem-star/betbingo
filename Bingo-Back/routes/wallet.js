@@ -9,16 +9,37 @@ const router = express.Router();
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const user = await UserService.getUserById(req.userId);
-        if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' });
+        if (!user) {
+            console.error('Wallet fetch: User not found for userId:', req.userId);
+            return res.status(404).json({ error: 'USER_NOT_FOUND' });
+        }
 
         const wallet = await WalletService.getWallet(user._id);
-        if (!wallet) return res.status(404).json({ error: 'WALLET_NOT_FOUND' });
+        if (!wallet) {
+            console.error('Wallet fetch: Wallet not found for userId:', user._id);
+            return res.status(404).json({ error: 'WALLET_NOT_FOUND' });
+        }
+
+        // Debug logging to verify wallet data
+        console.log('Wallet fetch success:', {
+            userId: user._id.toString(),
+            telegramId: user.telegramId,
+            walletMain: wallet.main,
+            walletPlay: wallet.play,
+            walletBalance: wallet.balance,
+            walletCoins: wallet.coins
+        });
 
         // Unified wallet response with main/play structure and credit fields
+        // Use actual wallet values - if main/play are null/undefined, fall back to balance
+        // But prioritize the actual field values if they exist (even if 0)
+        const mainValue = (wallet.main !== null && wallet.main !== undefined) ? wallet.main : (wallet.balance ?? 0);
+        const playValue = (wallet.play !== null && wallet.play !== undefined) ? wallet.play : 0;
+
         res.json({
             balance: wallet.balance ?? 0,
-            main: wallet.main ?? wallet.balance ?? 0,
-            play: wallet.play ?? wallet.balance ?? 0,
+            main: mainValue,
+            play: playValue,
             coins: wallet.coins ?? 0,
             gamesWon: wallet.gamesWon ?? 0,
             creditAvailable: wallet.creditAvailable ?? 0,

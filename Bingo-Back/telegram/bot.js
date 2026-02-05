@@ -589,15 +589,30 @@ Thank you for your dedication! 🙏`;
 
         bot.command('balance', async (ctx) => {
             try {
-                const userId = String(ctx.from.id);
-                const userData = await UserService.getUserWithWallet(userId);
+                const telegramId = String(ctx.from.id);
+                const userData = await UserService.getUserWithWallet(telegramId);
                 if (!userData || !userData.wallet) {
                     return ctx.reply('❌ Wallet not found. Please try again later.');
                 }
                 const w = userData.wallet;
+                
+                // Debug logging to verify wallet data matches frontend
+                console.log('Bot balance command:', {
+                    telegramId: telegramId,
+                    userId: userData.user._id.toString(),
+                    walletMain: w.main,
+                    walletPlay: w.play,
+                    walletBalance: w.balance,
+                    walletCoins: w.coins
+                });
+
+                // Use actual wallet values - if main/play are null/undefined, fall back to balance
+                const mainValue = (w.main !== null && w.main !== undefined) ? w.main : (w.balance ?? 0);
+                const playValue = (w.play !== null && w.play !== undefined) ? w.play : 0;
+
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
                 if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl + '?stake=10' } }]);
-                ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
+                ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${mainValue.toFixed(2)}\n🎮 Play Balance: ETB ${playValue.toFixed(2)}\n🪙 Coins: ${(w.coins ?? 0).toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
                 ctx.reply('❌ Error checking balance. Please try again.');
@@ -953,14 +968,31 @@ Thank you for your dedication! 🙏`;
         bot.action('balance', async (ctx) => {
             if (!(await requireRegistration(ctx))) return;
             try {
-                const userId = String(ctx.from.id);
-                const userData = await UserService.getUserWithWallet(userId);
-                if (!userData || !userData.wallet) { return ctx.reply('❌ Wallet not found. Please try again later.'); }
+                const telegramId = String(ctx.from.id);
+                const userData = await UserService.getUserWithWallet(telegramId);
+                if (!userData || !userData.wallet) { 
+                    return ctx.reply('❌ Wallet not found. Please try again later.'); 
+                }
                 const w = userData.wallet;
+                
+                // Debug logging to verify wallet data matches frontend
+                console.log('Bot balance check:', {
+                    telegramId: telegramId,
+                    userId: userData.user._id.toString(),
+                    walletMain: w.main,
+                    walletPlay: w.play,
+                    walletBalance: w.balance,
+                    walletCoins: w.coins
+                });
+
+                // Use actual wallet values - if main/play are null/undefined, fall back to balance
+                const mainValue = (w.main !== null && w.main !== undefined) ? w.main : (w.balance ?? 0);
+                const playValue = (w.play !== null && w.play !== undefined) ? w.play : 0;
+
                 ctx.answerCbQuery('💵 Balance checked');
                 const keyboard = { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] };
                 if (isHttpsWebApp) keyboard.inline_keyboard.unshift([{ text: '🌐 Open Web App', web_app: { url: webAppUrl + '?stake=10' } }]);
-                ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n🎮 Play Balance: ETB ${w.play.toFixed(2)}\n🪙 Coins: ${w.coins.toFixed(0)}`, { reply_markup: keyboard });
+                ctx.reply(`💵 Your Wallet Balance:\n\n💰 Main Wallet: ETB ${mainValue.toFixed(2)}\n🎮 Play Balance: ETB ${playValue.toFixed(2)}\n🪙 Coins: ${(w.coins ?? 0).toFixed(0)}`, { reply_markup: keyboard });
             } catch (error) {
                 console.error('Balance check error:', error);
                 ctx.reply('❌ Error checking balance. Please try again.');

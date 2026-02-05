@@ -62,29 +62,57 @@ export default function Wallet({ onNavigate }) {
             try {
                 setLoading(true);
 
-                // Fetch profile data which includes wallet information
+                // Fetch wallet data directly from /wallet endpoint (authoritative source)
                 try {
-                    const profile = await apiFetch('/user/profile', { sessionId });
-                    setProfileData(profile);
-                    setDisplayPhone(profile?.user?.phone || null);
-                    setDisplayRegistered(!!profile?.user?.isRegistered);
+                    const walletData = await apiFetch('/wallet', { sessionId });
+                    
+                    // Debug logging to verify wallet data
+                    console.log('Wallet page wallet fetch:', {
+                        main: walletData.main,
+                        play: walletData.play,
+                        balance: walletData.balance,
+                        coins: walletData.coins,
+                        fullResponse: walletData
+                    });
 
-                    // Extract wallet data from profile response
-                    if (profile?.wallet) {
-                        setWallet({
-                            main: profile.wallet.main || 0,
-                            play: profile.wallet.play || 0,
-                            coins: profile.wallet.coins || 0
-                        });
-                    }
-                } catch (e) {
-                    console.error('Profile fetch error:', e);
-                    // Fallback to direct wallet fetch if profile fails
+                    // Use actual wallet values - prioritize main/play fields, fall back to balance only if null/undefined
+                    const mainValue = (walletData.main !== null && walletData.main !== undefined) 
+                        ? walletData.main 
+                        : (walletData.balance ?? 0);
+                    const playValue = (walletData.play !== null && walletData.play !== undefined) 
+                        ? walletData.play 
+                        : 0;
+
+                    setWallet({
+                        main: mainValue,
+                        play: playValue,
+                        coins: walletData.coins ?? 0
+                    });
+                } catch (walletError) {
+                    console.error('Wallet fetch error:', walletError);
+                    // Fallback: try profile endpoint
                     try {
-                        const walletData = await apiFetch('/wallet', { sessionId });
-                        setWallet(walletData);
-                    } catch (walletError) {
-                        console.error('Wallet fetch error:', walletError);
+                        const profile = await apiFetch('/user/profile', { sessionId });
+                        setProfileData(profile);
+                        setDisplayPhone(profile?.user?.phone || null);
+                        setDisplayRegistered(!!profile?.user?.isRegistered);
+
+                        // Extract wallet data from profile response
+                        if (profile?.wallet) {
+                            const mainValue = (profile.wallet.main !== null && profile.wallet.main !== undefined) 
+                                ? profile.wallet.main 
+                                : (profile.wallet.balance ?? 0);
+                            const playValue = (profile.wallet.play !== null && profile.wallet.play !== undefined) 
+                                ? profile.wallet.play 
+                                : 0;
+                            setWallet({
+                                main: mainValue,
+                                play: playValue,
+                                coins: profile.wallet.coins ?? 0
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Profile fetch error:', e);
                     }
                 }
             } catch (error) {
