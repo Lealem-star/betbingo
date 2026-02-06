@@ -128,7 +128,7 @@ export default function GameLayout({
         }
     };
 
-    // Navigate to winner page when phase enters announce (for both players and watch mode)
+    // Navigate to winner page when phase enters announce
     useEffect(() => {
         if (gameState.phase === 'announce' && !isRefreshing) {
             // Show winner announcement
@@ -144,7 +144,7 @@ export default function GameLayout({
                 showSuccess('🏆 Game Over!');
             }
 
-            // Navigate to winner page for all users (players and watch mode)
+            // Navigate to winner page for all users
             onNavigate?.('winner');
         }
     }, [gameState.phase, gameState.winners, sessionId, onNavigate, isRefreshing, showSuccess]);
@@ -162,18 +162,7 @@ export default function GameLayout({
         }
     }, [currentGameId]);
     const yourCards = Array.isArray(gameState.yourCards) ? gameState.yourCards : [];
-    const selectedNumbers = Array.isArray(selectedCartelas) ? selectedCartelas : [];
 
-    // Determine if we're in watch mode (no selected cartella and no bingo card from WebSocket)
-    const isWatchMode = selectedNumbers.length === 0 && yourCards.length === 0;
-
-
-    // Auto-transition back to CartelaSelection when registration starts
-    useEffect(() => {
-        if (isWatchMode && gameState.phase === 'registration' && !isRefreshing) {
-            onNavigate?.('cartela-selection');
-        }
-    }, [isWatchMode, gameState.phase, onNavigate, isRefreshing]);
 
     // Reset local state when game phase changes to registration
     useEffect(() => {
@@ -551,61 +540,29 @@ export default function GameLayout({
                             </div>
                         </div>
 
-                        {/* Right Bottom Card - Enhanced User's Cartella */}
+                        {/* Right Bottom Card - User Cartellas */}
                         <div className="relative rounded-2xl p-3 bg-gradient-to-br from-purple-900/70 to-slate-900/50 ring-1 ring-black/20 shadow-2xl shadow-black/30 overflow-hidden">
                             <div className="shimmer-overlay"></div>
-                            {isWatchMode ? (
-                                /* Watching Only Mode - Matching the image design */
-                                <div className="rounded-xl p-4 text-center bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-black/10">
-                                    <div className="text-white font-bold text-lg mb-3 flex items-center justify-center gap-2">
-                                        <span>👀</span>
-                                        <span>Watching Only</span>
+                            {/* User's Cartellas (stacked vertically) */}
+                            <div className="rounded-xl p-3 mt-8 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-black/10">
+                                {yourCards.length === 0 ? (
+                                    <div className="text-center text-white/80 py-6">
+                                        No cartela selected. Please go back and select cartela.
                                     </div>
-                                    <div className="text-white/80 text-sm mb-4 space-y-2">
-                                        <div className="text-white/90 text-sm leading-relaxed">
-                                            {gameState.phase === 'running' ? (
-                                                <>
-                                                    <div className="mb-2">ጭዋታው ተጀምሯል።</div>
-                                                    <div className="mb-2">ቀጣይ ጭዋታ እስኪጀምር እዚህ ይቆዩ።</div>
-                                                    <div className="mb-2">መልካም ተዝናኖት መልካም ዕድል።</div>
-                                                </>
-                                            ) : gameState.phase === 'announce' ? (
-                                                <>
-                                                    <div className="mb-2">ጨዋታው ተጠናቋል።</div>
-                                                    <div className="mb-2">የአሸናፊ ማስታወቂያ ወደሚታይበት ያመራሉ።</div>
-                                                    <div className="mb-2">በቅርቡ ወደ ቀጣይ ጭዋታ ይቀላቀላሉ።</div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="mb-2">የጨዋታ ምዝገባ ተከፍቷል።</div>
-                                                    <div className="mb-2">አዲስ የጨዋታ ማጠናቀቅ እዚህ ይጀምራል።</div>
-                                                    <div className="mb-2">ተጠብቅ።</div>
-                                                </>
-                                            )}
-                                        </div>
+                                ) : (
+                                    <div className="flex flex-col gap-4">
+                                        {yourCards.map(({ cardNumber, card }) => (
+                                            <CartellaCard
+                                                key={cardNumber}
+                                                id={cardNumber}
+                                                card={card}
+                                                called={calledNumbers}
+                                                isPreview={false}
+                                            />
+                                        ))}
                                     </div>
-                                </div>
-                            ) : (
-                                /* Enhanced Normal Cartella Mode */
-                                <>
-                                    {/* User's Cartellas (stacked vertically) */}
-                                    <div className="rounded-xl p-3 mt-8 bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-black/10">
-                                        <div className="flex flex-col gap-4">
-                                            {yourCards.map(({ cardNumber, card }) => (
-                                                <CartellaCard
-                                                    key={cardNumber}
-                                                    id={cardNumber}
-                                                    card={card}
-                                                    called={calledNumbers}
-                                                    isPreview={false}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-
-
-                                </>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

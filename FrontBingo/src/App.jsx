@@ -91,7 +91,6 @@ function AppContent() {
         phase: gameState.phase,
         gameId: gameState.gameId,
         yourCards: gameState.yourCards,
-        isWatchMode: gameState.isWatchMode
       },
       selectedStake,
       selectedCartelas,
@@ -250,7 +249,7 @@ function AppContent() {
             onResetToGame={handleResetToGame}
             stake={selectedStake}
             onCartelaSelected={(cartelaNumbers) => {
-              // When cartela(s) are selected (or [] for watch mode), go to the live game layout
+              // When cartela(s) are selected, go to the live game layout
               setSelectedCartelas(Array.isArray(cartelaNumbers) ? cartelaNumbers : []);
               setCurrentPage('game-layout');
             }}

@@ -22,7 +22,6 @@ export function WebSocketProvider({ children }) {
         yourCards: [], // [{ cardNumber, card }]
         countdown: 0,
         registrationEndTime: null,
-        isWatchMode: false,
         winners: [],
         walletUpdate: null,
         nextRegistrationStart: null
@@ -213,7 +212,6 @@ export function WebSocketProvider({ children }) {
                                     yourSelections: event.payload.yourSelections || [],
                                     countdown: phase === 'registration' ? remainingSeconds : (event.payload.countdown || 0),
                                     registrationEndTime,
-                                    isWatchMode: event.payload.isWatchMode || false,
                                     ...(phase === 'registration' ? {
                                         yourCards: [],
                                         yourSelections: [],
@@ -243,7 +241,6 @@ export function WebSocketProvider({ children }) {
                                 winners: [],
                                 takenCards: event.payload.takenCards || [],
                                 availableCards: event.payload.availableCards || [],
-                                isWatchMode: false,
                                 prizePool: 0
                             }));
                             break;
@@ -258,7 +255,6 @@ export function WebSocketProvider({ children }) {
                                 prizePool: event.payload.prizePool,
                                 calledNumbers: event.payload.calledNumbers || event.payload.called || [],
                                 yourCards: event.payload.cards || [],
-                                isWatchMode: false
                             }));
                             setPendingGameStart(null);
                             break;
@@ -451,7 +447,6 @@ export function WebSocketProvider({ children }) {
                     yourCards: [],
                 countdown: 0,
                 registrationEndTime: null,
-                isWatchMode: false,
                 winners: [],
                 walletUpdate: null,
                 nextRegistrationStart: null

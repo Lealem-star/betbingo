@@ -265,7 +265,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             selectedNumbers,
             hasSelectedCard: selectedNumbers.length > 0,
             yourCards: Array.isArray(gameState.yourCards) ? gameState.yourCards.length : 0,
-            isWatchMode: gameState.isWatchMode
         });
 
         // If game is running and we have selected cartela(s), navigate to game layout
@@ -282,11 +281,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             console.log('Calling onCartelaSelected with:', selectedNumbers);
             onCartelaSelected?.(selectedNumbers);
         }
-        // If game is running but we don't have a selected card, navigate to watch mode
-        else if (gameState.phase === 'running' && gameState.gameId && selectedNumbers.length === 0) {
-            console.log('Game is ongoing, navigating to GameLayout for watch mode');
-            onCartelaSelected?.(null);
-        }
+        // If game is running but user has no selection, stay on CartelaSelection (no watch mode)
     }, [gameState.phase, gameState.gameId, gameState.yourSelections, gameState.yourCards, onCartelaSelected, onGameIdUpdate]);
 
     // Show message if game cancelled due to not enough players

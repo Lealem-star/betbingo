@@ -132,12 +132,28 @@ const wss = new WebSocketServer({ noServer: true });
 
 // --- Simple in-memory rooms with auto-cycling phases ---
 const stakes = [10];
-const rooms = new Map(); // stake -> room
-let currentStakeIndex = 0;
+// Multi-room per stake: stake -> [room, room, ...]
+const rooms = new Map();
+
+function getRoomsForStake(stake) {
+    if (!rooms.has(stake)) rooms.set(stake, []);
+    return rooms.get(stake);
+}
+
+function countSelectedCartelas(room) {
+    return Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+}
+
+function getJoinableRoomForStake(stake) {
+    const list = getRoomsForStake(stake);
+    const totalCards = BingoCards.cards.length;
+    // Prefer registration rooms with available cards
+    return list.find(r => r.phase === 'registration' && r.takenCards.size < totalCards) || null;
+}
 
 function makeRoom(stake) {
     const room = {
-        id: `room_${stake}`,
+        id: `room_${stake}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
         stake,
         phase: 'registration', // registration, running, announce
         currentGameId: null, // Will be set when registration starts
@@ -161,7 +177,7 @@ function makeRoom(stake) {
             ws.room = room;
 
             const getUserSelections = (userId) => room.userCardSelections.get(userId) || [];
-            const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+            const selectedCount = countSelectedCartelas(room);
             const snapshot = {
                 phase: room.phase,
                 gameId: room.currentGameId,
@@ -172,7 +188,6 @@ function makeRoom(stake) {
                 takenCards: Array.from(room.takenCards),
                 yourSelections: getUserSelections(ws.userId),
                 nextStartAt: room.registrationEndTime || room.gameEndTime || null,
-                isWatchMode: room.phase !== 'registration',
                 prizePool: room.phase === 'running'
                     ? (selectedCount * room.stake) - Math.floor(selectedCount * room.stake * 0.2)
                     : 0
@@ -192,7 +207,7 @@ function makeRoom(stake) {
             prevSelections.forEach((n) => room.takenCards.delete(n));
             room.userCardSelections.delete(ws.userId);
 
-            const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+            const selectedCount = countSelectedCartelas(room);
             broadcast('players_update', { playersCount: selectedCount, prizePool: Math.floor(selectedCount * room.stake * 0.8) }, room);
             broadcast('registration_update', { takenCards: Array.from(room.takenCards) }, room);
         }
@@ -254,7 +269,6 @@ async function startRegistration(room) {
         endsAt: room.registrationEndTime,
         availableCards: Array.from({ length: BingoCards.cards.length }, (_, i) => i + 1), // Generate available cards based on actual card count
         takenCards: [],
-        isWatchMode: false
     }, room);
 
     // Proactively fund bots when registration opens
@@ -827,10 +841,13 @@ wss.on('connection', async (ws, request) => {
 
     // Auto-join room based on URL stake param (aligns with frontend behavior)
     if (!Number.isNaN(stakeParam) && stakes.includes(stakeParam)) {
-        if (!rooms.has(stakeParam)) {
-            rooms.set(stakeParam, makeRoom(stakeParam));
+        const list = getRoomsForStake(stakeParam);
+        let room = getJoinableRoomForStake(stakeParam);
+        if (!room) {
+            room = makeRoom(stakeParam);
+            list.push(room);
+            await startRegistration(room);
         }
-        const room = rooms.get(stakeParam);
         await room.onJoin(ws);
     }
 
@@ -850,11 +867,20 @@ wss.on('connection', async (ws, request) => {
                     return;
                 }
 
-                if (!rooms.has(stake)) {
-                    rooms.set(stake, makeRoom(stake));
+                const list = getRoomsForStake(stake);
+                let room = getJoinableRoomForStake(stake);
+                if (!room) {
+                    room = makeRoom(stake);
+                    list.push(room);
+                    await startRegistration(room);
                 }
-                const room = rooms.get(stake);
-                console.log('Joining room:', { stake, roomPhase: room.phase, gameId: room.currentGameId });
+
+                // If user was previously in a different room, leave it
+                if (ws.room && ws.room !== room) {
+                    ws.room.onLeave(ws);
+                }
+
+                console.log('Joining room:', { stake, roomId: room.id, roomPhase: room.phase, gameId: room.currentGameId });
                 await room.onJoin(ws);
             } else if (data.type === 'select_card') {
                 const room = ws.room;
@@ -875,8 +901,7 @@ wss.on('connection', async (ws, request) => {
                             payload: {
                                 reason: 'NOT_IN_REGISTRATION',
                                 cardNumber,
-                                currentPhase: room.phase,
-                                isWatchMode: true
+                                currentPhase: room.phase
                             }
                         }));
                         return;
@@ -886,7 +911,7 @@ wss.on('connection', async (ws, request) => {
 
                     // Idempotent: clicking an already-selected cartela does nothing
                     if (selections.includes(cardNumber)) {
-                        const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+                        const selectedCount = countSelectedCartelas(room);
                         const currentPrizePool = Math.floor(selectedCount * room.stake * 0.8);
                         ws.send(JSON.stringify({
                             type: 'selection_confirmed',
@@ -922,7 +947,7 @@ wss.on('connection', async (ws, request) => {
                     room.selectedPlayers.add(ws.userId);
 
                     // Calculate current prize pool (80% of stake × players)
-                    const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+                    const selectedCount = countSelectedCartelas(room);
                     const currentPrizePool = Math.floor(selectedCount * room.stake * 0.8);
 
                     ws.send(JSON.stringify({
@@ -979,7 +1004,7 @@ wss.on('connection', async (ws, request) => {
                         }
 
                         // Recompute prize pool after removing player
-                        const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+                        const selectedCount = countSelectedCartelas(room);
                         const currentPrizePool = Math.floor(selectedCount * room.stake * 0.8);
 
                         // Notify the user
@@ -1004,7 +1029,7 @@ wss.on('connection', async (ws, request) => {
                         }, room);
                     } else {
                         // Nothing to clear; reply benignly
-                        const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+                        const selectedCount = countSelectedCartelas(room);
                         ws.send(JSON.stringify({ type: 'selection_cleared', payload: { removedCard: null, selections: [], playersCount: selectedCount, prizePool: Math.floor(selectedCount * room.stake * 0.8) } }));
                     }
                 } else {
@@ -1071,10 +1096,11 @@ server.listen(PORT, () => {
     // Initialize rooms with registration phase active
     stakes.forEach(async (stake) => {
         try {
-            if (!rooms.has(stake)) {
-                rooms.set(stake, makeRoom(stake));
+            const list = getRoomsForStake(stake);
+            if (list.length === 0) {
+                list.push(makeRoom(stake));
             }
-            const room = rooms.get(stake);
+            const room = list[0];
             // Start registration immediately
             await startRegistration(room);
         } catch (error) {
