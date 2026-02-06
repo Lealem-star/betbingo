@@ -675,36 +675,31 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     </button>
                 </div>
 
-                {/* Second Row: Wallet info and Timer */}
-                <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
-                        <div className="wallet-box">
-                            <div className="wallet-label">Main Wallet</div>
-                            <div className="wallet-value text-blue-400">
-                                {walletLoading ? '...' : wallet.main?.toLocaleString() || 0}
-                            </div>
-                        </div>
-                        <div className="wallet-box">
-                            <div className="wallet-label">Play Wallet</div>
-                            <div className="wallet-value text-green-400">
-                                {walletLoading ? '...' : wallet.play?.toLocaleString() || 0}
-                            </div>
-                        </div>
-                        <div className="wallet-box">
-                            <div className="wallet-label">Stake</div>
-                            <div className="wallet-value">{stake}</div>
+                {/* Second Row: Wallet info and Timer - White boxes style */}
+                <div className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap mobile-info-bar" style={{ marginBottom: '1rem' }}>
+                    <div className="info-box flex-1">
+                        <div className="info-label">Main Wallet</div>
+                        <div className="info-value">
+                            {walletLoading ? '...' : wallet.main?.toLocaleString() || 0}
                         </div>
                     </div>
-                    <div className="timer-box">
-                        <div className="timer-countdown">
-                            {gameState.countdown}s
+                    <div className="info-box flex-1">
+                        <div className="info-label">Play Wallet</div>
+                        <div className="info-value">
+                            {walletLoading ? '...' : wallet.play?.toLocaleString() || 0}
                         </div>
-                        <div className="timer-status">
-                            Players: {gameState.playersCount}
-                        </div>
-                        <div className="prize-pool">
-                            Prize: {gameState.prizePool || 0}
-                        </div>
+                    </div>
+                    <div className="info-box flex-1">
+                        <div className="info-label">Stake</div>
+                        <div className="info-value">{stake}</div>
+                    </div>
+                    <div className="info-box flex-1">
+                        <div className="info-label">Players</div>
+                        <div className="info-value">{gameState.playersCount || 0}</div>
+                    </div>
+                    <div className="info-box flex-1">
+                        <div className="info-label">Timer</div>
+                        <div className="info-value">{gameState.countdown || 0}s</div>
                     </div>
                 </div>
 
@@ -716,7 +711,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
                 {/* Number Selection Grid - Inside Scrollable Box */}
                 <div className="my-4 mx-4">
-                    <div className="bg-gray-800 rounded-lg p-4 max-h-[320px] min-h-[260px] overflow-y-auto">
+                    <div className="bg-purple-200 rounded-lg p-4 max-h-[320px] min-h-[260px] overflow-y-auto" style={{ background: '#e9d5ff' }}>
                         <div className="cartela-numbers-grid">
                             {Array.from({ length: cards.length }, (_, i) => i + 1).map((cartelaNumber) => {
                                 // Ensure type consistency for comparison (convert to number)
@@ -730,13 +725,13 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                                         key={cartelaNumber}
                                         onClick={() => !isTaken && handleCardSelect(cartelaNum)}
                                         disabled={isTaken || gameState.phase === 'running'}
-                                        className={`cartela-number-btn ${isTaken
+                                        className={`cartela-number-btn-light ${isTaken
                                             ? (takenByMe
-                                                ? 'bg-green-600 text-white cursor-default'
-                                                : 'bg-red-600 text-white cursor-not-allowed opacity-60')
+                                                ? 'cartela-selected-light'
+                                                : 'cartela-taken-light')
                                             : (isSelected
-                                                ? 'bg-blue-600 text-white'
-                                                : 'hover:bg-blue-500')
+                                                ? 'cartela-selected-light'
+                                                : 'cartela-normal-light')
                                             }`}
                                         title={`Cartella #${cartelaNumber}`}
                                     >
@@ -752,8 +747,8 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 {/* Selected Cartella Preview (up to 2 cartelas, side-by-side) */}
                 {selectedCards.length > 0 && (
                     <div className="mt-6">
-                        <h3 className="text-lg font-semibold text-white mb-3 text-center">Your Selected Cartella</h3>
-                        <div className="bg-gray-800 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">Your Selected Cartella</h3>
+                        <div className="bg-purple-200 rounded-lg p-4" style={{ background: '#e9d5ff' }}>
                             <div className="flex justify-center gap-4 flex-wrap">
                                 {selectedCards.map(({ number, card }) => (
                                     <CartellaCard
@@ -766,7 +761,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                                     />
                                 ))}
                             </div>
-                            <div className="text-center text-sm text-gray-300 mt-3">
+                            <div className="text-center text-sm text-gray-700 mt-3">
                                 🎫 {selectedNumbers.map(n => `Cartella #${n}`).join('  |  ')}
                             </div>
                         </div>
