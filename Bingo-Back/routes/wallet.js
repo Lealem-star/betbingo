@@ -47,7 +47,7 @@ router.get('/', authMiddleware, async (req, res) => {
             }
         });
 
-        // Unified wallet response with main/play structure and credit fields
+        // Unified wallet response with main/play structure
         // Use actual wallet values - if main/play are null/undefined, fall back to balance
         // But prioritize the actual field values if they exist (even if 0)
         const mainValue = (wallet.main !== null && wallet.main !== undefined) ? wallet.main : (wallet.balance ?? 0);
@@ -58,10 +58,7 @@ router.get('/', authMiddleware, async (req, res) => {
             main: mainValue,
             play: playValue,
             coins: wallet.coins ?? 0,
-            gamesWon: wallet.gamesWon ?? 0,
-            creditAvailable: wallet.creditAvailable ?? 0,
-            creditUsed: wallet.creditUsed ?? 0,
-            creditOutstanding: wallet.creditOutstanding ?? 0
+            gamesWon: wallet.gamesWon ?? 0
         };
 
         console.log(`📤 [${requestId}] Sending wallet response:`, {

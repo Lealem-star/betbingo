@@ -13,12 +13,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     const [selectedCardNumber, setSelectedCardNumber] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [wallet, setWallet] = useState({ main: 0, play: 0, coins: 0, creditAvailable: 0, creditUsed: 0 });
+    const [wallet, setWallet] = useState({ main: 0, play: 0, coins: 0 });
     const [walletLoading, setWalletLoading] = useState(true);
     const [centerMessage, setCenterMessage] = useState(null);
 
     // WebSocket integration
-    const { connected, gameState, selectCartella, deselectCartella, connectToStake, wsReadyState, isConnecting, lastEvent, messageCount } = useWebSocket();
+    const { connected, gameState, selectCartella, deselectCartella, connectToStake, wsReadyState, isConnecting, lastEvent } = useWebSocket();
     const hasConnectedRef = useRef(false);
     const rejoinTriedRef = useRef(false);
 
@@ -154,7 +154,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
             try {
                 setWalletLoading(true);
-                // Primary source: /wallet (auto-creates wallet and ensures credit fields)
+                // Primary source: /wallet (authoritative)
                 const walletResponse = await apiFetch('/wallet', { sessionId });
                 
                 // Debug logging to verify wallet data
@@ -177,9 +177,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 setWallet({
                     main: mainValue,
                     play: playValue,
-                    coins: walletResponse.coins ?? 0,
-                    creditAvailable: walletResponse.creditAvailable ?? 0,
-                    creditUsed: walletResponse.creditUsed ?? 0
+                    coins: walletResponse.coins ?? 0
                 });
             } catch (walletErr) {
                 console.error('Error fetching wallet from /wallet:', walletErr);
@@ -190,17 +188,13 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                         setWallet({
                             main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
                             play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
-                            coins: profileResponse.wallet.coins ?? 0,
-                            creditAvailable: profileResponse.wallet.creditAvailable ?? 0,
-                            creditUsed: profileResponse.wallet.creditUsed ?? 0
+                            coins: profileResponse.wallet.coins ?? 0
                         });
                     } else {
                         setWallet({
                             main: 0,
                             play: 0,
-                            coins: 0,
-                            creditAvailable: 0,
-                            creditUsed: 0
+                            coins: 0
                         });
                     }
                 } catch (profileErr) {
@@ -209,9 +203,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     setWallet({
                         main: 0,
                         play: 0,
-                        coins: 0,
-                        creditAvailable: 0,
-                        creditUsed: 0
+                        coins: 0
                     });
                 }
             } finally {
@@ -222,16 +214,14 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         fetchWallet();
     }, [sessionId]);
 
-    // Apply wallet updates from WebSocket (includes credit fields when playing on credit)
+    // Apply wallet updates from WebSocket
     useEffect(() => {
         if (!gameState?.walletUpdate) return;
         const update = gameState.walletUpdate;
         setWallet(prev => ({
             main: update.main ?? prev.main ?? 0,
             play: update.play ?? prev.play ?? 0,
-            coins: update.coins ?? prev.coins ?? 0,
-            creditAvailable: update.creditAvailable ?? prev.creditAvailable ?? 0,
-            creditUsed: update.creditUsed ?? prev.creditUsed ?? 0
+            coins: update.coins ?? prev.coins ?? 0
         }));
     }, [gameState.walletUpdate]);
 
@@ -364,14 +354,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             return;
         }
 
-        // Check if player has sufficient balance or credit
+        // Check if player has sufficient balance
         const totalBalance = (wallet.main || 0) + (wallet.play || 0);
-        const creditAvailable = wallet.creditAvailable || 0;
         const hasBalance = totalBalance >= stake;
-        const hasCredit = creditAvailable >= stake && totalBalance === 0; // Credit only if no balance
 
-        if (!hasBalance && !hasCredit) {
-            const msg = `Insufficient balance and credit. You need ${stake} ETB but have ${totalBalance} ETB balance and ${creditAvailable} ETB credit available.`;
+        if (!hasBalance) {
+            const msg = `Insufficient balance. You need ${stake} ETB but have ${totalBalance} ETB.`;
 
             // Avoid stacking multiple overlays/toasts on repeated clicks
             if (centerMessage !== msg) {
@@ -381,10 +369,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
             showError(msg);
             return;
-        }
-
-        if (totalBalance < stake && hasCredit) {
-            showSuccess('Using credit to play this game...');
         }
 
         // Check if card is already taken
@@ -440,9 +424,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             setWallet({
                 main: walletResponse.main ?? walletResponse.balance ?? 0,
                 play: walletResponse.play ?? walletResponse.balance ?? 0,
-                coins: walletResponse.coins ?? 0,
-                creditAvailable: walletResponse.creditAvailable ?? 0,
-                creditUsed: walletResponse.creditUsed ?? 0
+                coins: walletResponse.coins ?? 0
             });
         } catch (walletErr) {
             console.error('Error refreshing wallet from /wallet:', walletErr);
@@ -453,9 +435,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     setWallet({
                         main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
                         play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
-                        coins: profileResponse.wallet.coins ?? 0,
-                        creditAvailable: profileResponse.wallet.creditAvailable ?? 0,
-                        creditUsed: profileResponse.wallet.creditUsed ?? 0
+                        coins: profileResponse.wallet.coins ?? 0
                     });
                 }
             } catch (profileErr) {
@@ -540,17 +520,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                                 <div className="wallet-value text-green-400">
                                     {walletLoading ? '...' : (wallet.play || 0).toLocaleString()}
                                 </div>
-                            </div>
-                            <div className="wallet-box">
-                                <div className="wallet-label">Credit</div>
-                                <div className="wallet-value text-orange-400">
-                                    {walletLoading ? '...' : (wallet.creditAvailable || 0).toLocaleString()}
-                                </div>
-                                {(wallet.creditUsed || 0) > 0 && (
-                                    <div className="text-xs text-orange-300 mt-1">
-                                        Used: {(wallet.creditUsed || 0).toLocaleString()}
-                                    </div>
-                                )}
                             </div>
                             <div className="wallet-box">
                                 <div className="wallet-label">Stake</div>
@@ -712,17 +681,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                             <div className="wallet-value text-green-400">
                                 {walletLoading ? '...' : wallet.play?.toLocaleString() || 0}
                             </div>
-                        </div>
-                        <div className="wallet-box">
-                            <div className="wallet-label">Credit</div>
-                            <div className="wallet-value text-orange-400">
-                                {walletLoading ? '...' : (wallet.creditAvailable || 0).toLocaleString()}
-                            </div>
-                            {(wallet.creditUsed || 0) > 0 && (
-                                <div className="text-xs text-orange-300 mt-1">
-                                    Used: {(wallet.creditUsed || 0).toLocaleString()}
-                                </div>
-                            )}
                         </div>
                         <div className="wallet-box">
                             <div className="wallet-label">Stake</div>

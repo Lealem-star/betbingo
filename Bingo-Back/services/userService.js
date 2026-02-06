@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
+const WalletService = require('./walletService');
 
 class UserService {
     // Create or update user from Telegram data
@@ -137,9 +138,77 @@ class UserService {
             user.isRegistered = true;
             await user.save();
 
-            // No monetary welcome bonus awarded on first registration
+            // Award welcome / referral bonuses only on first successful registration (first contact share)
+            let welcomeBonusAmount = 0;
+            let inviterRewardAmount = 0;
+            let inviterRewarded = false;
+            let inviterId = null;
 
-            return { user, isNewRegistration: isFirstRegistration };
+            if (isFirstRegistration) {
+                // Ensure wallet exists
+                await WalletService.getWallet(user._id);
+
+                // 1) Welcome bonus: +10 ETB to Play Wallet
+                welcomeBonusAmount = 10;
+                const welcomeResult = await WalletService.updateBalance(user._id, { play: welcomeBonusAmount });
+
+                const welcomeTx = new Transaction({
+                    userId: user._id,
+                    type: 'registration_bonus',
+                    amount: welcomeBonusAmount,
+                    description: `Welcome bonus: ETB ${welcomeBonusAmount} added to play wallet`,
+                    balanceBefore: welcomeResult.balanceBefore,
+                    balanceAfter: welcomeResult.balanceAfter
+                });
+                await welcomeTx.save();
+
+                // 2) Referral bonus: +1 ETB to inviter's Play Wallet (only if this user was invited)
+                if (user.invitedBy) {
+                    inviterId = user.invitedBy;
+                    const inviter = await User.findById(inviterId);
+                    if (inviter) {
+                        inviterRewardAmount = 1;
+
+                        await WalletService.getWallet(inviter._id);
+                        const inviterResult = await WalletService.updateBalance(inviter._id, { play: inviterRewardAmount });
+
+                        const inviterTx = new Transaction({
+                            userId: inviter._id,
+                            type: 'invite_reward',
+                            amount: inviterRewardAmount,
+                            description: `Referral bonus: ETB ${inviterRewardAmount} (added to play wallet) for inviting ${user.firstName || 'a friend'}`,
+                            balanceBefore: inviterResult.balanceBefore,
+                            balanceAfter: inviterResult.balanceAfter
+                        });
+                        await inviterTx.save();
+
+                        // Update inviter stats (used by invite-stats/admin dashboards)
+                        inviter.inviteRewards = (inviter.inviteRewards || 0) + inviterRewardAmount;
+
+                        // Mark invite history as rewarded (best-effort)
+                        const invitedUserIdStr = String(user._id);
+                        if (Array.isArray(inviter.inviteHistory)) {
+                            const entry = inviter.inviteHistory.find(e => String(e.invitedUserId) === invitedUserIdStr);
+                            if (entry) {
+                                entry.status = 'rewarded';
+                                entry.rewardEarned = inviterRewardAmount;
+                            }
+                        }
+
+                        await inviter.save();
+                        inviterRewarded = true;
+                    }
+                }
+            }
+
+            return {
+                user,
+                isNewRegistration: isFirstRegistration,
+                welcomeBonusAmount,
+                inviterRewardAmount,
+                inviterRewarded,
+                inviterId
+            };
         } catch (error) {
             console.error('Error updating user phone:', error);
             throw error;

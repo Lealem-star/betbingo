@@ -73,8 +73,7 @@ class InviteService {
 
             await Promise.all([inviter.save(), invitee.save()]);
 
-            // Note: Rewards are now deposit-based (10% of invited user's deposit)
-            // Tier-based rewards are disabled - rewards are awarded when invited users deposit
+            // Note: Rewards are awarded when the invited user completes registration (shares contact).
 
             return { success: true, inviter, invitee };
         } catch (error) {
@@ -197,9 +196,9 @@ class InviteService {
 
             return {
                 totalInvites,
-                totalRewards, // Total rewards earned from deposits (10% of invited users' deposits)
+                totalRewards, // Total rewards earned from registrations (ETB 1 per invitee registration)
                 totalDepositsFromInvited, // Total deposits made by invited users
-                rewardRate: '10% of invited user deposits', // Reward rate description
+                rewardRate: 'ETB 1 per invited user registration', // Reward rate description
                 inviteCode: user.inviteCode,
                 inviteHistory: user.inviteHistory || []
             };

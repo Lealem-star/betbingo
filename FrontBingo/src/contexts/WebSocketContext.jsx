@@ -355,9 +355,6 @@ export function WebSocketProvider({ children }) {
                                     main: event.payload.main,
                                     play: event.payload.play,
                                     coins: event.payload.coins,
-                                    creditAvailable: event.payload.creditAvailable,
-                                    creditUsed: event.payload.creditUsed,
-                                    creditOutstanding: event.payload.creditOutstanding,
                                     source: event.payload.source
                                 }
                             }));

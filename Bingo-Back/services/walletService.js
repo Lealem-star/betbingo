@@ -19,12 +19,7 @@ class WalletService {
                 console.log('WalletService.getWallet - Creating new wallet for userId:', userId.toString());
                 wallet = await this.createWallet(userId);
             }
-            
-            // Ensure credit availability is set based on deposits (only for users who have deposited)
-            await this.ensureCreditAvailability(userId);
-            
-            // Refresh wallet to get updated credit fields
-            wallet = await Wallet.findOne({ userId });
+
             console.log('WalletService.getWallet - Final wallet:', {
                 userId: userId.toString(),
                 main: wallet?.main,
@@ -102,7 +97,7 @@ class WalletService {
     // Process deposit
     static async processDeposit(userId, amount, smsData = null) {
         try {
-            // Credit main wallet (deposit balance)
+            // Add to main wallet (deposit balance)
             const result = await this.updateBalance(userId, { main: amount });
 
             // Gift play wallet: 10% of deposit
@@ -133,18 +128,7 @@ class WalletService {
                 }
             );
 
-            // If user has outstanding credit, auto-repay from deposit
-            const wallet = await Wallet.findOne({ userId });
-            if (wallet && wallet.creditOutstanding > 0 && wallet.main > 0) {
-                const repay = Math.min(wallet.main, wallet.creditOutstanding);
-                wallet.main -= repay;
-                wallet.creditOutstanding -= repay;
-                wallet.creditUsed = Math.max(0, wallet.creditUsed - repay);
-                await wallet.save();
-            }
-
-            // Award invite reward: 10% of deposit to inviter (if user was invited)
-            await this.processInviteDepositReward(userId, amount);
+            // NOTE: Referral reward is handled on invitee registration (contact share), not on deposits.
 
             return { wallet: result.wallet, transaction };
         } catch (error) {
@@ -251,20 +235,10 @@ class WalletService {
         }
     }
 
-    // Process game win - credit to main wallet
+    // Process game win - add to main wallet
     static async processGameWin(userId, amount, gameId) {
         try {
             const result = await this.updateBalance(userId, { main: amount, gamesWon: 1 });
-
-            // Auto-repay outstanding credit first from main
-            const wallet = await Wallet.findOne({ userId });
-            if (wallet && wallet.creditOutstanding > 0 && wallet.main > 0) {
-                const repay = Math.min(amount, wallet.creditOutstanding);
-                wallet.main -= repay;
-                wallet.creditOutstanding -= repay;
-                wallet.creditUsed = Math.max(0, wallet.creditUsed - repay);
-                await wallet.save();
-            }
 
             // Create transaction record
             const transaction = new Transaction({
@@ -283,66 +257,6 @@ class WalletService {
             console.error('Error processing game win:', error);
             throw error;
         }
-    }
-
-    // Compute credit tier based on all-time deposits
-    // Credit is ONLY given to users who have deposited
-    static getCreditTierAmount(totalDeposited) {
-        if (totalDeposited === 0 || !totalDeposited) return 0; // No credit for users without deposits
-        if (totalDeposited > 500) return 50;
-        if (totalDeposited >= 200) return 20;
-        return 10;
-    }
-
-    // Ensure credit availability fields are set based on tier
-    // Credit is ONLY given to users who have deposited
-    static async ensureCreditAvailability(userId) {
-        const wallet = await Wallet.findOne({ userId });
-        if (!wallet) throw new Error('Wallet not found');
-        const tier = this.getCreditTierAmount(wallet.totalDeposited || 0);
-        
-        // Only set credit if user has deposits (tier > 0)
-        // If user has no deposits, ensure creditAvailable is 0
-        if (tier === 0) {
-            if (wallet.creditAvailable > 0) {
-                wallet.creditAvailable = 0;
-                await wallet.save();
-            }
-        } else {
-            // Set available to tier if lower than tier (only for users with deposits)
-            if ((wallet.creditAvailable || 0) < tier) {
-                wallet.creditAvailable = tier;
-                await wallet.save();
-            }
-        }
-        return wallet;
-    }
-
-    // Use credit for a game stake (once per game handled by caller)
-    // Credit is ONLY available to users who have deposited
-    static async useCredit(userId, amount) {
-        const wallet = await this.ensureCreditAvailability(userId);
-        
-        // Check if user has deposits (required for credit)
-        if (!wallet.totalDeposited || wallet.totalDeposited === 0) {
-            throw new Error('NO_DEPOSIT_HISTORY');
-        }
-        
-        if ((wallet.main > 0) || (wallet.play > 0)) {
-            throw new Error('NOT_ELIGIBLE_FOR_CREDIT');
-        }
-        const tier = wallet.creditAvailable || 0;
-        if (tier === 0) {
-            throw new Error('NO_CREDIT_AVAILABLE');
-        }
-        if (amount > tier) {
-            throw new Error('CREDIT_LIMIT_EXCEEDED');
-        }
-        // Increase used and outstanding by amount
-        wallet.creditUsed = (wallet.creditUsed || 0) + amount;
-        wallet.creditOutstanding = (wallet.creditOutstanding || 0) + amount;
-        await wallet.save();
-        return wallet;
     }
 
     // Process game completion - give 10 coins as gift
@@ -476,8 +390,7 @@ class WalletService {
                 await this.updateBalance(userId, { coins: giftCoins });
             }
 
-            // Award invite reward: 10% of deposit to inviter (if user was invited)
-            await this.processInviteDepositReward(userId, amount);
+            // NOTE: Referral reward is handled on invitee registration (contact share), not on deposits.
 
             return { success: true, wallet: result.wallet };
         } catch (error) {

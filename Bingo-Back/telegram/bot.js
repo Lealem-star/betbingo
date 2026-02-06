@@ -1385,14 +1385,14 @@ Thank you for your dedication! 🙏`;
                 await ctx.replyWithPhoto(
                     { source: imagePath },
                     {
-                        caption: `🔗 Invite Friends to FUN Bingo!\n\n👥 Share this link with your friends:\n\n${inviteLink}`,
+                        caption: `🔗 Invite Friends to FUN Bingo!\n\n🎁 Get ETB 1 bonus to your Play Wallet for each friend who registers.\n\n👥 Share this link with your friends:\n\n${inviteLink}`,
                         reply_markup: keyboard
                     }
                 );
             } catch (error) {
                 console.error('Error sending invite image:', error);
                 // Fallback to text message if image fails
-                ctx.reply(`🔗 Invite Friends to FUN Bingo!\n\n👥 Share this link with your friends:\n\n${inviteLink}`, { reply_markup: keyboard });
+                ctx.reply(`🔗 Invite Friends to FUN Bingo!\n\n🎁 Get ETB 1 bonus to your Play Wallet for each friend who registers.\n\n👥 Share this link with your friends:\n\n${inviteLink}`, { reply_markup: keyboard });
             }
         });
 
@@ -1505,23 +1505,32 @@ Thank you for your dedication! 🙏`;
                     const result = await UserService.updateUserPhone(userId, contact.phone_number);
                     const isNewRegistration = result?.isNewRegistration;
 
-                    // Build registration message
-                    const fullName = (contact.first_name || '') + (contact.last_name ? ' ' + contact.last_name : '');
-                    let phoneDisplay = contact.phone_number;
-                    // Format phone with + if international format
-                    if (phoneDisplay && !phoneDisplay.startsWith('+')) {
-                        if (phoneDisplay.startsWith('251')) {
-                            phoneDisplay = '+' + phoneDisplay;
-                        }
+                    const displayName =
+                        (ctx.from?.username ? `@${ctx.from.username}` : '') ||
+                        (contact.first_name || '').trim() ||
+                        (ctx.from?.first_name || '').trim() ||
+                        'User';
+
+                    // Private welcome message to the registering user (no broadcast, no phone number)
+                    if (isNewRegistration) {
+                        await ctx.reply(
+                            `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!`,
+                            { reply_markup: { remove_keyboard: true } }
+                        );
+                    } else {
+                        await ctx.reply('✅ Registration completed!', { reply_markup: { remove_keyboard: true } });
                     }
-
-                    let message = `✅ Registration completed!\n\n📱 Phone: ${phoneDisplay}\n👤 Name: ${fullName}`;
-                    message += `\n\n🎮 You can now start playing!`;
-
-                    ctx.reply(message, { reply_markup: { remove_keyboard: true } });
                 } catch (dbError) {
                     console.log('Database unavailable during contact update');
-                    ctx.reply('✅ Registration completed!\n\n📱 Phone: ' + contact.phone_number + '\n👤 Name: ' + (contact.first_name || '') + ' ' + (contact.last_name || '') + '\n\n🎮 You can now start playing!', { reply_markup: { remove_keyboard: true } });
+                    const displayName =
+                        (ctx.from?.username ? `@${ctx.from.username}` : '') ||
+                        (contact.first_name || '').trim() ||
+                        (ctx.from?.first_name || '').trim() ||
+                        'User';
+                    ctx.reply(
+                        `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!`,
+                        { reply_markup: { remove_keyboard: true } }
+                    );
                 }
             } catch (error) {
                 console.error('Contact registration error:', error);

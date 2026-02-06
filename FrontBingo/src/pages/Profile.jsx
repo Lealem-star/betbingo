@@ -56,7 +56,7 @@ export default function Profile({ onNavigate }) {
                 apiFetch('/wallet', { sessionId }).catch(err => {
                     // If wallet fetch fails, use default values
                     console.warn('Wallet fetch failed:', err);
-                    return { balance: 0, main: 0, play: 0, coins: 0, gamesWon: 0, creditAvailable: 0, creditUsed: 0 };
+                    return { balance: 0, main: 0, play: 0, coins: 0, gamesWon: 0 };
                 }),
                 apiFetch('/user/invite-stats', { sessionId }).catch(() => null)
             ]);
@@ -93,9 +93,7 @@ export default function Profile({ onNavigate }) {
                 main: mainValue,
                 play: playValue,
                 coins: walletRes.coins ?? 0,
-                gamesWon: walletRes.gamesWon ?? 0,
-                creditAvailable: walletRes.creditAvailable ?? 0,
-                creditUsed: walletRes.creditUsed ?? 0
+                gamesWon: walletRes.gamesWon ?? 0
             };
 
             setProfileData({
@@ -186,25 +184,6 @@ export default function Profile({ onNavigate }) {
                                 <div className="profile-card-subtitle">Game funds</div>
                             </div>
 
-                            {/* Credit */}
-                            <div className="profile-card">
-                                <div className="profile-card-title">
-                                    <span className="profile-card-icon">📄</span>
-                                    <span className="profile-card-label">Credit</span>
-                                </div>
-                                <div className="profile-card-value profile-card-value-blue">
-                                    {profileData.wallet.creditAvailable?.toLocaleString() || 0}
-                                </div>
-                                <div className="profile-card-subtitle">
-                                    Available Credit
-                                    {((profileData.wallet.creditUsed || 0) > 0) && (
-                                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-700 border border-orange-300">
-                                            Used: {profileData.wallet.creditUsed}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
                             {/* Total Coins */}
                             <div className="profile-card">
                                 <div className="profile-card-title">
@@ -245,7 +224,7 @@ export default function Profile({ onNavigate }) {
                                 <div className="profile-card-subtitle">
                                     ETB earned (play wallet)
                                     <br />
-                                    <span className="text-xs text-gray-400">10% of invited users' deposits</span>
+                                    <span className="text-xs text-gray-400">ETB 1 per invited user registration</span>
                                 </div>
                             </div>
 

@@ -297,7 +297,7 @@ function startGame(room) {
 
     // Process stake sources per player and build pot from paying players only
     let payingUsers = [];
-    let creditUsers = [];
+    // Loan/credit play removed: only main/play wallet balances are supported
 
     console.log(`Starting game ${room.currentGameId}: ${room.selectedPlayers.size} players`);
     console.log('Room players:', Array.from(room.players.keys()));
@@ -325,8 +325,7 @@ function startGame(room) {
                     players.push({
                         userId,
                         cartelaNumber: room.userCardSelections.get(userId),
-                        joinedAt: new Date(),
-                        isCredit: false
+                        joinedAt: new Date()
                     });
                     payingUsers.push(userId);
                     console.log(`Stake deducted for user ${userId} from ${result.source}`);
@@ -342,9 +341,6 @@ function startGame(room) {
                                 main: wallet.main,
                                 play: wallet.play,
                                 coins: wallet.coins,
-                                creditAvailable: wallet.creditAvailable,
-                                creditUsed: wallet.creditUsed,
-                                creditOutstanding: wallet.creditOutstanding,
                                 source: result.source
                             }
                         }));
@@ -365,8 +361,7 @@ function startGame(room) {
                                 players.push({
                                     userId,
                                     cartelaNumber: room.userCardSelections.get(userId),
-                                    joinedAt: new Date(),
-                                    isCredit: false
+                                    joinedAt: new Date()
                                 });
                                 payingUsers.push(userId);
                                 console.log(`✅ Bot ${userId} auto-funded and stake deducted from ${result.source}`);
@@ -382,9 +377,6 @@ function startGame(room) {
                                             main: wallet.main,
                                             play: wallet.play,
                                             coins: wallet.coins,
-                                            creditAvailable: wallet.creditAvailable,
-                                            creditUsed: wallet.creditUsed,
-                                            creditOutstanding: wallet.creditOutstanding,
                                             source: result.source
                                         }
                                     }));
@@ -393,43 +385,6 @@ function startGame(room) {
                         } catch (fundError) {
                             console.error(`❌ Failed to auto-fund bot ${userId}:`, fundError.message);
                             // Remove bot if auto-funding fails
-                            room.selectedPlayers.delete(userId);
-                        }
-                    } else {
-                        // Not a bot - try credit as before
-                        try {
-                            // Try to grant and use credit (once per game eligibility enforced by wallet service)
-                            await WalletService.useCredit(userId, room.stake);
-                            players.push({
-                                userId,
-                                cartelaNumber: room.userCardSelections.get(userId),
-                                joinedAt: new Date(),
-                                isCredit: true
-                            });
-                            creditUsers.push(userId);
-                            console.log(`User ${userId} is playing on credit`);
-
-                            // Notify credit update
-                            const playerObj = room.players.get(userId);
-                            const ws = playerObj && playerObj.ws;
-                            if (ws && ws.readyState === ws.OPEN) {
-                                const wallet = await WalletService.getWallet(userId);
-                                ws.send(JSON.stringify({
-                                    type: 'wallet_update',
-                                    payload: {
-                                        main: wallet.main,
-                                        play: wallet.play,
-                                        coins: wallet.coins,
-                                        creditAvailable: wallet.creditAvailable,
-                                        creditUsed: wallet.creditUsed,
-                                        creditOutstanding: wallet.creditOutstanding,
-                                        source: 'credit'
-                                    }
-                                }));
-                            }
-                        } catch (e) {
-                            console.error(`Credit not available for user ${userId}:`, e.message);
-                            // Remove player who couldn't pay nor get credit
                             room.selectedPlayers.delete(userId);
                         }
                     }
@@ -484,7 +439,7 @@ function startGame(room) {
         });
     })();
 
-    // (persisting handled above after payments/credit)
+    // (persisting handled above after payments)
 
     room.phase = 'running';
     room.calledNumbers = [];
@@ -501,7 +456,6 @@ function startGame(room) {
                     userId,
                     cartelaNumber,
                     cardData,
-                    isCredit: creditUsers.includes(userId)
                 };
             });
 

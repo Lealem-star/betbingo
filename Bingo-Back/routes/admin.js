@@ -94,9 +94,6 @@ function sanitizeWallet(walletDoc) {
             play: 0,
             coins: 0,
             balance: 0,
-            creditAvailable: 0,
-            creditUsed: 0,
-            creditOutstanding: 0,
             totalDeposited: 0,
             lastDepositDate: null
         };
@@ -111,9 +108,6 @@ function sanitizeWallet(walletDoc) {
         play: walletDoc.play || 0,
         coins: walletDoc.coins || 0,
         balance: balanceValue,
-        creditAvailable: walletDoc.creditAvailable || 0,
-        creditUsed: walletDoc.creditUsed || 0,
-        creditOutstanding: walletDoc.creditOutstanding || 0,
         totalDeposited: walletDoc.totalDeposited || 0,
         lastDepositDate: walletDoc.lastDepositDate || null
     };
@@ -259,7 +253,6 @@ router.post('/users/:id/wallet-adjust', adminMiddleware, async (req, res) => {
         if (coinsDelta !== 0) updates.coins = coinsDelta;
 
         const result = await WalletService.updateBalance(user._id, updates);
-        await WalletService.ensureCreditAvailability(user._id);
         const walletAfter = await Wallet.findOne({ userId: user._id }).lean();
 
         const adminDetails = await getAdminDetails(req);

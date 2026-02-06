@@ -51,10 +51,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
                     main: 0,
                     play: 0,
                     coins: 0,
-                    gamesWon: 0,
-                    creditAvailable: 0,
-                    creditUsed: 0,
-                    creditOutstanding: 0
+                    gamesWon: 0
                 };
             }
         }
@@ -89,10 +86,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
                 coins: userData.wallet?.coins ?? 0,
                 gamesWon: userData.wallet?.gamesWon ?? 0,
                 main: userData.wallet?.main ?? userData.wallet?.balance ?? 0,
-                play: userData.wallet?.play ?? userData.wallet?.balance ?? 0,
-                creditAvailable: userData.wallet?.creditAvailable ?? 0,
-                creditUsed: userData.wallet?.creditUsed ?? 0,
-                creditOutstanding: userData.wallet?.creditOutstanding ?? 0
+                play: userData.wallet?.play ?? userData.wallet?.balance ?? 0
             }
         });
     } catch (error) {

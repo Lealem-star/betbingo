@@ -299,7 +299,7 @@ export default function GameLayout({
                         <div className="wallet-value font-bold text-blue-300">ETB {stake}</div>
                     </div>
                     <div className="wallet-box wallet-box--compact flex-1 group">
-                        <div className="wallet-label">Prize</div>
+                        <div className="wallet-label">Derash</div>
                         <div className="wallet-value font-bold text-orange-300">ETB {currentPrizePool}</div>
                     </div>
                     <div className="wallet-box wallet-box--compact flex-1 group">
