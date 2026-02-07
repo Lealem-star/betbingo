@@ -2,12 +2,45 @@ const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const WalletService = require('./walletService');
+const mongoose = require('mongoose');
+
+// Helper to ensure MongoDB connection is ready
+async function ensureConnection(retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        if (mongoose.connection.readyState === 1) {
+            return true; // Connected
+        }
+        if (i < retries - 1) {
+            console.log(`⏳ MongoDB not ready, waiting ${delay}ms before retry ${i + 1}/${retries}...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2; // Exponential backoff
+        }
+    }
+    throw new Error('MongoDB connection not ready after retries');
+}
+
+// Helper to retry database operations
+async function retryOperation(operation, retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await ensureConnection();
+            return await operation();
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            console.log(`⚠️ Database operation failed, retrying ${i + 1}/${retries}...`, error.message);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2; // Exponential backoff
+        }
+    }
+}
 
 class UserService {
     // Create or update user from Telegram data
     static async createOrUpdateUser(telegramUser, phone = null) {
         try {
-            const existingUser = await User.findOne({ telegramId: String(telegramUser.id) });
+            const existingUser = await retryOperation(async () => {
+                return await User.findOne({ telegramId: String(telegramUser.id) });
+            });
 
             if (existingUser) {
                 // Update existing user
@@ -21,7 +54,9 @@ class UserService {
                     existingUser.isRegistered = true;
                 }
 
-                await existingUser.save();
+                await retryOperation(async () => {
+                    return await existingUser.save();
+                });
                 return existingUser;
             } else {
                 // Create new user
@@ -36,7 +71,9 @@ class UserService {
                     lastActive: new Date()
                 });
 
-                await newUser.save();
+                await retryOperation(async () => {
+                    return await newUser.save();
+                });
 
                 console.log('User saved successfully:', {
                     telegramId: newUser.telegramId,
@@ -81,7 +118,9 @@ class UserService {
     // Get user by Telegram ID
     static async getUserByTelegramId(telegramId) {
         try {
-            return await User.findOne({ telegramId: String(telegramId) });
+            return await retryOperation(async () => {
+                return await User.findOne({ telegramId: String(telegramId) });
+            });
         } catch (error) {
             console.error('Error getting user by Telegram ID:', error);
             throw error;
