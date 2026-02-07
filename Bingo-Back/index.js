@@ -640,7 +640,19 @@ function startGame(room) {
 }
 
 function callNextNumber(room) {
+    console.log('🔢 callNextNumber called:', {
+        roomId: room.id,
+        phase: room.phase,
+        calledCount: room.calledNumbers.length,
+        gameId: room.currentGameId
+    });
+
     if (room.phase !== 'running' || room.calledNumbers.length >= 75) {
+        console.log('⏹️ Stopping number calls:', {
+            phase: room.phase,
+            calledCount: room.calledNumbers.length,
+            reason: room.phase !== 'running' ? 'phase not running' : 'max numbers reached'
+        });
         toAnnounce(room); // Fire and forget - don't block
         return;
     }
@@ -651,13 +663,26 @@ function callNextNumber(room) {
     } while (room.calledNumbers.includes(number));
 
     room.calledNumbers.push(number);
+    console.log('📢 Calling number:', {
+        number,
+        calledCount: room.calledNumbers.length,
+        gameId: room.currentGameId,
+        allCalled: room.calledNumbers
+    });
     broadcast('number_called', { gameId: room.currentGameId, number, calledNumbers: room.calledNumbers, value: number, called: room.calledNumbers }, room);
 
     // Check for winners (fire and forget - don't block the game flow)
-    checkWinners(room);
+    checkWinners(room).catch(err => {
+        console.error('Error in checkWinners (non-blocking):', err);
+    });
 
     // Call next number after delay (maintains consistent timing)
-    room.callTimerId = setTimeout(() => callNextNumber(room), 3000);
+    console.log('⏰ Scheduling next number call in 3 seconds...');
+    room.callTimerId = setTimeout(() => {
+        console.log('⏰ Timer fired, calling next number...');
+        callNextNumber(room);
+    }, 3000);
+    console.log('✅ Timer scheduled, callTimerId:', room.callTimerId);
 }
 
 async function checkWinners(room) {
