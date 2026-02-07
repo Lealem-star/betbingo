@@ -323,68 +323,76 @@ export function WebSocketProvider({ children }) {
 
                         case 'number_called':
                             // Only process if it's for the current game
-                            if (event.payload.gameId && event.payload.gameId !== prev.gameId) {
-                                console.log('🔢 number_called IGNORED - different gameId:', {
-                                    eventGameId: event.payload.gameId,
-                                    currentGameId: prev.gameId,
-                                    number: event.payload.number
-                                });
-                                break;
-                            }
-                            setGameState(prev => ({
-                                ...prev,
-                                currentNumber: event.payload.number,
-                                calledNumbers: event.payload.calledNumbers || event.payload.called || []
-                            }));
+                            setGameState(prev => {
+                                if (event.payload.gameId && event.payload.gameId !== prev.gameId) {
+                                    console.log('🔢 number_called IGNORED - different gameId:', {
+                                        eventGameId: event.payload.gameId,
+                                        currentGameId: prev.gameId,
+                                        number: event.payload.number
+                                    });
+                                    return prev; // Don't update state
+                                }
+                                return {
+                                    ...prev,
+                                    currentNumber: event.payload.number,
+                                    calledNumbers: event.payload.calledNumbers || event.payload.called || []
+                                };
+                            });
                             break;
 
                         case 'players_update':
                             // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                console.log('👥 players_update IGNORED - different gameId:', {
-                                    eventGameId: event.payload.gameId,
-                                    currentGameId: prev.gameId
-                                });
-                                break;
-                            }
-                            setGameState(prev => ({
-                                ...prev,
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool
-                            }));
+                            setGameState(prev => {
+                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
+                                    console.log('👥 players_update IGNORED - different gameId:', {
+                                        eventGameId: event.payload.gameId,
+                                        currentGameId: prev.gameId
+                                    });
+                                    return prev; // Don't update state
+                                }
+                                return {
+                                    ...prev,
+                                    playersCount: event.payload.playersCount,
+                                    prizePool: event.payload.prizePool
+                                };
+                            });
                             break;
 
                         case 'registration_update':
                             // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                console.log('📝 registration_update IGNORED - different gameId:', {
-                                    eventGameId: event.payload.gameId,
-                                    currentGameId: prev.gameId
-                                });
-                                break;
-                            }
-                            setGameState(prev => ({
-                                ...prev,
-                                takenCards: event.payload.takenCards || [],
-                                prizePool: event.payload.prizePool
-                            }));
+                            setGameState(prev => {
+                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
+                                    console.log('📝 registration_update IGNORED - different gameId:', {
+                                        eventGameId: event.payload.gameId,
+                                        currentGameId: prev.gameId
+                                    });
+                                    return prev; // Don't update state
+                                }
+                                return {
+                                    ...prev,
+                                    takenCards: event.payload.takenCards || [],
+                                    prizePool: event.payload.prizePool
+                                };
+                            });
                             break;
 
                         case 'selection_confirmed':
                             // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                console.log('✅ selection_confirmed IGNORED - different gameId:', {
-                                    eventGameId: event.payload.gameId,
-                                    currentGameId: prev.gameId
-                                });
-                                break;
-                            }
-                            setGameState(prev => ({
-                                ...prev,
-                                yourSelections: event.payload.selections || prev.yourSelections || [],
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool
-                            }));
+                            setGameState(prev => {
+                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
+                                    console.log('✅ selection_confirmed IGNORED - different gameId:', {
+                                        eventGameId: event.payload.gameId,
+                                        currentGameId: prev.gameId
+                                    });
+                                    return prev; // Don't update state
+                                }
+                                return {
+                                    ...prev,
+                                    yourSelections: event.payload.selections || prev.yourSelections || [],
+                                    playersCount: event.payload.playersCount,
+                                    prizePool: event.payload.prizePool
+                                };
+                            });
                             break;
 
                         case 'card_selected':
@@ -417,23 +425,25 @@ export function WebSocketProvider({ children }) {
                         case 'game_finished':
                         case 'game_ended':
                             // Only process if it's for the current game
-                            if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                console.log('🏁 game_finished IGNORED - different gameId:', {
-                                    eventGameId: event.payload.gameId,
-                                    currentGameId: prev.gameId
-                                });
-                                break;
-                            }
-                            setGameState(prev => ({
-                                ...prev,
-                                phase: 'announce',
-                                winners: (event.payload && (event.payload.winners || event.payload.winner || [])) || prev.winners || [],
-                                calledNumbers: (event.payload && (event.payload.calledNumbers || event.payload.called)) || prev.calledNumbers,
-                                currentNumber: null,
-                                yourCards: [],
-                                yourSelections: [],
-                                nextRegistrationStart: event.payload?.nextStartAt || null // Store when next registration will start
-                            }));
+                            setGameState(prev => {
+                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
+                                    console.log('🏁 game_finished IGNORED - different gameId:', {
+                                        eventGameId: event.payload.gameId,
+                                        currentGameId: prev.gameId
+                                    });
+                                    return prev; // Don't update state
+                                }
+                                return {
+                                    ...prev,
+                                    phase: 'announce',
+                                    winners: (event.payload && (event.payload.winners || event.payload.winner || [])) || prev.winners || [],
+                                    calledNumbers: (event.payload && (event.payload.calledNumbers || event.payload.called)) || prev.calledNumbers,
+                                    currentNumber: null,
+                                    yourCards: [],
+                                    yourSelections: [],
+                                    nextRegistrationStart: event.payload?.nextStartAt || null // Store when next registration will start
+                                };
+                            });
                             // Do not auto-rejoin immediately here. We'll rejoin when:
                             // 1) Backend opens registration (we receive snapshot/registration_open), or
                             // 2) User navigates to cartella selection screen.
