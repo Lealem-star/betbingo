@@ -585,16 +585,47 @@ function callNextNumber(room) {
 }
 
 async function checkWinners(room) {
-    const winners = [];
-    room.cartellas.forEach((cartella, userId) => {
-        if (checkBingo(cartella, room.calledNumbers)) {
-            winners.push({ userId, cartella });
+    try {
+        // Safety check: ensure room is in running phase and has cartellas
+        if (room.phase !== 'running') {
+            return;
         }
-    });
+        if (!room.cartellas || room.cartellas.size === 0) {
+            // No cartellas to check - game should continue
+            return;
+        }
 
-    if (winners.length > 0) {
-        room.winners = winners;
-        await toAnnounce(room);
+        const winners = [];
+        const calledCount = room.calledNumbers?.length || 0;
+        
+        room.cartellas.forEach((cartellasMap, userId) => {
+            // cartellasMap is a Map of cartelaNumber -> cartella (2D array)
+            if (cartellasMap instanceof Map) {
+                cartellasMap.forEach((cartella, cartelaNumber) => {
+                    if (cartella && Array.isArray(cartella)) {
+                        if (checkBingo(cartella, room.calledNumbers)) {
+                            console.log(`Bingo found! User: ${userId}, Cartela: ${cartelaNumber}, Called numbers: ${calledCount}`);
+                            winners.push({ userId, cartella, cartelaNumber });
+                        }
+                    }
+                });
+            } else if (Array.isArray(cartellasMap)) {
+                // Fallback: if it's directly an array (legacy support)
+                if (checkBingo(cartellasMap, room.calledNumbers)) {
+                    console.log(`Bingo found! User: ${userId}, Called numbers: ${calledCount}`);
+                    winners.push({ userId, cartella: cartellasMap });
+                }
+            }
+        });
+
+        if (winners.length > 0) {
+            console.log(`Found ${winners.length} winner(s), announcing game end`);
+            room.winners = winners;
+            await toAnnounce(room);
+        }
+    } catch (error) {
+        console.error('Error in checkWinners:', error);
+        // Don't stop the game if there's an error checking winners
     }
 }
 
@@ -767,8 +798,19 @@ function getPredefinedCartella(cardNumber) {
 }
 
 function checkBingo(cartella, calledNumbers) {
+    // Safety checks
+    if (!cartella || !Array.isArray(cartella) || cartella.length !== 5) {
+        return false;
+    }
+    if (!calledNumbers || !Array.isArray(calledNumbers)) {
+        return false;
+    }
+    
     // Check rows
     for (let i = 0; i < 5; i++) {
+        if (!cartella[i] || !Array.isArray(cartella[i])) {
+            continue;
+        }
         if (cartella[i].every(num => num === 0 || calledNumbers.includes(num))) {
             return true;
         }
@@ -776,16 +818,16 @@ function checkBingo(cartella, calledNumbers) {
 
     // Check columns
     for (let j = 0; j < 5; j++) {
-        if (cartella.every(row => row[j] === 0 || calledNumbers.includes(row[j]))) {
+        if (cartella.every(row => row && Array.isArray(row) && (row[j] === 0 || calledNumbers.includes(row[j])))) {
             return true;
         }
     }
 
     // Check diagonals
-    if (cartella.every((row, i) => row[i] === 0 || calledNumbers.includes(row[i]))) {
+    if (cartella.every((row, i) => row && Array.isArray(row) && (row[i] === 0 || calledNumbers.includes(row[i])))) {
         return true;
     }
-    if (cartella.every((row, i) => row[4 - i] === 0 || calledNumbers.includes(row[4 - i]))) {
+    if (cartella.every((row, i) => row && Array.isArray(row) && (row[4 - i] === 0 || calledNumbers.includes(row[4 - i])))) {
         return true;
     }
 
