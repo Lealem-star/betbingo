@@ -162,6 +162,19 @@ export default function GameLayout({
         }
     }, [currentGameId]);
     const yourCards = Array.isArray(gameState.yourCards) ? gameState.yourCards : [];
+    
+    // Debug logging
+    useEffect(() => {
+        console.log('🎯 GameLayout state:', {
+            phase: gameState.phase,
+            yourCardsCount: yourCards.length,
+            yourCards: yourCards,
+            playersCount: currentPlayersCount,
+            prizePool: currentPrizePool,
+            calledNumbersCount: calledNumbers.length,
+            gameId: currentGameId
+        });
+    }, [gameState.phase, yourCards.length, currentPlayersCount, currentPrizePool, calledNumbers.length, currentGameId]);
 
 
     // Reset local state when game phase changes to registration
@@ -265,7 +278,7 @@ export default function GameLayout({
 
 
     // Determine game phase display
-    const gamePhaseDisplay = gameState.phase === 'playing' ? 'STARTED' : gameState.phase === 'registration' ? 'REGISTRATION' : 'WAITING';
+    const gamePhaseDisplay = (gameState.phase === 'running' || gameState.phase === 'playing') ? 'STARTED' : gameState.phase === 'registration' ? 'REGISTRATION' : 'WAITING';
 
     return (
         <div className="app-container relative overflow-hidden joy-bingo-bg">
@@ -274,19 +287,19 @@ export default function GameLayout({
                 <div className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap mobile-info-bar" style={{ marginBottom: '1rem' }}>
                     <div className="info-box flex-1">
                         <div className="info-label">Derash</div>
-                        <div className="info-value">{currentPrizePool}</div>
+                        <div className="info-value">{currentPrizePool || 0}</div>
                     </div>
                     <div className="info-box flex-1">
                         <div className="info-label">Players</div>
-                        <div className="info-value">{currentPlayersCount}</div>
+                        <div className="info-value">{currentPlayersCount || 0}</div>
                     </div>
                     <div className="info-box flex-1">
                         <div className="info-label">Bet</div>
-                        <div className="info-value">{stake}</div>
+                        <div className="info-value">{stake || 0}</div>
                     </div>
                     <div className="info-box flex-1">
                         <div className="info-label">Call</div>
-                        <div className="info-value">{calledNumbers.length}</div>
+                        <div className="info-value">{calledNumbers.length || 0}</div>
                     </div>
                     <div className="info-box flex-1">
                         <div className="info-label">Game Nº</div>

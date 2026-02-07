@@ -197,14 +197,47 @@ export function WebSocketProvider({ children }) {
 
                         case 'snapshot': {
                             setGameState(prev => {
-                                const phase = event.payload.phase || 'waiting';
+                                const snapshotPhase = event.payload.phase || 'waiting';
+                                const snapshotGameId = event.payload.gameId;
+                                
+                                // Don't overwrite phase if we're in a running game with cards
+                                // Only update phase from snapshot if:
+                                // 1. We're not in a running game, OR
+                                // 2. The snapshot is for the same gameId (same game update)
+                                const isCurrentlyRunning = prev.phase === 'running';
+                                const hasCards = Array.isArray(prev.yourCards) && prev.yourCards.length > 0;
+                                const isSameGame = prev.gameId === snapshotGameId;
+                                
+                                // If we're running with cards, only update phase if it's for the same game
+                                // Otherwise, always update phase from snapshot
+                                const shouldUpdatePhase = !(isCurrentlyRunning && hasCards) || isSameGame;
+                                const phase = shouldUpdatePhase ? snapshotPhase : prev.phase;
+                                
+                                // If we're keeping the running phase, also keep the gameId and cards
+                                const gameId = shouldUpdatePhase ? snapshotGameId : prev.gameId;
+                                const yourCards = shouldUpdatePhase && phase === 'registration' ? [] : prev.yourCards;
+                                
                                 const registrationEndTime = event.payload.nextStartAt || event.payload.registrationEndTime;
                                 const remainingSeconds = registrationEndTime ? Math.max(0, Math.ceil((registrationEndTime - Date.now()) / 1000)) : 0;
+                                
+                                console.log('📸 Snapshot received:', {
+                                    snapshotPhase,
+                                    snapshotGameId,
+                                    currentPhase: prev.phase,
+                                    currentGameId: prev.gameId,
+                                    isCurrentlyRunning,
+                                    hasCards,
+                                    isSameGame,
+                                    shouldUpdatePhase,
+                                    finalPhase: phase,
+                                    finalGameId: gameId
+                                });
+                                
                                 return {
                                     ...prev,
                                     ...event.payload,
                                     phase,
-                                    gameId: event.payload.gameId,
+                                    gameId,
                                     playersCount: event.payload.playersCount || 0,
                                     prizePool: event.payload.prizePool || 0,
                                     calledNumbers: event.payload.calledNumbers || event.payload.called || [],
@@ -212,8 +245,8 @@ export function WebSocketProvider({ children }) {
                                     yourSelections: event.payload.yourSelections || [],
                                     countdown: phase === 'registration' ? remainingSeconds : (event.payload.countdown || 0),
                                     registrationEndTime,
-                                    ...(phase === 'registration' ? {
-                                        yourCards: [],
+                                    yourCards,
+                                    ...(phase === 'registration' && shouldUpdatePhase ? {
                                         yourSelections: [],
                                         calledNumbers: [],
                                         currentNumber: null,
@@ -247,15 +280,30 @@ export function WebSocketProvider({ children }) {
                         }
 
                         case 'game_started':
-                            setGameState(prev => ({
-                                ...prev,
-                                phase: 'running',
+                            console.log('🎮 game_started received:', {
                                 gameId: event.payload.gameId,
                                 playersCount: event.payload.playersCount,
                                 prizePool: event.payload.prizePool,
-                                calledNumbers: event.payload.calledNumbers || event.payload.called || [],
-                                yourCards: event.payload.cards || [],
-                            }));
+                                cardsCount: event.payload.cards?.length || 0,
+                                cards: event.payload.cards
+                            });
+                            setGameState(prev => {
+                                const newState = {
+                                    ...prev,
+                                    phase: 'running', // Keep 'running' to match App.jsx and CartelaSelection.jsx
+                                    gameId: event.payload.gameId,
+                                    playersCount: event.payload.playersCount,
+                                    prizePool: event.payload.prizePool,
+                                    calledNumbers: event.payload.calledNumbers || event.payload.called || [],
+                                    yourCards: event.payload.cards || [],
+                                };
+                                console.log('🎮 Game state updated to running:', {
+                                    gameId: newState.gameId,
+                                    phase: newState.phase,
+                                    cardsCount: newState.yourCards?.length || 0
+                                });
+                                return newState;
+                            });
                             setPendingGameStart(null);
                             break;
 
