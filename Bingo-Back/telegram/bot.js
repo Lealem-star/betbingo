@@ -1246,15 +1246,23 @@ Thank you for your dedication! 🙏`;
 
                     // Notify other admins about this action
                     try {
-                        if (!Transaction) {
-                            console.error('Transaction model not available');
+                        let transaction;
+                        try {
+                            if (!Transaction) {
+                                console.error('Transaction model not available');
+                                return;
+                            }
+                            transaction = await Transaction.findById(withdrawalId).populate('userId', 'firstName lastName phone telegramId');
+                        } catch (dbError) {
+                            console.error('Error fetching transaction:', dbError);
                             return;
                         }
-                        const transaction = await Transaction.findById(withdrawalId).populate('userId', 'firstName lastName phone telegramId');
+                        
                         if (!transaction) {
                             console.error('Transaction not found:', withdrawalId);
                             return;
                         }
+                        
                         const user = transaction.userId;
                         const userDisplay = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.phone || 'Unknown' : 'Unknown';
                         const destination = transaction.metadata?.destination || 'N/A';

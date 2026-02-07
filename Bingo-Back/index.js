@@ -525,13 +525,36 @@ function startGame(room) {
         }
     });
 
-    // Send individual game_started messages to each player with their specific card
+    // Send individual game_started messages to each player with their specific cards
     room.selectedPlayers.forEach(userId => {
         const player = room.players.get(userId);
         if (player && player.ws) {
-            const card = room.cartellas.get(userId);
-            const cardNumber = room.userCardSelections.get(userId);
-            console.log('Sending game_started to player:', { userId, gameId: room.currentGameId, cardNumber });
+            const cartellasMap = room.cartellas.get(userId);
+            const selections = room.userCardSelections.get(userId) || [];
+            
+            // Convert Map to array format expected by frontend: [{ cardNumber, card }]
+            const cards = [];
+            if (cartellasMap instanceof Map) {
+                cartellasMap.forEach((cartella, cartelaNumber) => {
+                    cards.push({
+                        cardNumber: cartelaNumber,
+                        card: cartella
+                    });
+                });
+            } else if (Array.isArray(selections)) {
+                // Fallback: if cartellasMap is not a Map, try to get cards from selections
+                selections.forEach(cardNumber => {
+                    const cartella = getPredefinedCartella(cardNumber);
+                    if (cartella) {
+                        cards.push({
+                            cardNumber: cardNumber,
+                            card: cartella
+                        });
+                    }
+                });
+            }
+            
+            console.log('Sending game_started to player:', { userId, gameId: room.currentGameId, cardsCount: cards.length, cardNumbers: selections });
             console.log('WebSocket state:', { readyState: player.ws.readyState, OPEN: player.ws.OPEN });
             const message = JSON.stringify({
                 type: 'game_started',
@@ -543,11 +566,10 @@ function startGame(room) {
                     prizePool: prizePool,
                     calledNumbers: room.calledNumbers,
                     called: room.calledNumbers,
-                    card: card,
-                    cardNumber: cardNumber
+                    cards: cards
                 }
             });
-            console.log('Game started message:', message);
+            console.log('Game started message:', message.substring(0, 500) + '...'); // Log first 500 chars to avoid huge logs
             if (player.ws.readyState === player.ws.OPEN) {
                 player.ws.send(message);
                 console.log('Game started message sent successfully to player:', userId);
@@ -587,36 +609,55 @@ function callNextNumber(room) {
 async function checkWinners(room) {
     try {
         // Safety check: ensure room is in running phase and has cartellas
-        if (room.phase !== 'running') {
+        if (!room || room.phase !== 'running') {
             return;
         }
-        if (!room.cartellas || room.cartellas.size === 0) {
+        if (!room.cartellas || !(room.cartellas instanceof Map) || room.cartellas.size === 0) {
             // No cartellas to check - game should continue
+            return;
+        }
+        if (!room.calledNumbers || !Array.isArray(room.calledNumbers)) {
             return;
         }
 
         const winners = [];
-        const calledCount = room.calledNumbers?.length || 0;
+        const calledCount = room.calledNumbers.length;
         
-        room.cartellas.forEach((cartellasMap, userId) => {
-            // cartellasMap is a Map of cartelaNumber -> cartella (2D array)
-            if (cartellasMap instanceof Map) {
-                cartellasMap.forEach((cartella, cartelaNumber) => {
-                    if (cartella && Array.isArray(cartella)) {
-                        if (checkBingo(cartella, room.calledNumbers)) {
-                            console.log(`Bingo found! User: ${userId}, Cartela: ${cartelaNumber}, Called numbers: ${calledCount}`);
-                            winners.push({ userId, cartella, cartelaNumber });
+        try {
+            room.cartellas.forEach((cartellasMap, userId) => {
+                try {
+                    // cartellasMap is a Map of cartelaNumber -> cartella (2D array)
+                    if (cartellasMap instanceof Map) {
+                        cartellasMap.forEach((cartella, cartelaNumber) => {
+                            try {
+                                if (cartella && Array.isArray(cartella)) {
+                                    if (checkBingo(cartella, room.calledNumbers)) {
+                                        console.log(`Bingo found! User: ${userId}, Cartela: ${cartelaNumber}, Called numbers: ${calledCount}`);
+                                        winners.push({ userId, cartella, cartelaNumber });
+                                    }
+                                }
+                            } catch (cartellaError) {
+                                console.error(`Error checking cartella for user ${userId}, cartela ${cartelaNumber}:`, cartellaError);
+                            }
+                        });
+                    } else if (Array.isArray(cartellasMap)) {
+                        // Fallback: if it's directly an array (legacy support)
+                        try {
+                            if (checkBingo(cartellasMap, room.calledNumbers)) {
+                                console.log(`Bingo found! User: ${userId}, Called numbers: ${calledCount}`);
+                                winners.push({ userId, cartella: cartellasMap });
+                            }
+                        } catch (bingoError) {
+                            console.error(`Error checking bingo for user ${userId}:`, bingoError);
                         }
                     }
-                });
-            } else if (Array.isArray(cartellasMap)) {
-                // Fallback: if it's directly an array (legacy support)
-                if (checkBingo(cartellasMap, room.calledNumbers)) {
-                    console.log(`Bingo found! User: ${userId}, Called numbers: ${calledCount}`);
-                    winners.push({ userId, cartella: cartellasMap });
+                } catch (userError) {
+                    console.error(`Error processing cartellas for user ${userId}:`, userError);
                 }
-            }
-        });
+            });
+        } catch (forEachError) {
+            console.error('Error iterating over cartellas:', forEachError);
+        }
 
         if (winners.length > 0) {
             console.log(`Found ${winners.length} winner(s), announcing game end`);
