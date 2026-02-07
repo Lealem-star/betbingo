@@ -151,6 +151,43 @@ function getJoinableRoomForStake(stake) {
     return list.find(r => r.phase === 'registration' && r.takenCards.size < totalCards) || null;
 }
 
+// Find user's active game room (where they have cards in a running game)
+function getActiveGameRoomForUser(userId, stake) {
+    const list = getRoomsForStake(stake);
+    return list.find(r => {
+        // Check if room is running and user has cards
+        if (r.phase !== 'running') return false;
+        const userCartellas = r.cartellas.get(userId);
+        return userCartellas instanceof Map && userCartellas.size > 0;
+    }) || null;
+}
+
+// Clean up empty finished rooms (rooms in announce phase with no players)
+function cleanupEmptyRooms(stake) {
+    const list = getRoomsForStake(stake);
+    const now = Date.now();
+    const cleaned = list.filter(room => {
+        // Keep rooms that:
+        // 1. Have players
+        // 2. Are in registration or running phase
+        // 3. Are in announce phase but just finished (less than 10 seconds ago)
+        if (room.players.size > 0) return true;
+        if (room.phase === 'registration' || room.phase === 'running') return true;
+        if (room.phase === 'announce') {
+            // Keep announce rooms for 10 seconds after game ends
+            const timeSinceAnnounce = now - (room.gameEndTime || 0);
+            return timeSinceAnnounce < 10000;
+        }
+        return false;
+    });
+    
+    const removed = list.length - cleaned.length;
+    if (removed > 0) {
+        rooms.set(stake, cleaned);
+        console.log(`🧹 Cleaned up ${removed} empty room(s) for stake ${stake}`);
+    }
+}
+
 function makeRoom(stake) {
     const room = {
         id: `room_${stake}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
@@ -823,6 +860,10 @@ async function toAnnounce(room) {
         room.startTime = null;
         room.registrationEndTime = null;
         room.gameEndTime = null;
+        room.announceProcessed = false; // Reset for next round
+        
+        console.log('🔄 Room reset for next round:', { roomId: room.id, stake: room.stake, playersCount: room.players.size });
+        
         // Start new registration immediately
         await startRegistration(room);
     }, 5000);
@@ -924,12 +965,29 @@ wss.on('connection', async (ws, request) => {
 
     // Auto-join room based on URL stake param (aligns with frontend behavior)
     if (!Number.isNaN(stakeParam) && stakes.includes(stakeParam)) {
+        // Clean up empty rooms
+        cleanupEmptyRooms(stakeParam);
+        
         const list = getRoomsForStake(stakeParam);
-        let room = getJoinableRoomForStake(stakeParam);
-        if (!room) {
-            room = makeRoom(stakeParam);
-            list.push(room);
-            await startRegistration(room);
+        let room = null;
+        
+        // Check if user has active game first
+        const activeRoom = getActiveGameRoomForUser(ws.userId, stakeParam);
+        if (activeRoom) {
+            room = activeRoom;
+            console.log('🎮 Auto-join: User has active game, returning to game room:', {
+                userId: ws.userId,
+                roomId: room.id,
+                gameId: room.currentGameId
+            });
+        } else {
+            // Find/create registration room
+            room = getJoinableRoomForStake(stakeParam);
+            if (!room) {
+                room = makeRoom(stakeParam);
+                list.push(room);
+                await startRegistration(room);
+            }
         }
         await room.onJoin(ws);
     }
@@ -939,7 +997,7 @@ wss.on('connection', async (ws, request) => {
             const data = JSON.parse(message);
             if (data.type === 'join_room') {
                 const stake = data.stake || data.payload?.stake;
-                console.log('join_room received:', { stake, dataStake: data.stake, payloadStake: data.payload?.stake, fullData: data });
+                console.log('join_room received:', { stake, dataStake: data.stake, payloadStake: data.payload?.stake, userId: ws.userId });
 
                 if (!stake || !stakes.includes(stake)) {
                     console.error('Invalid stake for join_room:', { stake, validStakes: stakes });
@@ -950,20 +1008,52 @@ wss.on('connection', async (ws, request) => {
                     return;
                 }
 
+                // Clean up empty rooms periodically
+                cleanupEmptyRooms(stake);
+
                 const list = getRoomsForStake(stake);
-                let room = getJoinableRoomForStake(stake);
-                if (!room) {
-                    room = makeRoom(stake);
-                    list.push(room);
-                    await startRegistration(room);
+                let room = null;
+
+                // FIRST: Check if user has an active game in a running room
+                const activeRoom = getActiveGameRoomForUser(ws.userId, stake);
+                if (activeRoom) {
+                    // User has active game - return them to that room
+                    console.log('🎮 User has active game, returning to game room:', {
+                        userId: ws.userId,
+                        roomId: activeRoom.id,
+                        gameId: activeRoom.currentGameId,
+                        phase: activeRoom.phase
+                    });
+                    room = activeRoom;
+                } else {
+                    // User has no active game - find/create a registration room
+                    room = getJoinableRoomForStake(stake);
+                    if (!room) {
+                        room = makeRoom(stake);
+                        list.push(room);
+                        await startRegistration(room);
+                    }
+                    console.log('📝 User joining registration room:', {
+                        userId: ws.userId,
+                        roomId: room.id,
+                        roomPhase: room.phase,
+                        gameId: room.currentGameId
+                    });
                 }
 
                 // If user was previously in a different room, leave it
                 if (ws.room && ws.room !== room) {
+                    console.log('🔄 User switching rooms:', {
+                        userId: ws.userId,
+                        fromRoom: ws.room.id,
+                        toRoom: room.id,
+                        fromPhase: ws.room.phase,
+                        toPhase: room.phase
+                    });
                     ws.room.onLeave(ws);
                 }
 
-                console.log('Joining room:', { stake, roomId: room.id, roomPhase: room.phase, gameId: room.currentGameId });
+                console.log('✅ Joining room:', { stake, roomId: room.id, roomPhase: room.phase, gameId: room.currentGameId, userId: ws.userId });
                 await room.onJoin(ws);
             } else if (data.type === 'select_card') {
                 const room = ws.room;
@@ -1190,6 +1280,13 @@ server.listen(PORT, () => {
             console.error(`Error initializing room for stake ${stake}:`, error);
         }
     });
+
+    // Periodic cleanup of empty rooms (every 30 seconds)
+    setInterval(() => {
+        stakes.forEach(stake => {
+            cleanupEmptyRooms(stake);
+        });
+    }, 30000);
 });
 
 // Start Telegram bot (guarded by RUN_TELEGRAM_BOT)
