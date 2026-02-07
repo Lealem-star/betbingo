@@ -1,12 +1,97 @@
 import React from 'react';
 
-export default function CartellaCard({ id, card, called = [], selectedNumber = null, isPreview = false }) {
+// Helper function to detect winning pattern
+function detectWinningPattern(card, called) {
+    if (!card || !called || called.length === 0) return new Set();
+    
+    const winningCells = new Set();
+    const calledSet = new Set(called);
+    
+    // Check rows
+    for (let row = 0; row < 5; row++) {
+        let allCalled = true;
+        const rowCells = [];
+        for (let col = 0; col < 5; col++) {
+            const num = card[row][col];
+            const isFree = num === 0;
+            const isCalled = isFree || calledSet.has(num);
+            if (!isCalled) {
+                allCalled = false;
+                break;
+            }
+            rowCells.push({ row, col });
+        }
+        if (allCalled) {
+            rowCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+        }
+    }
+    
+    // Check columns
+    for (let col = 0; col < 5; col++) {
+        let allCalled = true;
+        const colCells = [];
+        for (let row = 0; row < 5; row++) {
+            const num = card[row][col];
+            const isFree = num === 0;
+            const isCalled = isFree || calledSet.has(num);
+            if (!isCalled) {
+                allCalled = false;
+                break;
+            }
+            colCells.push({ row, col });
+        }
+        if (allCalled) {
+            colCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+        }
+    }
+    
+    // Check main diagonal (top-left to bottom-right)
+    let mainDiagAllCalled = true;
+    const mainDiagCells = [];
+    for (let i = 0; i < 5; i++) {
+        const num = card[i][i];
+        const isFree = num === 0;
+        const isCalled = isFree || calledSet.has(num);
+        if (!isCalled) {
+            mainDiagAllCalled = false;
+            break;
+        }
+        mainDiagCells.push({ row: i, col: i });
+    }
+    if (mainDiagAllCalled) {
+        mainDiagCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+    }
+    
+    // Check anti-diagonal (top-right to bottom-left)
+    let antiDiagAllCalled = true;
+    const antiDiagCells = [];
+    for (let i = 0; i < 5; i++) {
+        const num = card[i][4 - i];
+        const isFree = num === 0;
+        const isCalled = isFree || calledSet.has(num);
+        if (!isCalled) {
+            antiDiagAllCalled = false;
+            break;
+        }
+        antiDiagCells.push({ row: i, col: 4 - i });
+    }
+    if (antiDiagAllCalled) {
+        antiDiagCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+    }
+    
+    return winningCells;
+}
+
+export default function CartellaCard({ id, card, called = [], selectedNumber = null, isPreview = false, showWinningPattern = false }) {
     // Use card prop if provided, otherwise fallback to null
     const grid = card || null;
     if (!grid) return <div className="text-xs opacity-60">Loading...</div>;
 
     const letters = ['B', 'I', 'N', 'G', 'O'];
-    const letterColors = ['bg-blue-600', 'bg-purple-600', 'bg-green-600', 'bg-orange-600', 'bg-red-600'];
+    const letterColors = ['bg-yellow-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-pink-500'];
+    
+    // Detect winning pattern if needed
+    const winningPattern = showWinningPattern ? detectWinningPattern(grid, called) : new Set();
 
     return (
         <div className={`cartela-card ${isPreview ? 'cartela-preview' : 'cartela-full'}`}>
@@ -32,14 +117,27 @@ export default function CartellaCard({ id, card, called = [], selectedNumber = n
                                 const isFree = number === 0;
                                 const isCalled = called.includes(number);
                                 const isSelected = selectedNumber && number === selectedNumber;
+                                const isWinningCell = winningPattern.has(`${rowIndex}-${colIndex}`);
+                                
+                                // Priority: winning pattern > selected > called > normal
+                                let cellClass = 'cartela-normal';
+                                if (isFree) {
+                                    cellClass = 'cartela-free';
+                                    if (isWinningCell) {
+                                        cellClass += ' cartela-winning';
+                                    }
+                                } else if (isWinningCell) {
+                                    cellClass = 'cartela-winning';
+                                } else if (isSelected) {
+                                    cellClass = 'cartela-selected';
+                                } else if (isCalled) {
+                                    cellClass = 'cartela-called';
+                                }
 
                                 return (
                                     <div
                                         key={`${rowIndex}-${colIndex}`}
-                                        className={`cartela-cell ${isFree ? 'cartela-free' :
-                                            isSelected ? 'cartela-selected' :
-                                                isCalled ? 'cartela-called' : 'cartela-normal'
-                                            }`}
+                                        className={`cartela-cell ${cellClass}`}
                                     >
                                         {isFree ? (
                                             <span className="cartela-star">★</span>

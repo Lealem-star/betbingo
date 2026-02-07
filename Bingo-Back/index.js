@@ -699,7 +699,7 @@ async function checkWinners(room) {
             return;
         }
 
-        const winners = [];
+    const winners = [];
         const calledCount = room.calledNumbers.length;
         
         try {
@@ -710,10 +710,10 @@ async function checkWinners(room) {
                         cartellasMap.forEach((cartella, cartelaNumber) => {
                             try {
                                 if (cartella && Array.isArray(cartella)) {
-                                    if (checkBingo(cartella, room.calledNumbers)) {
+        if (checkBingo(cartella, room.calledNumbers)) {
                                         console.log(`Bingo found! User: ${userId}, Cartela: ${cartelaNumber}, Called numbers: ${calledCount}`);
                                         winners.push({ userId, cartella, cartelaNumber });
-                                    }
+        }
                                 }
                             } catch (cartellaError) {
                                 console.error(`Error checking cartella for user ${userId}, cartela ${cartelaNumber}:`, cartellaError);
@@ -738,10 +738,10 @@ async function checkWinners(room) {
             console.error('Error iterating over cartellas:', forEachError);
         }
 
-        if (winners.length > 0) {
+    if (winners.length > 0) {
             console.log(`Found ${winners.length} winner(s), announcing game end`);
-            room.winners = winners;
-            await toAnnounce(room);
+        room.winners = winners;
+        await toAnnounce(room);
         }
     } catch (error) {
         console.error('Error in checkWinners:', error);
@@ -1025,10 +1025,10 @@ wss.on('connection', async (ws, request) => {
         } else {
             // Find/create registration room
             room = getJoinableRoomForStake(stakeParam);
-            if (!room) {
-                room = makeRoom(stakeParam);
-                list.push(room);
-                await startRegistration(room);
+        if (!room) {
+            room = makeRoom(stakeParam);
+            list.push(room);
+            await startRegistration(room);
             }
         }
         await room.onJoin(ws);
@@ -1070,10 +1070,10 @@ wss.on('connection', async (ws, request) => {
                 } else {
                     // User has no active game - find/create a registration room
                     room = getJoinableRoomForStake(stake);
-                    if (!room) {
-                        room = makeRoom(stake);
-                        list.push(room);
-                        await startRegistration(room);
+                if (!room) {
+                    room = makeRoom(stake);
+                    list.push(room);
+                    await startRegistration(room);
                     }
                     console.log('📝 User joining registration room:', {
                         userId: ws.userId,
