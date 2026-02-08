@@ -63,10 +63,10 @@ export default function GameLayout({
 
 
     // Sound control
-    const [isSoundOn, setIsSoundOn] = useState(true);
+    const [isSoundOn, setIsSoundOn] = useState(false);
     
     // Auto-mark control (green or light purple)
-    const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
+    const [isAutoMarkOn, setIsAutoMarkOn] = useState(false);
     
     // Track manually marked numbers per cartela when auto-mark is OFF
     // Structure: { cardNumber: Set<number> }
