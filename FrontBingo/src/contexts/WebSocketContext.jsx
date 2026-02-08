@@ -499,18 +499,29 @@ export function WebSocketProvider({ children }) {
 
                         case 'game_finished':
                         case 'game_ended':
-                            // Only process if it's for the current game
+                            // Process game_finished message
                             setGameState(prev => {
-                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
+                                // Only ignore if we have both gameIds and they don't match
+                                // If prev.gameId is null/undefined, accept the message (user might have just connected)
+                                if (event.payload?.gameId && prev.gameId && event.payload.gameId !== prev.gameId) {
                                     console.log('🏁 game_finished IGNORED - different gameId:', {
                                         eventGameId: event.payload.gameId,
                                         currentGameId: prev.gameId
                                     });
                                     return prev; // Don't update state
                                 }
+                                
+                                console.log('🏁 game_finished PROCESSING:', {
+                                    eventGameId: event.payload?.gameId,
+                                    prevGameId: prev.gameId,
+                                    winnersCount: event.payload?.winners?.length || 0,
+                                    phase: 'announce'
+                                });
+                                
                                 return {
                                 ...prev,
                                 phase: 'announce',
+                                gameId: event.payload?.gameId || prev.gameId, // Explicitly set gameId
                                 winners: (event.payload && (event.payload.winners || event.payload.winner || [])) || prev.winners || [],
                                 calledNumbers: (event.payload && (event.payload.calledNumbers || event.payload.called)) || prev.calledNumbers,
                                 currentNumber: null,

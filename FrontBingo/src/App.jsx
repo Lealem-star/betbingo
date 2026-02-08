@@ -194,11 +194,13 @@ function AppContent() {
     console.log('🤔 Should navigate?', shouldNavigate, {
       phase: gameState.phase,
       hasGameId: !!gameState.gameId,
+      gameId: gameState.gameId,
       targetPage,
       currentPage,
       isGameRunning,
       isGameFinished,
-      hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0
+      hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
+      winnersCount: gameState.winners?.length || 0
     });
     
     if (shouldNavigate) {
@@ -208,7 +210,8 @@ function AppContent() {
         phase: gameState.phase,
         gameId: gameState.gameId,
         hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
-        yourSelections: gameState.yourSelections
+        yourSelections: gameState.yourSelections,
+        winnersCount: gameState.winners?.length || 0
       });
       
       // Update selectedCartelas if we have cards from gameState (for display purposes)
@@ -232,7 +235,7 @@ function AppContent() {
     } else {
       console.log('⏸️ Not navigating - conditions not met');
     }
-  }, [gameState.phase, gameState.gameId, gameState.yourCards, gameState.yourSelections, selectedStake, currentPage]);
+  }, [gameState.phase, gameState.gameId, gameState.yourCards, gameState.yourSelections, gameState.winners, selectedStake, currentPage]);
 
   // Handle query parameter routing for admin panel and stake
   useEffect(() => {
