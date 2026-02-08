@@ -136,6 +136,40 @@ function AppContent() {
     return 'game';
   };
 
+  // Auto-navigate based on game state changes
+  useEffect(() => {
+    if (!selectedStake) return; // Only auto-navigate if we have a stake selected
+    
+    const targetPage = determineGamePage();
+    
+    // Always navigate to game-layout when game is running, or to winner when game finishes
+    const shouldNavigate = 
+      (gameState.phase === 'running' && gameState.gameId && targetPage === 'game-layout' && currentPage !== 'game-layout') ||
+      (gameState.phase === 'announce' && gameState.gameId && targetPage === 'winner' && currentPage !== 'winner');
+    
+    if (shouldNavigate) {
+      console.log('🔄 Auto-navigating based on game state:', {
+        from: currentPage,
+        to: targetPage,
+        phase: gameState.phase,
+        gameId: gameState.gameId,
+        hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
+        yourSelections: gameState.yourSelections
+      });
+      
+      // Update selectedCartelas if we have cards from gameState
+      if (targetPage === 'game-layout' && Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
+        const cardNumbers = gameState.yourCards.map(card => card.cardNumber || card).filter(num => num != null);
+        if (cardNumbers.length > 0) {
+          console.log('📋 Setting selectedCartelas from gameState:', cardNumbers);
+          setSelectedCartelas(cardNumbers);
+        }
+      }
+      
+      setCurrentPage(targetPage);
+    }
+  }, [gameState.phase, gameState.gameId, gameState.yourCards, gameState.yourSelections, selectedStake, currentPage]);
+
   // Handle query parameter routing for admin panel and stake
   useEffect(() => {
     const checkUrlParams = () => {
