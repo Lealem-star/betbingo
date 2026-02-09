@@ -82,13 +82,14 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         }
     }, [gameState.phase, gameState.winners, stake, sessionId]);
 
-    // If we are connected but not in registration or countdown invalid, rejoin once to fetch fresh snapshot
+    // If we are connected but not in registration, rejoin once to fetch fresh snapshot.
+    // Don't rejoin just because countdown hits 0 - backend may extend registration.
     useEffect(() => {
         if (!stake || !sessionId) return;
         if (!connected || isConnecting) return;
         if (rejoinTriedRef.current) return;
 
-        const notReadyForSelection = gameState.phase !== 'registration' || (typeof gameState.countdown === 'number' && gameState.countdown <= 0);
+        const notReadyForSelection = gameState.phase !== 'registration';
         if (notReadyForSelection) {
             rejoinTriedRef.current = true;
             console.log('CartelaSelection - Auto rejoin to fetch fresh snapshot');

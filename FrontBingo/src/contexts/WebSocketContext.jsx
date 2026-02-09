@@ -738,23 +738,6 @@ export function WebSocketProvider({ children }) {
         return send('bingo_claim', {});
     }, [send]);
 
-    // Countdown timer effect
-    useEffect(() => {
-        if (gameState.phase !== 'registration' || !gameState.registrationEndTime) return;
-
-        const interval = setInterval(() => {
-            setGameState(prev => {
-                if (prev.phase === 'registration' && prev.registrationEndTime) {
-                    const remaining = Math.max(0, Math.ceil((prev.registrationEndTime - Date.now()) / 1000));
-                    return { ...prev, countdown: remaining };
-                }
-                return prev;
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [gameState.phase, gameState.registrationEndTime]);
-
     // Debug connection state
     useEffect(() => {
         console.log('WebSocket Context State:', {
