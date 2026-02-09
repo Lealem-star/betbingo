@@ -1076,26 +1076,27 @@ wss.on('connection', async (ws, request) => {
                 const list = getRoomsForStake(stake);
                 let room = null;
 
-                // FIRST: Check if user has an active game in a running room
-                const activeRoom = getActiveGameRoomForUser(ws.userId, stake);
-                if (activeRoom) {
-                    // User has active game - return them to that room
-                    console.log('🎮 User has active game, returning to game room:', {
+                // NEW BEHAVIOR: Only one room per stake.
+                // If a room already exists (running, registration or announce), join that room.
+                // Only create a new room when none exists.
+                if (list.length > 0) {
+                    // Prefer running room, then registration, then announce; but all are the same "single" room in practice.
+                    room = list.find(r => r.phase === 'running') ||
+                           list.find(r => r.phase === 'registration') ||
+                           list.find(r => r.phase === 'announce') ||
+                           list[0];
+                    console.log('🔗 Joining existing single room for stake:', {
                         userId: ws.userId,
-                        roomId: activeRoom.id,
-                        gameId: activeRoom.currentGameId,
-                        phase: activeRoom.phase
+                        roomId: room.id,
+                        roomPhase: room.phase,
+                        gameId: room.currentGameId
                     });
-                    room = activeRoom;
                 } else {
-                    // User has no active game - find/create a registration room
-                    room = getJoinableRoomForStake(stake);
-                if (!room) {
+                    // No room yet for this stake – create one and start registration
                     room = makeRoom(stake);
                     list.push(room);
                     await startRegistration(room);
-                    }
-                    console.log('📝 User joining registration room:', {
+                    console.log('🆕 Created first room for stake and started registration:', {
                         userId: ws.userId,
                         roomId: room.id,
                         roomPhase: room.phase,
