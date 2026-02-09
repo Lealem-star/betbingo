@@ -97,14 +97,21 @@ function AppContent() {
       connected
     });
 
-    // If we have an active game, go to game layout (with or without cartella - watch mode supported)
+    // If we have an active game:
+    // - Players who have cartellas go to game layout.
+    // - Newcomers without cards stay on cartela selection (no automatic watch-mode navigation).
     if (gameState.phase === 'running' && gameState.gameId) {
-      if ((Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) || selectedCartelas.length > 0) {
+      const hasCards =
+        (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+        selectedCartelas.length > 0;
+
+      if (hasCards) {
         console.log('→ Routing to game-layout (active game with cartella)');
-      } else {
-        console.log('→ Routing to game-layout (watch mode - no cartella)');
+        return 'game-layout';
       }
-      return 'game-layout';
+
+      console.log('→ Staying on cartela-selection (running game, no cartella for this user)');
+      return 'cartela-selection';
     }
 
     // If we have a game in announce phase (finished), go to winner page
@@ -142,7 +149,13 @@ function AppContent() {
       console.log('🎯 gameStarted custom event received:', event.detail);
       if (!selectedStake) return;
       
+      // Only force navigation for users who actually have cards in this game
       if (event.detail.phase === 'running' && event.detail.gameId && currentPage !== 'game-layout') {
+        const hasCards = Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0;
+        if (!hasCards) {
+          console.log('🚫 gameStarted event ignored - user has no cards (watchers stay on cartela-selection)');
+          return;
+        }
         console.log('🚀 FORCE NAVIGATING via custom event to game-layout');
         // Update selectedCartelas from gameState if available
         if (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
@@ -182,9 +195,11 @@ function AppContent() {
       currentPage
     });
     
-    // CRITICAL: Navigate immediately when game is running - don't wait for cards
-    // This matches the working version behavior where GameLayout handles loading states
-    const isGameRunning = gameState.phase === 'running' && gameState.gameId;
+    // Navigate to game layout only when game is running AND user has cards.
+    const hasCardsForGame =
+      (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+      selectedCartelas.length > 0;
+    const isGameRunning = gameState.phase === 'running' && gameState.gameId && hasCardsForGame;
     const isGameFinished = gameState.phase === 'announce' && gameState.gameId;
     
     const shouldNavigate = 
