@@ -1450,10 +1450,8 @@ Thank you for your dedication! 🙏`;
             // Automatically set deposit state to await receipt - no need for extra button click
             depositStates.set(userId, 'awaiting_receipt');
             ctx.answerCbQuery('📱 Telebirr deposit...');
-            // Using code block formatting to create a styled box effect
-            const telebirrMessage = `የ Telebirr አካውንት
-
-\`0994237676\`
+            // Using inline code for the Telebirr account so it is tap‑to‑copy, and a code block for the instructions
+            const telebirrMessage = `የ Telebirr አካውንት: \`0994237676\`
 
 መመሪያ
 
@@ -1478,7 +1476,9 @@ Thank you for your dedication! 🙏`;
             // Using code block formatting to create a styled box effect
             const telebirrMessage = `የ Telebirr አካውንት
 
-\`0994237676\'
+\`\`\`
+0994237676
+\`\`\`
 
 መመሪያ
 
