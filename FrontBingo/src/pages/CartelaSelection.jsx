@@ -545,6 +545,11 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
     console.log('CartelaSelection render - loading:', loading, 'error:', error, 'cards:', cards.length);
 
+    // Derive a fresh timer value from registrationEndTime to avoid getting stuck at 0
+    const timerSeconds = (gameState.phase === 'registration' && gameState.registrationEndTime)
+        ? Math.max(0, Math.ceil((gameState.registrationEndTime - Date.now()) / 1000))
+        : (gameState.countdown || 0);
+
     const selectedNumbers = Array.isArray(gameState.yourSelections) ? gameState.yourSelections : [];
     const selectedCards = selectedNumbers
         .map(n => ({ number: n, card: cards[n - 1] }))
@@ -586,7 +591,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                         </div>
                         <div className="timer-box">
                             <div className="timer-countdown">
-                                {gameState.countdown}s
+                                {timerSeconds}s
                             </div>
                             <div className="timer-status">
                                 {gameState.phase === 'registration' && `Registration open... (${gameState.playersCount} players)`}
@@ -658,7 +663,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                         </div>
                         <div className="timer-box">
                             <div className="timer-countdown">
-                                {gameState.countdown}s
+                                {timerSeconds}s
                             </div>
                             <div className="timer-status">
                                 {gameState.phase === 'registration' && `Registration open... (${gameState.playersCount} players)`}
@@ -778,7 +783,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     </div>
                     <div className="info-box flex-1">
                         <div className="info-label">Timer</div>
-                        <div className="info-value">{gameState.countdown || 0}s</div>
+                        <div className="info-value">{timerSeconds}s</div>
                     </div>
                 </div>
 
