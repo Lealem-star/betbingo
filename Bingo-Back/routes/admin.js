@@ -785,24 +785,43 @@ router.get('/stats/wallets/total-main', adminMiddleware, async (req, res) => {
             .populate('userId', 'telegramId')
             .lean();
         
+        let totalMain = 0;
+        let botCount = 0;
+        let botTotal = 0;
+        let userCount = 0;
+        
         // Filter out bot wallets and sum only real user wallets
-        const totalMain = wallets.reduce((sum, wallet) => {
+        wallets.forEach((wallet) => {
             // Skip if wallet has no user data
             if (!wallet.userId || !wallet.userId.telegramId) {
-                return sum;
+                return;
             }
             
             const telegramId = String(wallet.userId.telegramId);
-            // Check if this is a bot user (telegramId starts with 9000000000 or contains bot_user_)
-            const isBot = telegramId.startsWith('9000000000') || telegramId.includes('bot_user_');
+            // Check if this is a bot user
+            // Bots have telegramId in range 9000000000-9000000020 (9 billion range, 20 bots)
+            // or contain "bot_user_" pattern
+            const telegramIdNum = parseInt(telegramId, 10);
+            const isBot = (!isNaN(telegramIdNum) && telegramIdNum >= 9000000000 && telegramIdNum <= 9000000020) 
+                || telegramId.includes('bot_user_');
             
-            // Only include non-bot wallets
-            if (!isBot) {
-                return sum + (wallet.main || 0);
+            if (isBot) {
+                botCount++;
+                botTotal += (wallet.main || 0);
+            } else {
+                userCount++;
+                totalMain += (wallet.main || 0);
             }
-            
-            return sum;
-        }, 0);
+        });
+        
+        // Debug logging
+        console.log('Total Main Wallet Stats:', {
+            totalWallets: wallets.length,
+            botWallets: botCount,
+            botTotal: botTotal.toFixed(2),
+            userWallets: userCount,
+            userTotal: totalMain.toFixed(2)
+        });
         
         res.json({ totalMain });
     } catch (error) {
