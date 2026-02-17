@@ -709,11 +709,11 @@ function callNextNumber(room) {
     });
 
     // Call next number after delay (maintains consistent timing)
-    console.log('⏰ Scheduling next number call in 3 seconds...');
+    console.log('⏰ Scheduling next number call in 5 seconds...');
     room.callTimerId = setTimeout(() => {
         console.log('⏰ Timer fired, calling next number...');
         callNextNumber(room);
-    }, 3000);
+    }, 5000);
     console.log('✅ Timer scheduled, callTimerId:', room.callTimerId);
 }
 

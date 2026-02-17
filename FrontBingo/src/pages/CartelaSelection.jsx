@@ -18,7 +18,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     const alertTimersRef = useRef(new Map());
 
     // WebSocket integration
-    const { connected, gameState, selectCartella, connectToStake, wsReadyState, isConnecting, lastEvent } = useWebSocket();
+    const { connected, gameState, selectCartella, deselectCartella, connectToStake, wsReadyState, isConnecting, lastEvent } = useWebSocket();
     const hasConnectedRef = useRef(false);
     const rejoinTriedRef = useRef(false);
 
@@ -405,8 +405,43 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
         const selectedNumbers = Array.isArray(gameState.yourSelections) ? gameState.yourSelections : [];
 
-        // No unselect/toggle behavior: clicking an already-selected number does nothing
+        // Check if we're in the right phase first (for both select and deselect)
+        if (gameState.phase !== 'registration') {
+            // Friendly message when user tries to pick while a game is already running
+            const waitMsg = 'Please wait until the current game finishes. You can select cartela when registration starts again.';
+            
+            // Add to alert banners (same style as "Insufficient fund" and "Not enough players")
+            setAlertBanners(prev => {
+                // Avoid duplicate messages
+                if (prev.includes(waitMsg)) return prev;
+                return [...prev, waitMsg];
+            });
+            
+            showError(waitMsg);
+            return;
+        }
+
+        // Check WebSocket connection
+        if (!connected || wsReadyState !== WebSocket.OPEN) {
+            showError('Not connected to game server. Please refresh and try again.');
+            return;
+        }
+
+        // Toggle behavior: if already selected, deselect it
         if (selectedNumbers.includes(cardNum)) {
+            try {
+                console.log('Deselecting cartella:', cardNum);
+                const success = deselectCartella(cardNum);
+                if (success) {
+                    showSuccess(`Cartella #${cardNum} deselected!`);
+                    console.log('Cartella deselection sent successfully');
+                } else {
+                    showError('Failed to deselect cartella. Please try again.');
+                }
+            } catch (err) {
+                console.error('Error deselecting cartella:', err);
+                showError('Failed to deselect cartella. Please try again.');
+            }
             return;
         }
 
@@ -434,28 +469,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         // Check if card is already taken
         if (gameState.takenCards.some(taken => Number(taken) === cardNum)) {
             showError('This cartella is already taken by another player!');
-            return;
-        }
-
-        // Check if we're in the right phase
-        if (gameState.phase !== 'registration') {
-            // Friendly message when user tries to pick while a game is already running
-            const waitMsg = 'Please wait until the current game finishes. You can select cartela when registration starts again.';
-            
-            // Add to alert banners (same style as "Insufficient fund" and "Not enough players")
-            setAlertBanners(prev => {
-                // Avoid duplicate messages
-                if (prev.includes(waitMsg)) return prev;
-                return [...prev, waitMsg];
-            });
-            
-            showError(waitMsg);
-            return;
-        }
-
-        // Check WebSocket connection
-        if (!connected || wsReadyState !== WebSocket.OPEN) {
-            showError('Not connected to game server. Please refresh and try again.');
             return;
         }
 

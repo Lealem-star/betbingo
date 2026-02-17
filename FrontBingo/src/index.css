@@ -4477,6 +4477,11 @@ body {
     overflow-y: auto;
 }
 
+/* Reduced padding when user has exactly 2 cartelas */
+.user-cartelas-container-full.two-cartelas {
+    padding: 6px;
+}
+
 /* User Cartelas Container - Inside Right Column (kept for backward compatibility) */
 .user-cartelas-container {
     flex: 1;

@@ -68,6 +68,9 @@ export default function GameLayout({
     // Auto-mark control (green or light purple)
     const [isAutoMarkOn, setIsAutoMarkOn] = useState(false);
     
+    // Track if user has manually toggled auto-mark off (to prevent auto-enabling again)
+    const userManuallyDisabledRef = useRef(false);
+    
     // Track manually marked numbers per cartela when auto-mark is OFF
     // Structure: { cardNumber: Set<number> }
     const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
@@ -78,6 +81,19 @@ export default function GameLayout({
             setManuallyMarkedNumbers({});
         }
     }, [isAutoMarkOn]);
+    
+    // Automatically enable auto-mark when user has 2 cartelas (but user can still toggle it off)
+    useEffect(() => {
+        if (yourCards.length === 2 && !isAutoMarkOn && !userManuallyDisabledRef.current) {
+            // Only auto-enable if it's currently off AND user hasn't manually disabled it
+            setIsAutoMarkOn(true);
+            userManuallyDisabledRef.current = false; // Reset flag when auto-enabling
+        }
+        // When user has less than 2 cartelas, reset the manual disable flag
+        if (yourCards.length < 2) {
+            userManuallyDisabledRef.current = false;
+        }
+    }, [yourCards.length, isAutoMarkOn]);
     
     // Track if we've already claimed bingo for this game to prevent duplicate claims
     const claimedBingoRef = useRef(false);
@@ -596,7 +612,17 @@ export default function GameLayout({
                             
                             {/* Auto-Mark Toggle (Toggle Switch Style) */}
                             <button
-                                onClick={() => setIsAutoMarkOn(!isAutoMarkOn)}
+                                onClick={() => {
+                                    const newValue = !isAutoMarkOn;
+                                    setIsAutoMarkOn(newValue);
+                                    // Track if user manually turns it off when they have 2 cartelas
+                                    if (yourCards.length === 2 && !newValue) {
+                                        userManuallyDisabledRef.current = true;
+                                    } else if (newValue) {
+                                        // Reset flag when user turns it back on
+                                        userManuallyDisabledRef.current = false;
+                                    }
+                                }}
                                 className={`auto-mark-toggle-switch ${isAutoMarkOn ? 'auto-mark-on' : 'auto-mark-off'}`}
                                 title={isAutoMarkOn ? 'Auto-mark ON' : 'Auto-mark OFF'}
                             >
@@ -695,7 +721,7 @@ export default function GameLayout({
                                 style={{
                                     display: 'grid',
                                     gridTemplateColumns: '1fr 1fr',
-                                    gap: '0.4rem',
+                                    gap: '0.1rem',
                                     alignItems: 'stretch'
                                 }}
                             >
@@ -708,10 +734,6 @@ export default function GameLayout({
                                         <div
                                             key={cardNumber}
                                             className="user-cartela-item-two"
-                                            style={{
-                                                transform: 'scale(0.9)',
-                                                transformOrigin: 'top center'
-                                            }}
                                         >
                                             <CartellaCard
                                                 id={cardNumber}
