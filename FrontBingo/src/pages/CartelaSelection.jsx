@@ -655,7 +655,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                         </div>
                     </div>
                 </main>
-                <BottomNav current="game" onNavigate={onNavigate} />
+                {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
             </div>
         );
     }
@@ -728,7 +728,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 <main className="p-4">
 
                 </main>
-                <BottomNav current="game" onNavigate={onNavigate} />
+                {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
             </div>
         );
     }
