@@ -79,6 +79,27 @@ function detectWinningPattern(card, called) {
         antiDiagCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
     }
     
+    // Check four corners
+    const corners = [
+        { row: 0, col: 0 }, // top-left
+        { row: 0, col: 4 }, // top-right
+        { row: 4, col: 0 }, // bottom-left
+        { row: 4, col: 4 }  // bottom-right
+    ];
+    let allCornersCalled = true;
+    for (const corner of corners) {
+        const num = card[corner.row][corner.col];
+        const isFree = num === 0;
+        const isCalled = isFree || calledSet.has(num);
+        if (!isCalled) {
+            allCornersCalled = false;
+            break;
+        }
+    }
+    if (allCornersCalled) {
+        corners.forEach(corner => winningCells.add(`${corner.row}-${corner.col}`));
+    }
+    
     return winningCells;
 }
 

@@ -47,6 +47,20 @@ export default function GameLayout({
             return true;
         }
 
+        // Check four corners
+        const topLeft = cartella[0][0];
+        const topRight = cartella[0][4];
+        const bottomLeft = cartella[4][0];
+        const bottomRight = cartella[4][4];
+        if (
+            (topLeft === 0 || calledNumbers.includes(topLeft)) &&
+            (topRight === 0 || calledNumbers.includes(topRight)) &&
+            (bottomLeft === 0 || calledNumbers.includes(bottomLeft)) &&
+            (bottomRight === 0 || calledNumbers.includes(bottomRight))
+        ) {
+            return true;
+        }
+
         return false;
     };
 
