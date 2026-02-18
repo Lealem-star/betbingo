@@ -709,8 +709,8 @@ Thank you for your dedication! 🙏`;
                 const message = `<b>Your Current Account Balance!</b>\n\n` +
                     `<i>Name: ${userName}\n` +
                     `Phone Number: ${userPhone}\n` +
-                    `Withdrawable Balance: ${mainValue.toFixed(1)}\n` +
-                    `Non-Withdrawable Balance: ${playValue.toFixed(1)}</i>`;
+                    `Withdrawable Balance (Main Wallet): ${mainValue.toFixed(1)}\n` +
+                    `Non-Withdrawable Balance (Play Balance): ${playValue.toFixed(1)}</i>`;
 
                 ctx.reply(message, { parse_mode: 'HTML' });
             } catch (error) {
@@ -1105,8 +1105,8 @@ Thank you for your dedication! 🙏`;
                 const message = `<b>Your Current Account Balance!</b>\n\n` +
                     `<i>Name: ${userName}\n` +
                     `Phone Number: ${userPhone}\n` +
-                    `Withdrawable Balance: ${mainValue.toFixed(1)}\n` +
-                    `Non-Withdrawable Balance: ${playValue.toFixed(1)}</i>`;
+                    `Withdrawable Balance (Main Wallet): ${mainValue.toFixed(1)}\n` +
+                    `Non-Withdrawable Balance (Play Balance): ${playValue.toFixed(1)}</i>`;
 
                 ctx.answerCbQuery('💵 Balance checked');
                 ctx.reply(message, { parse_mode: 'HTML' });
