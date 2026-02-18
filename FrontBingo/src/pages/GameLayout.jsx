@@ -88,6 +88,8 @@ export default function GameLayout({
     // Track manually marked numbers per cartela when auto-mark is OFF
     // Structure: { cardNumber: Set<number> }
     const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
+    const [isManualClaiming, setIsManualClaiming] = useState(false);
+    const [startCountdown, setStartCountdown] = useState(0);
     
     // Reset manually marked numbers when auto-mark is turned back ON
     useEffect(() => {
@@ -183,6 +185,37 @@ export default function GameLayout({
         });
     }, [isAutoMarkOn]);
 
+    // Manual BINGO claim button handler (single cartela)
+    const handleManualBingo = useCallback(() => {
+        if (!connected || gameState.phase !== 'running' || !currentGameId) {
+            return;
+        }
+
+        if (claimedBingoRef.current || isManualClaiming) {
+            return;
+        }
+
+        try {
+            setIsManualClaiming(true);
+            console.log('📨 Manual BINGO claim sent by user');
+            claimedBingoRef.current = true;
+            const result = claimBingo();
+            if (!result) {
+                console.warn('Manual BINGO claim send failed');
+                claimedBingoRef.current = false;
+                showError('Failed to send BINGO claim. Please try again.');
+            } else {
+                showSuccess('BINGO claim sent! Waiting for confirmation...');
+            }
+        } catch (error) {
+            console.error('Error sending manual BINGO claim:', error);
+            claimedBingoRef.current = false;
+            showError('Failed to send BINGO claim. Please try again.');
+        } finally {
+            setIsManualClaiming(false);
+        }
+    }, [claimBingo, connected, currentGameId, gameState.phase, isManualClaiming, showError, showSuccess]);
+
     // Automatic winning pattern detection and auto-claim
     useEffect(() => {
         // Only check during running phase and if we have cards
@@ -243,6 +276,31 @@ export default function GameLayout({
             }
         }
     }, [calledNumbers, yourCards, gameState.phase, currentGameId, connected, claimBingo, isAutoMarkOn, manuallyMarkedNumbers]);
+
+    // Local 3-2-1 countdown before showing "STARTED" in status box
+    useEffect(() => {
+        // Reset countdown when game changes or leaves running phase
+        if (gameState.phase !== 'running') {
+            setStartCountdown(0);
+            return;
+        }
+
+        // Only trigger countdown at the very beginning of a running game (no numbers called yet)
+        if (gameState.phase === 'running' && calledNumbers.length === 0) {
+            setStartCountdown(3);
+        }
+    }, [gameState.phase, calledNumbers.length, currentGameId]);
+
+    // Tick the countdown down each second
+    useEffect(() => {
+        if (startCountdown <= 0) return;
+
+        const timer = setTimeout(() => {
+            setStartCountdown(prev => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [startCountdown]);
 
     // Handle refresh button click - refresh game data without full page reload
     const handleRefresh = async () => {
@@ -425,8 +483,13 @@ export default function GameLayout({
     // Determine game phase display
     const gamePhaseDisplay = (gameState.phase === 'running' || gameState.phase === 'playing') ? 'STARTED' : gameState.phase === 'registration' ? 'REGISTRATION' : 'WAITING';
     const hasTwoCartelas = yourCards.length === 2;
+    const hasSingleCartela = yourCards.length === 1;
+    const statusText = startCountdown > 0 ? startCountdown : gamePhaseDisplay;
     // When showing two cartelas, avoid forcing a tall left grid; it creates empty space due to maxHeight on cells.
     const mainContentHeight = hasTwoCartelas ? 'auto' : 'calc(100vh - 180px)';
+    // Make left BINGO columns a bit narrower and right side larger when showing single cartela,
+    // otherwise keep 1:1 split.
+    const gridTemplateColumns = hasSingleCartela ? '0.8fr 1.2fr' : '1fr 1fr';
 
     return (
         <div className="app-container relative overflow-hidden joy-bingo-bg">
@@ -465,7 +528,7 @@ export default function GameLayout({
                     className="main-content-area mobile-first-grid"
                     style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateColumns,
                         gap: hasTwoCartelas ? '0.2rem' : '0.3rem',
                         padding: hasTwoCartelas ? '0.15rem' : '0.25rem',
                         marginTop: hasTwoCartelas ? '0.4rem' : '0.75rem',
@@ -621,7 +684,9 @@ export default function GameLayout({
                         <div className="game-controls-bar">
                             {/* Reduced Size Status Box */}
                             <div className="game-status-box-small">
-                                <span className="game-status-text-small">{gamePhaseDisplay}</span>
+                                <span className="game-status-text-small">
+                                    {statusText}
+                                </span>
                             </div>
                             
                             {/* Auto-Mark Toggle (Toggle Switch Style) */}
@@ -717,13 +782,31 @@ export default function GameLayout({
                                     <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
-                                    <p className="waiting-message-text font-semibold">Watch Mode</p>
-                                    <p className="waiting-message-text text-sm mt-1 opacity-90">You're watching this game. Join the next round to play!</p>
+                                    <p className="waiting-message-text font-semibold">Watch Only</p>
+                                    <p className="waiting-message-text text-sm mt-1 opacity-90">የዚህ ዙር ጨዋታ ተጀምሯል። አዲስ ዙር እስኪጀምር እዚሁ ይጠብቁ</p>
                                 </div>
                             </div>
                         ) : null}
                     </div>
                 </div>
+
+                {/* Manual BINGO button for single cartela (below main content) */}
+                {hasSingleCartela && gameState.phase === 'running' && (
+                    <div className="mt-3 mb-4">
+                        <button
+                            onClick={handleManualBingo}
+                            className={`action-button bingo-button game-bingo-button ${isManualClaiming ? 'loading' : ''}`}
+                            disabled={!connected || !currentGameId || claimedBingoRef.current || gameState.phase !== 'running'}
+                            style={{ width: '100%' }}
+                        >
+                            <div className="button-content">
+                                <span className="button-icon bingo-icon">🎉</span>
+                                <span className="button-text">BINGO</span>
+                            </div>
+                            <div className="bingo-overlay"></div>
+                        </button>
+                    </div>
+                )}
 
                 {/* User Cartelas - Below Both Columns (only for multiple cartelas) */}
                 {yourCards.length > 1 && (

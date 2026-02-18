@@ -274,6 +274,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     useEffect(() => {
         const selectedNumbers = Array.isArray(gameState.yourSelections) ? gameState.yourSelections : [];
         const hasCards = Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0;
+        const isGameRunning = gameState.phase === 'running' && gameState.gameId;
         
         console.log('🎮 CartelaSelection - Game state changed:', {
             phase: gameState.phase,
@@ -281,14 +282,15 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             selectedNumbers,
             hasSelectedCard: selectedNumbers.length > 0,
             yourCardsCount: gameState.yourCards?.length || 0,
-            hasCards
+            hasCards,
+            isGameRunning
         });
 
-        // Navigate to GameLayout ONLY for players who actually have cards in this running game.
-        // Newcomers / users without cards stay on CartelaSelection in watch/wait mode
-        // until the current game finishes and registration opens again.
-        if (gameState.phase === 'running' && gameState.gameId && hasCards) {
-            console.log('🎮 NAVIGATION TRIGGERED - Game started, navigating to game layout', {
+        // When a game is running, always move into GameLayout:
+        // - Players with cards see their boards.
+        // - Users without cards see watch mode.
+        if (isGameRunning) {
+            console.log('🎮 NAVIGATION TRIGGERED - Game started, requesting game layout', {
                 gameId: gameState.gameId,
                 phase: gameState.phase,
                 hasCards,
@@ -298,23 +300,29 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             // Ensure gameId is updated in parent before navigation
             onGameIdUpdate?.(gameState.gameId);
             
-            // Extract card numbers from yourCards if available, otherwise use yourSelections
-            let cardNumbersToPass = selectedNumbers;
-            if (hasCards) {
-                cardNumbersToPass = gameState.yourCards.map(card => card.cardNumber || card).filter(num => num != null);
+            // Extract card numbers from yourCards if available, otherwise use yourSelections.
+            // If neither exist, pass an empty array (watch mode).
+            let cardNumbersToPass = [];
+            if (hasCards && Array.isArray(gameState.yourCards)) {
+                cardNumbersToPass = gameState.yourCards
+                    .map(card => card.cardNumber || card)
+                    .filter(num => num != null);
                 console.log('📋 Using card numbers from yourCards:', cardNumbersToPass);
             } else if (selectedNumbers.length > 0) {
                 cardNumbersToPass = selectedNumbers;
                 console.log('📋 Using card numbers from yourSelections:', cardNumbersToPass);
             } else {
-                cardNumbersToPass = []; // Watch mode
-                console.log('👀 Watch mode - no cards available');
+                console.log('👀 Watch mode - no cards available for this user');
             }
             
             console.log('Calling onCartelaSelected with:', cardNumbersToPass);
             onCartelaSelected?.(cardNumbersToPass);
+
+            // Ask parent app to navigate into game-layout immediately (players or watchers).
+            // Use forceDirect=true so we don't get bounced back to selection by smart routing.
+            onNavigate?.('game-layout', true);
         }
-    }, [gameState.phase, gameState.gameId, gameState.yourSelections, gameState.yourCards, onCartelaSelected, onGameIdUpdate]);
+    }, [gameState.phase, gameState.gameId, gameState.yourSelections, gameState.yourCards, onCartelaSelected, onGameIdUpdate, onNavigate]);
 
     // Show message if game cancelled due to not enough players
     useEffect(() => {

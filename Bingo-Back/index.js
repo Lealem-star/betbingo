@@ -204,6 +204,7 @@ function makeRoom(stake) {
         // Prevent duplicate announce/payout and manage call timer lifecycle
         announceProcessed: false,
         callTimerId: null,
+        announceTimerId: null,
         startTime: Date.now(),
         registrationEndTime: Date.now() + 30000, // 30 seconds from now
         gameEndTime: null,
@@ -685,7 +686,7 @@ function callNextNumber(room) {
             calledCount: room.calledNumbers.length,
             reason: room.phase !== 'running' ? 'phase not running' : 'max numbers reached'
         });
-        toAnnounce(room); // Fire and forget - don't block
+        scheduleAnnounce(room, 'max_numbers_or_not_running');
         return;
     }
 
@@ -771,14 +772,41 @@ async function checkWinners(room) {
         }
 
     if (winners.length > 0) {
-            console.log(`Found ${winners.length} winner(s), announcing game end`);
+            console.log(`Found ${winners.length} winner(s), scheduling announce`);
         room.winners = winners;
-        await toAnnounce(room);
+        scheduleAnnounce(room, 'winner_found');
         }
     } catch (error) {
         console.error('Error in checkWinners:', error);
         // Don't stop the game if there's an error checking winners
     }
+}
+
+function scheduleAnnounce(room, reason = 'unknown') {
+    // Don't schedule if we've already processed announce or a timer exists
+    if (!room || room.announceProcessed) {
+        return;
+    }
+    if (room.announceTimerId) {
+        return;
+    }
+
+    // Stop any further number calls while we wait
+    if (room.callTimerId) {
+        clearTimeout(room.callTimerId);
+        room.callTimerId = null;
+    }
+
+    console.log('⏳ Scheduling announce in 5 seconds...', {
+        roomId: room.id,
+        gameId: room.currentGameId,
+        reason
+    });
+
+    room.announceTimerId = setTimeout(async () => {
+        room.announceTimerId = null;
+        await toAnnounce(room);
+    }, 5000);
 }
 
 async function toAnnounce(room) {
@@ -1307,7 +1335,9 @@ wss.on('connection', async (ws, request) => {
                             calledNumbers: room.calledNumbers,
                             called: room.calledNumbers
                         }, room);
-                        await toAnnounce(room);
+                        // Schedule announce after short delay so clients have time
+                        // to show \"Bingo accepted\" before moving to results.
+                        scheduleAnnounce(room, 'bingo_claim_accepted');
                     }
                 }
             }

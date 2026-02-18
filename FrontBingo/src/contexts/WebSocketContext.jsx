@@ -508,10 +508,11 @@ export function WebSocketProvider({ children }) {
                             break;
 
                         case 'bingo_accepted':
+                            // Store winners but keep phase as running until game_finished arrives.
+                            // This lets the backend control the exact timing of the announce phase.
                             setGameState(prev => ({
                                 ...prev,
-                                winners: event.payload.winners || [],
-                                phase: 'announce'
+                                winners: event.payload.winners || prev.winners || []
                             }));
                             break;
 
