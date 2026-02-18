@@ -485,11 +485,11 @@ export default function GameLayout({
     const hasTwoCartelas = yourCards.length === 2;
     const hasSingleCartela = yourCards.length === 1;
     const statusText = startCountdown > 0 ? startCountdown : gamePhaseDisplay;
-    // When showing two cartelas, avoid forcing a tall left grid; it creates empty space due to maxHeight on cells.
-    const mainContentHeight = hasTwoCartelas ? 'auto' : 'calc(100vh - 180px)';
-    // Make left BINGO columns a bit narrower and right side larger when showing single cartela,
+    // When showing user cartelas, avoid forcing a tall left grid; it creates empty space due to maxHeight on cells.
+    const mainContentHeight = (hasTwoCartelas || hasSingleCartela) ? 'auto' : 'calc(100vh - 180px)';
+    // Make left BINGO columns noticeably narrower and right side larger when showing single cartela,
     // otherwise keep 1:1 split.
-    const gridTemplateColumns = hasSingleCartela ? '0.8fr 1.2fr' : '1fr 1fr';
+    const gridTemplateColumns = hasSingleCartela ? '0.6fr 1.4fr' : '1fr 1fr';
 
     return (
         <div className="app-container relative overflow-hidden joy-bingo-bg">
@@ -539,8 +539,19 @@ export default function GameLayout({
                     }}
                 >
                     {/* Left Card - BINGO Grid with Square Letters */}
-                    <div className="bingo-grid-container" style={{ height: hasTwoCartelas ? 'auto' : '100%', overflow: 'hidden' }}>
-                        <div className="grid grid-cols-5 gap-1" style={{ height: hasTwoCartelas ? 'auto' : '100%' }}>
+                    <div
+                        className="bingo-grid-container"
+                        style={{
+                            height: hasTwoCartelas || hasSingleCartela ? 'auto' : '100%',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <div
+                            className="grid grid-cols-5 gap-1"
+                            style={{
+                                height: hasTwoCartelas || hasSingleCartela ? 'auto' : '100%'
+                            }}
+                        >
                             {/* B Column - Yellow */}
                             <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-b">

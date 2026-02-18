@@ -114,6 +114,12 @@ function AppContent() {
       return 'game-layout';
     }
 
+    // If registration just closed and game is about to start, show game layout (watch mode for users without cards)
+    if (gameState.phase === 'starting' && gameState.gameId) {
+      console.log('→ Routing to game-layout (starting game)');
+      return 'game-layout';
+    }
+
     // If we have a game in announce phase (finished), go to winner page
     if (gameState.phase === 'announce' && gameState.gameId) {
       console.log('→ Routing to winner (game finished)');
@@ -190,12 +196,13 @@ function AppContent() {
       currentPage
     });
     
-    // Navigate to game layout when game is running (players OR watchers).
-    const isGameRunning = gameState.phase === 'running' && gameState.gameId;
+    // Navigate to game layout when game is starting/running (players OR watchers).
+    const isGameStartingOrRunning =
+      (gameState.phase === 'starting' || gameState.phase === 'running') && gameState.gameId;
     const isGameFinished = gameState.phase === 'announce' && gameState.gameId;
     
     const shouldNavigate = 
-      (isGameRunning && currentPage !== 'game-layout') ||
+      (isGameStartingOrRunning && currentPage !== 'game-layout') ||
       (isGameFinished && currentPage !== 'winner');
     
     console.log('🤔 Should navigate?', shouldNavigate, {
@@ -213,7 +220,7 @@ function AppContent() {
     if (shouldNavigate) {
       console.log('✅ NAVIGATING! Auto-navigating based on game state:', {
         from: currentPage,
-        to: isGameRunning ? 'game-layout' : 'winner',
+        to: isGameStartingOrRunning ? 'game-layout' : 'winner',
         phase: gameState.phase,
         gameId: gameState.gameId,
         hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
@@ -223,7 +230,7 @@ function AppContent() {
       
       // Update selectedCartelas if we have cards from gameState (for display purposes)
       // But don't block navigation if cards aren't loaded yet - GameLayout will handle loading
-      if (isGameRunning) {
+      if (isGameStartingOrRunning) {
         if (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
           const cardNumbers = gameState.yourCards.map(card => card.cardNumber || card).filter(num => num != null);
           if (cardNumbers.length > 0) {
@@ -238,7 +245,7 @@ function AppContent() {
         // If no cards/selections, that's fine - GameLayout will show watch mode
       }
       
-      setCurrentPage(isGameRunning ? 'game-layout' : 'winner');
+      setCurrentPage(isGameStartingOrRunning ? 'game-layout' : 'winner');
     } else {
       console.log('⏸️ Not navigating - conditions not met');
     }

@@ -356,6 +356,19 @@ export function WebSocketProvider({ children }) {
                             break;
                         }
 
+                        case 'registration_closed': {
+                            // Backend signaled registration ended; game is about to start.
+                            // Move to a "starting" phase so the UI can navigate to GameLayout
+                            // even before the first number arrives.
+                            setGameState(prev => ({
+                                ...prev,
+                                phase: 'starting',
+                                gameId: event.payload?.gameId || prev.gameId,
+                                countdown: 0
+                            }));
+                            break;
+                        }
+
                         case 'game_started':
                             console.log('🎮 game_started received:', {
                                 gameId: event.payload.gameId,

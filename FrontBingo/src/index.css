@@ -2701,6 +2701,11 @@ body {
     border-radius: 16px;
     padding: 16px;
     box-shadow: 0 4px 16px rgba(148, 163, 184, 0.35);
+    /* Make the whole card a responsive square */
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .cartela-preview {
@@ -2729,6 +2734,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .cartela-letters {
@@ -2755,12 +2762,15 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .cartela-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 2px;
+    flex: 1 1 0;
 }
 
 .cartela-cell {
