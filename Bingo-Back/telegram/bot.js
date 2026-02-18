@@ -727,13 +727,14 @@ Thank you for your dedication! 🙏`;
         // Add /withdraw command to initiate withdrawal flow
         bot.command('withdraw', async (ctx) => {
             try {
+                if (!(await requireRegistration(ctx))) return;
                 // Start the same flow as pressing the Withdraw button
                 const userId = String(ctx.from.id);
                 // Initialize withdrawal state to await amount
                 if (typeof withdrawalStates !== 'undefined' && withdrawalStates instanceof Map) {
                     withdrawalStates.set(userId, 'awaiting_amount');
                 }
-                ctx.reply('💰 እባክዎትን ማውጣት የፈለጉትን የገንዘብ መጠን ያስገቡ (ETB 50 - 10,000):\n\n💡 Example: 100');
+                ctx.reply('Please enter the amount you wish to withdraw.');
             } catch (e) {
                 ctx.reply('❌ Could not start withdrawal. Please try again.');
             }
@@ -1122,62 +1123,17 @@ Thank you for your dedication! 🙏`;
 
         bot.action('withdraw', async (ctx) => {
             if (!(await requireRegistration(ctx))) return;
-            ctx.answerCbQuery('🤑 Withdraw info...');
-
+            ctx.answerCbQuery('🤑 Withdraw...');
             try {
                 const userId = String(ctx.from.id);
-                const userData = await UserService.getUserWithWallet(userId);
-                if (!userData || !userData.wallet || !userData.user) {
-                    return ctx.reply('❌ Wallet not found. Please try again later.');
+                // Initialize withdrawal state to await amount
+                if (typeof withdrawalStates !== 'undefined' && withdrawalStates instanceof Map) {
+                    withdrawalStates.set(userId, 'awaiting_amount');
                 }
-
-                const w = userData.wallet;
-                const dbUserId = userData.user._id;
-
-                // Check if user has deposit history
-                const depositHistory = await Transaction.find({
-                    userId: dbUserId,
-                    type: 'deposit',
-                    status: { $in: ['completed', 'pending'] }
-                }).limit(1);
-
-                const hasDepositHistory = depositHistory.length > 0;
-                const keyboard = { inline_keyboard: [] };
-
-                // If user has NO deposit history, check if they have 300 birr minimum
-                if (!hasDepositHistory) {
-                    if (w.main < 300) {
-                        // Block withdrawal - show error message
-                        keyboard.inline_keyboard.push([{ text: '❌ Insufficient Requirements', callback_data: 'back_to_menu' }]);
-                        keyboard.inline_keyboard.push([{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]);
-
-                        return ctx.reply(
-                            `🤑 Withdraw Funds:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n\n` +
-                            `❌ ያለምንም ተቀመጭ ታሪክ (deposit history) ለማውጣት ቢያንስ 300 ብር የmain wallet ተቀማጭዎ መድረስ አለበት።\n` +
-                            `በማንኛውም መጠን ማውጣት ለመጠየቅ እባክዎ መጀመሪያ ተቀማጭ ያድርጉ?\n` +
-                            `ይህን የምናደርገው የጭዋታውን መድረክ ፍትሃዊ ለማድረግ ነው።\n\n` +
-                            `💡 You need either:\n` +
-                            `• Reach 300 birr in main wallet, OR\n` +
-                            `• Make a deposit first to withdraw any amount`,
-                            { reply_markup: keyboard }
-                        );
-                    }
-                    // User has >= 300 birr but no deposit history - allow withdrawal
-                }
-
-                // Normal flow: user has deposit history OR has >= 300 birr with no deposit history
-                if (w.main >= 50) {
-                    keyboard.inline_keyboard.push([{ text: '💰 Request Withdrawal', callback_data: 'request_withdrawal' }]);
-                } else {
-                    keyboard.inline_keyboard.push([{ text: '❌ Insufficient Balance (Min: 50 ETB)', callback_data: 'back_to_menu' }]);
-                }
-
-                keyboard.inline_keyboard.push([{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]);
-
-                ctx.reply(`🤑 Withdraw Funds:\n\n💰 Main Wallet: ETB ${w.main.toFixed(2)}\n\n💡 Withdrawal Options:\n• Minimum: ETB 50\n• Maximum: ETB 10,000\n• Processing: 24-48 hours\n\n📞 Contact support for assistance`, { reply_markup: keyboard });
+                ctx.reply('Please enter the amount you wish to withdraw.');
             } catch (error) {
-                console.error('Withdraw info error:', error);
-                ctx.reply('❌ Error checking balance. Please try again.');
+                console.error('Withdraw action error:', error);
+                ctx.reply('❌ Could not start withdrawal. Please try again.');
             }
         });
 
@@ -1185,7 +1141,7 @@ Thank you for your dedication! 🙏`;
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('💰 Withdrawal request...');
             withdrawalStates.set(String(ctx.from.id), 'awaiting_amount');
-            ctx.reply('💰 Enter withdrawal amount (ETB 50 - 10,000):\n\n💡 Example: 100\n\n🏦 You will choose transfer method after amount confirmation.');
+            ctx.reply('Please enter the amount you wish to withdraw.');
         });
 
         // Withdrawal method selection handlers
@@ -1811,20 +1767,48 @@ Thank you for your dedication! 🙏`;
                     if (amountMatch) {
                         const amount = Number(amountMatch[1]);
                         if (amount >= 50 && amount <= 10000) {
-                            // Store amount and ask for transfer method
-                            withdrawalStates.set(userId, { stage: 'awaiting_method', amount });
-                            ctx.reply(`💰 Withdrawal Amount: ETB ${amount}\n\n🏦 Choose your preferred transfer method:`, {
-                                reply_markup: {
-                                    inline_keyboard: [
-                                        [{ text: '📱 Telebirr', callback_data: 'withdraw_telebirr' }],
-                                        [{ text: '🏦 Commercial Bank', callback_data: 'withdraw_commercial' }],
-                                        [{ text: '💳 CBE Birr', callback_data: 'withdraw_cbe' }],
-                                        [{ text: '🏛️ Other Bank', callback_data: 'withdraw_other' }],
-                                        [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
-                                    ]
+                            // Check user balance before proceeding
+                            try {
+                                const userData = await UserService.getUserWithWallet(userId);
+                                if (!userData || !userData.wallet) {
+                                    withdrawalStates.delete(userId);
+                                    return ctx.reply('❌ Wallet not found. Please try again later.', {
+                                        reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                                    });
                                 }
-                            });
-                            return;
+
+                                const w = userData.wallet;
+                                const mainBalance = (w.main !== null && w.main !== undefined) ? w.main : (w.balance ?? 0);
+
+                                // Check if user has sufficient balance
+                                if (mainBalance < amount) {
+                                    withdrawalStates.delete(userId);
+                                    return ctx.reply('በቂ withdraw balance የለዎትም። Deposit በማድረግ ይጫወቱ', {
+                                        reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                                    });
+                                }
+
+                                // Balance is sufficient - proceed to transfer method selection
+                                withdrawalStates.set(userId, { stage: 'awaiting_method', amount });
+                                ctx.reply(`💰 Withdrawal Amount: ETB ${amount}\n\n🏦 Choose your preferred transfer method:`, {
+                                    reply_markup: {
+                                        inline_keyboard: [
+                                            [{ text: '📱 Telebirr', callback_data: 'withdraw_telebirr' }],
+                                            [{ text: '🏦 Commercial Bank', callback_data: 'withdraw_commercial' }],
+                                            [{ text: '💳 CBE Birr', callback_data: 'withdraw_cbe' }],
+                                            [{ text: '🏛️ Other Bank', callback_data: 'withdraw_other' }],
+                                            [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
+                                        ]
+                                    }
+                                });
+                                return;
+                            } catch (error) {
+                                console.error('Balance check error during withdrawal:', error);
+                                withdrawalStates.delete(userId);
+                                return ctx.reply('❌ Error checking balance. Please try again.', {
+                                    reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                                });
+                            }
                         } else {
                             ctx.reply('❌ Invalid amount. Please enter between ETB 50 - 10,000.');
                             return;
