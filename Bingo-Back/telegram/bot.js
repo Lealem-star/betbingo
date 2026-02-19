@@ -2112,26 +2112,7 @@ Thank you for your dedication! 🙏`;
                     return;
                 }
 
-                // Check if user is trying to enter amount (old flow - redirect to bank selection)
-                const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
-                if (amountMatch) {
-                    const amount = Number(amountMatch[1]);
-                    if (amount >= 50) {
-                        // Redirect to bank selection (new flow)
-                        ctx.reply('Please select the bank option you wish to use for the top-up.\n\nእባክዎ ለማስገባት የሚፈልጉትን የባንክ አማራጭ ይምረጡ:', {
-                            reply_markup: {
-                                inline_keyboard: [
-                                    [{ text: '📱 Telebirr', callback_data: 'deposit_telebirr' }],
-                                    [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
-                                ]
-                            }
-                        });
-                        return;
-                    } else {
-                        return ctx.reply('❌ Minimum deposit amount is 50 Birr. Please enter a valid amount.');
-                    }
-                }
-                // Check if user is in deposit image amount flow
+                // Check if user is in deposit image amount flow (MUST be before generic amount check)
                 const depositState = depositStates.get(userId);
                 if (depositState === 'awaiting_image_amount') {
                     const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
@@ -2149,6 +2130,26 @@ Thank you for your dedication! 🙏`;
                     } else {
                         ctx.reply('❌ Please enter a valid amount (numbers only).\n\n💡 Example: 100');
                         return;
+                    }
+                }
+
+                // Check if user is trying to enter amount (old flow - redirect to bank selection)
+                const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
+                if (amountMatch) {
+                    const amount = Number(amountMatch[1]);
+                    if (amount >= 50) {
+                        // Redirect to bank selection (new flow)
+                        ctx.reply('Please select the bank option you wish to use for the top-up.\n\nእባክዎ ለማስገባት የሚፈልጉትን የባንክ አማራጭ ይምረጡ:', {
+                            reply_markup: {
+                                inline_keyboard: [
+                                    [{ text: '📱 Telebirr', callback_data: 'deposit_telebirr' }],
+                                    [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
+                                ]
+                            }
+                        });
+                        return;
+                    } else {
+                        return ctx.reply('❌ Minimum deposit amount is 50 Birr. Please enter a valid amount.');
                     }
                 }
 
