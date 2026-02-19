@@ -97,21 +97,15 @@ class WalletService {
     // Process deposit
     static async processDeposit(userId, amount, smsData = null) {
         try {
-            // Add to main wallet (deposit balance)
-            const result = await this.updateBalance(userId, { main: amount });
-
-            // Gift play wallet: 10% of deposit
-            const giftPlayAmount = Math.floor(amount * 0.1);
-            if (giftPlayAmount > 0) {
-                await this.updateBalance(userId, { play: giftPlayAmount });
-            }
+            // Add deposits to play wallet by default (gaming balance)
+            const result = await this.updateBalance(userId, { play: amount });
 
             // Create transaction record
             const transaction = new Transaction({
                 userId,
                 type: 'deposit',
                 amount,
-                description: `Deposit via SMS: ETB ${amount}${giftPlayAmount ? ` (+${giftPlayAmount} play wallet gift)` : ''}`,
+                description: `Deposit via SMS: ETB ${amount} (credited to play wallet)`,
                 reference: smsData?.ref || null,
                 smsData,
                 balanceBefore: result.balanceBefore,
@@ -381,8 +375,8 @@ class WalletService {
         try {
             const wallet = await this.getWallet(userId);
 
-            // Add to main wallet
-            const result = await this.updateBalance(userId, { main: amount });
+            // Add deposits to play wallet by default
+            const result = await this.updateBalance(userId, { play: amount });
 
             // Gift coins: 10% of deposit amount
             const giftCoins = Math.floor(amount * 0.1);

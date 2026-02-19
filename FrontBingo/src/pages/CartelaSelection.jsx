@@ -614,15 +614,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
                             <div className="wallet-box">
-                                <div className="wallet-label">Main Wallet</div>
+                                <div className="wallet-label">Wallet</div>
                                 <div className="wallet-value text-blue-400">
-                                    {walletLoading ? '...' : (wallet.main || 0).toLocaleString()}
-                                </div>
-                            </div>
-                            <div className="wallet-box">
-                                <div className="wallet-label">Play Wallet</div>
-                                <div className="wallet-value text-green-400">
-                                    {walletLoading ? '...' : (wallet.play || 0).toLocaleString()}
+                                    {walletLoading ? '...' : ((wallet.main || 0) + (wallet.play || 0)).toLocaleString()}
                                 </div>
                             </div>
                             <div className="wallet-box">
@@ -686,15 +680,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
                             <div className="wallet-box">
-                                <div className="wallet-label">Main Wallet</div>
+                                <div className="wallet-label">Wallet</div>
                                 <div className="wallet-value text-blue-400">
-                                    {walletLoading ? '...' : wallet.main?.toLocaleString() || 0}
-                                </div>
-                            </div>
-                            <div className="wallet-box">
-                                <div className="wallet-label">Play Wallet</div>
-                                <div className="wallet-value text-green-400">
-                                    {walletLoading ? '...' : wallet.play?.toLocaleString() || 0}
+                                    {walletLoading ? '...' : ((wallet.main || 0) + (wallet.play || 0)).toLocaleString()}
                                 </div>
                             </div>
                             <div className="wallet-box">
@@ -803,15 +791,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 {/* Second Row: Wallet info and Timer - White boxes style */}
                 <div className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap mobile-info-bar" style={{ marginBottom: '1rem' }}>
                     <div className="info-box flex-1">
-                        <div className="info-label">Main Wallet</div>
+                        <div className="info-label">Wallet</div>
                         <div className="info-value">
-                            {walletLoading ? '...' : wallet.main?.toLocaleString() || 0}
-                        </div>
-                    </div>
-                    <div className="info-box flex-1">
-                        <div className="info-label">Play Wallet</div>
-                        <div className="info-value">
-                            {walletLoading ? '...' : wallet.play?.toLocaleString() || 0}
+                            {walletLoading ? '...' : ((wallet.main || 0) + (wallet.play || 0)).toLocaleString()}
                         </div>
                     </div>
                     <div className="info-box flex-1">
