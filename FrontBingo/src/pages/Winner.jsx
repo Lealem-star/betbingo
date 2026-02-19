@@ -6,52 +6,31 @@ import CartellaCard from '../components/CartellaCard';
 export default function Winner({ onNavigate, onResetToGame }) {
     const { gameState } = useWebSocket();
     const { sessionId } = useAuth();
-    const FALLBACK_TIMEOUT = 5; // seconds
-    const [countdown, setCountdown] = useState(FALLBACK_TIMEOUT);
+    const [countdown, setCountdown] = useState(0);
 
-    // Server-synchronized countdown timer - updates based on server's nextRegistrationStart timestamp
+    // Server-synchronized countdown timer - uses only server's nextRegistrationStart timestamp
     useEffect(() => {
         const updateCountdown = () => {
             if (gameState.nextRegistrationStart) {
-                // Calculate remaining time until next registration starts (based on server timestamp)
                 const remaining = Math.max(0, Math.ceil((gameState.nextRegistrationStart - Date.now()) / 1000));
                 setCountdown(remaining);
-            } else if (gameState.registrationEndTime) {
-                // Fallback: Use registrationEndTime if nextRegistrationStart not available
-                const remaining = Math.max(0, Math.ceil((gameState.registrationEndTime - Date.now()) / 1000));
-                setCountdown(remaining);
             } else {
-                // Final fallback: Use local countdown if server time not available
-                setCountdown(FALLBACK_TIMEOUT);
+                setCountdown(0);
             }
         };
 
-        // Update immediately
         updateCountdown();
-
-        // Update every second to keep countdown synchronized across all clients
         const interval = setInterval(updateCountdown, 1000);
 
         return () => clearInterval(interval);
-    }, [gameState.nextRegistrationStart, gameState.registrationEndTime]);
+    }, [gameState.nextRegistrationStart]);
 
-    // Navigate immediately when backend starts new registration
+    // Navigate when backend starts new registration
     useEffect(() => {
         if (gameState.phase === 'registration') {
-            console.log('Winner page - Backend started new registration, navigating to cartella selection immediately');
             onNavigate?.('cartela-selection');
         }
     }, [gameState.phase, onNavigate]);
-
-    // Fallback: Navigate after timeout if backend doesn't send registration_open
-    useEffect(() => {
-        const fallbackTimer = setTimeout(() => {
-            console.log(`Winner page - Fallback navigation after ${FALLBACK_TIMEOUT} seconds`);
-            onNavigate?.('cartela-selection');
-        }, FALLBACK_TIMEOUT * 1000);
-
-        return () => clearTimeout(fallbackTimer);
-    }, [onNavigate]);
 
     const winners = gameState.winners || [];
     const isMulti = winners.length > 1;
