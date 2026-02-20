@@ -3,7 +3,6 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../lib/auth/AuthProvider';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import lbLogo from '../assets/lb.png';
-// import StatsPanel from '../components/StatsPanel';
 import { apiFetch, getApiBase } from '../lib/api/client';
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
@@ -157,7 +156,6 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                         </div>
                     )}
 
-                    {/* <StatsPanel /> */}
                 </main>
 
                 <BottomNav current="game" onNavigate={onNavigate} />

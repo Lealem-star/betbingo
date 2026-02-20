@@ -12,12 +12,12 @@ export default function AdminStats() {
     useEffect(() => {
         (async () => {
             try {
-                const t = await apiFetch('/admin/stats/today');
+                const t = await apiFetch('/admin/stats/today', { timeoutMs: 15000 });
                 setToday(t);
             } catch { }
             try {
                 // Fetch real daily game statistics
-                const gamesData = await apiFetch('/admin/stats/games?days=14');
+                const gamesData = await apiFetch('/admin/stats/games?days=14', { timeoutMs: 30000 });
                 const games = gamesData?.games || [];
 
                 // Group games by day and format for display
@@ -105,9 +105,9 @@ export default function AdminStats() {
                 const to = endUTC.toISOString();
 
                 const [overview, depositsRes, withdrawalsCompletedRes] = await Promise.all([
-                    apiFetch('/admin/stats/overview'),
-                    apiFetch(`/admin/balances/deposits?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
-                    apiFetch('/admin/balances/withdrawals?status=completed')
+                    apiFetch('/admin/stats/overview', { timeoutMs: 20000 }),
+                    apiFetch(`/admin/balances/deposits?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { timeoutMs: 20000 }),
+                    apiFetch('/admin/balances/withdrawals?status=completed', { timeoutMs: 20000 })
                 ]);
 
                 const totalGames = overview?.today?.totalGames || 0;
@@ -129,11 +129,11 @@ export default function AdminStats() {
                 setTodayFinance({ totalGames, totalDeposit, totalWithdraw });
             } catch { }
             try {
-                const walletData = await apiFetch('/admin/stats/wallets/total-main');
+                const walletData = await apiFetch('/admin/stats/wallets/total-main', { timeoutMs: 20000 });
                 setTotalMainWallet(walletData?.totalMain || 0);
             } catch { }
             try {
-                const playWalletData = await apiFetch('/admin/stats/wallets/total-play');
+                const playWalletData = await apiFetch('/admin/stats/wallets/total-play', { timeoutMs: 20000 });
                 setTotalPlayWallet(playWalletData?.totalPlay || 0);
             } catch { }
         })();

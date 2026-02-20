@@ -81,6 +81,7 @@ const gameSchema = new mongoose.Schema({
 
 // Create indexes
 gameSchema.index({ status: 1 });
+gameSchema.index({ status: 1, finishedAt: -1 }); // Admin stats: find finished games by date
 gameSchema.index({ stake: 1 });
 gameSchema.index({ 'players.userId': 1 });
 gameSchema.index({ createdAt: -1 });

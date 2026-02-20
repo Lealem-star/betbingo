@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 export default function useCountUp(target, durationMs = 1200) {
     const [value, setValue] = useState(0);
     const startRef = useRef(null);
+
     useEffect(() => {
+        startRef.current = null; // Reset so animation runs from scratch when target changes
+
         let raf = null;
         const step = (ts) => {
             if (!startRef.current) startRef.current = ts;
