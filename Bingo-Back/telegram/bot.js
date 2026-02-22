@@ -102,15 +102,15 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 const match = text.match(pattern);
                 if (match) {
                     const candidateAmount = Number(match[1]);
-                    // Only accept amounts >= 10 (minimum deposit)
-                    if (candidateAmount >= 10 && candidateAmount <= 1000000) { // Reasonable upper limit
+                    // Only accept amounts >= 50 (minimum deposit)
+                    if (candidateAmount >= 50 && candidateAmount <= 1000000) { // Reasonable upper limit
                         amount = candidateAmount;
                         break;
                     }
                 }
             }
 
-            if (!amount || amount < 10) return null;
+            if (!amount || amount < 50) return null;
 
             // Enhanced datetime patterns (including CBE Birr DD/MM/YY format)
             const whenMatch = text.match(/on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+at\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i) ||
@@ -1452,7 +1452,7 @@ Thank you for your dedication! 🙏`;
                     return ctx.reply('❌ This deposit request has already been processed.');
                 }
                 const amount = request.amount;
-                if (!amount || amount < 10) {
+                if (!amount || amount < 50) {
                     await ctx.answerCbQuery('❌ Invalid amount');
                     return ctx.reply('❌ Invalid amount in deposit request.');
                 }
@@ -1593,55 +1593,65 @@ Thank you for your dedication! 🙏`;
         // Handle Telebirr selection (without amount - amount will be parsed from receipt)
         bot.action('deposit_telebirr', (ctx) => {
             const userId = String(ctx.from.id);
-            depositStates.set(userId, 'awaiting_receipt');
             ctx.answerCbQuery('📱 Telebirr deposit...');
-            const telebirrMessage = `የ Telebirr አካውንት: 0994237676
+            // Using inline code for the Telebirr account so it is tap‑to‑copy, and a code block for the instructions
+            const telebirrMessage = `የ Telebirr አካውንት: \`0994237676\`
 
 መመሪያ
 
+\`\`\`
 1. ከላይ ባለው የ Telebirr አካውንት ገንዘቡን ያስገቡ
 2. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከ Telebirr ይደርሳችኋል
-3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
+3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
+\`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @Funbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ
-
-💡 የክፍያ ማረጋገጫዎን እንደ ጽሁፍ ወይም ምስል ይላኩ።
-Send your payment proof as a message or image.`;
-            ctx.reply(telebirrMessage);
+የሚያጋጥማቹ የክፍያ ችግር ካለ @Funbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+            
+            depositStates.set(userId, 'awaiting_receipt');
+            ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
         });
 
-        // Backward compatibility: Paste SMS / Send Image (buttons no longer shown)
+        // Handle "Paste SMS" button - sets state to awaiting_receipt (kept for backward compat if called from elsewhere)
         bot.action('deposit_paste_sms', (ctx) => {
             const userId = String(ctx.from.id);
             depositStates.set(userId, 'awaiting_receipt');
-            ctx.answerCbQuery('📱 Ready...');
-            ctx.reply('💡 Send your payment proof as a message or image.');
-        });
-        bot.action('deposit_send_image', (ctx) => {
-            const userId = String(ctx.from.id);
-            depositStates.set(userId, 'awaiting_image_amount');
-            ctx.answerCbQuery('💰 Enter amount...');
-            ctx.reply('💡 Enter the amount you deposited (ETB, minimum 10):');
+            ctx.answerCbQuery('📱 Ready for SMS receipt...');
+            ctx.reply('📱 Send your Telebirr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!');
         });
 
-        // Backward compatibility (if amount is provided in callback)
+        // Handle "Send Image" button - sets state to awaiting_image_amount
+        bot.action('deposit_send_image', async (ctx) => {
+            const userId = String(ctx.from.id);
+            depositStates.set(userId, 'awaiting_image_amount');
+            ctx.answerCbQuery('💰 Enter deposit amount...');
+            ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 50):\n\n📋 Example: 100');
+        });
+
+        // Keep the old handler for backward compatibility (if amount is provided in callback)
         bot.action(/^deposit_telebirr_(\d+(?:\.\d{1,2})?)$/, (ctx) => {
             const userId = String(ctx.from.id);
+            const amount = ctx.match[1];
+            // Automatically set deposit state to await receipt - no need for extra button click
             depositStates.set(userId, 'awaiting_receipt');
             ctx.answerCbQuery('📱 Telebirr deposit...');
-            const telebirrMessage = `የ Telebirr አካውንት: 0994237676
+            // Using code block formatting to create a styled box effect
+            const telebirrMessage = `የ Telebirr አካውንት
+
+\`\`\`
+0994237676
+\`\`\`
 
 መመሪያ
 
+\`\`\`
 1. ከላይ ባለው የ Telebirr አካውንት ገንዘቡን ያስገቡ
 2. ብሩን ስትልኩ የከፈላችሁበትን መረጃ የያዝ አጭር የጹሁፍ መልክት(sms) ከ Telebirr ይደርሳችኋል
-3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
+3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
+\`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @Funbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ
-
-💡 የክፍያ ማረጋገጫዎን እንደ ጽሁፍ ወይም ምስል ይላኩ።
-Send your payment proof as a message or image.`;
-            ctx.reply(telebirrMessage);
+የሚያጋጥማቹ የክፍያ ችግር ካለ @Funbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+            
+            ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
         });
         // Temporarily disabled - Commercial Bank payment method
         // bot.action(/^deposit_commercial_(\d+(?:\.\d{1,2})?)$/, (ctx) => {
@@ -1659,8 +1669,8 @@ Send your payment proof as a message or image.`;
         bot.action('send_receipt_telebirr', (ctx) => {
             const userId = String(ctx.from.id);
             depositStates.set(userId, 'awaiting_receipt');
-            ctx.answerCbQuery('📱 Ready...');
-            ctx.reply('💡 Send your payment proof as a message or image.');
+            ctx.answerCbQuery('📱 Ready for Telebirr receipt...');
+            ctx.reply('📱 Send your Telebirr transaction receipt here:\n\n💡 የደርስዎትን የአጭር መልዕክት ኮፒ አድርገው ቦቱ ላይ ላኩ!\n\n✅ Your wallet will be credited automatically!');
         });
         // Temporarily disabled - Commercial Bank receipt handler
         // bot.action('send_receipt_commercial', (ctx) => {
@@ -1871,7 +1881,7 @@ Send your payment proof as a message or image.`;
                     const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
                     if (amountMatch) {
                         const amount = Number(amountMatch[1]);
-                        if (amount >= 10 && amount <= 10000) {
+                        if (amount >= 50 && amount <= 10000) {
                             // Check user balance before proceeding
                             try {
                                 const userData = await UserService.getUserWithWallet(userId);
@@ -1915,7 +1925,7 @@ Send your payment proof as a message or image.`;
                                 });
                             }
                         } else {
-                            ctx.reply('❌ Invalid amount. Please enter between ETB 10 - 10,000.');
+                            ctx.reply('❌ Invalid amount. Please enter between ETB 50 - 10,000.');
                             return;
                         }
                     } else {
@@ -2030,7 +2040,7 @@ Send your payment proof as a message or image.`;
                             const error = await response.json();
                             let errorMsg = '❌ Withdrawal request failed.';
                             if (error.error === 'INSUFFICIENT_FUNDS') errorMsg = '❌ Insufficient balance in main wallet.';
-                            else if (error.error === 'INVALID_AMOUNT') errorMsg = '❌ Invalid amount. Minimum is ETB 10, maximum is ETB 10,000.';
+                            else if (error.error === 'INVALID_AMOUNT') errorMsg = '❌ Invalid amount. Minimum is ETB 50, maximum is ETB 10,000.';
                             else if (error.error === 'DESTINATION_REQUIRED') errorMsg = '❌ Destination information is required.';
                             else if (error.error === 'USER_NOT_FOUND') errorMsg = '❌ User not found. Please try again.';
                             else if (error.error === 'NO_DEPOSIT_HISTORY_MIN_300') {
@@ -2048,19 +2058,89 @@ Send your payment proof as a message or image.`;
                     return;
                 }
 
-                // Check if user is in deposit image amount flow (MUST be before generic amount check)
+                // Check if user is in deposit image amount flow (image already sent, just need amount)
                 const depositState = depositStates.get(userId);
-                if (depositState === 'awaiting_image_amount') {
+                const isAwaitingImageAmount = depositState === 'awaiting_image_amount' ||
+                    (depositState && typeof depositState === 'object' && depositState.mode === 'awaiting_image_amount');
+
+                if (isAwaitingImageAmount) {
                     const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
                     if (amountMatch) {
                         const amount = Number(amountMatch[1]);
-                        if (amount >= 10) {
-                            // Store amount and ask for image
+                        if (amount >= 50) {
+                            // If we have stored imageFileId, process image now (no second image needed)
+                            const hasStoredImage = depositState && typeof depositState === 'object' && depositState.imageFileId;
+                            if (hasStoredImage) {
+                                try {
+                                    let user = await UserService.getUserByTelegramId(userId);
+                                    if (!user) user = await UserService.createOrUpdateUser(ctx.from);
+
+                                    const userDisplay = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'User';
+                                    const userPhone = user.phone || userId;
+                                    const imageFileId = depositState.imageFileId;
+                                    const isPhoto = depositState.isPhoto;
+
+                                    const apiBase = process.env.API_BASE_URL || 'http://localhost:3001';
+                                    const createRes = await fetch(`${apiBase}/sms-forwarder/image-deposit`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            userId: user._id.toString(),
+                                            telegramId: userId,
+                                            imageFileId,
+                                            userName: userDisplay,
+                                            userPhone: userPhone,
+                                            amount: amount
+                                        })
+                                    });
+                                    const createData = await createRes.json();
+                                    if (!createData.success || !createData.requestId) {
+                                        throw new Error(createData.error || 'Failed to create deposit request');
+                                    }
+
+                                    const requestId = createData.requestId;
+                                    const approveDenyKeyboard = {
+                                        inline_keyboard: [[
+                                            { text: '✅ Approve', callback_data: `approve_img_${requestId}` },
+                                            { text: '❌ Deny', callback_data: `deny_img_${requestId}` }
+                                        ]]
+                                    };
+
+                                    const adminUsers = await require('../models/User').find({ role: 'admin' }, { telegramId: 1 });
+                                    let forwardedCount = 0;
+                                    const caption = `📷 Deposit Receipt Image\n\n👤 User: ${userDisplay}\n📱 Phone: ${userPhone}\n🆔 Telegram ID: ${userId}\n💰 Amount: ETB ${amount}\n📋 Request ID: ${requestId}\n\n⏳ Manual review required.`;
+
+                                    for (const admin of adminUsers) {
+                                        if (admin.telegramId) {
+                                            try {
+                                                if (isPhoto) {
+                                                    await bot.telegram.sendPhoto(admin.telegramId, imageFileId, { caption, reply_markup: approveDenyKeyboard });
+                                                } else {
+                                                    await bot.telegram.sendDocument(admin.telegramId, imageFileId, { caption, reply_markup: approveDenyKeyboard });
+                                                }
+                                                forwardedCount++;
+                                            } catch (e) { console.error('Error forwarding deposit image to admin:', e); }
+                                        }
+                                    }
+
+                                    depositStates.delete(userId);
+                                    const msg = forwardedCount > 0
+                                        ? '📷 Receipt image received!\n\n✅ Your deposit receipt has been forwarded to admin for manual review.\n\n⏳ You will be notified when your deposit is approved or denied.'
+                                        : '❌ Failed to forward receipt. Please contact support @Funbingosupport1';
+                                    return ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] } });
+                                } catch (error) {
+                                    console.error('Error processing deposit image:', error);
+                                    depositStates.delete(userId);
+                                    return ctx.reply('❌ Failed to process your image. Please try again or contact support.\n\n🔙 Session closed. Use /deposit to try again.', {
+                                        reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
+                                    });
+                                }
+                            }
+                            // Fallback: no stored image (legacy path) - ask for image
                             depositStates.set(userId, { mode: 'awaiting_image', amount });
-                            ctx.reply(`✅ Amount: ETB ${amount}\n\n📷 Now send a screenshot of your Telebirr receipt.`);
-                            return;
+                            return ctx.reply(`✅ Amount: ETB ${amount}\n\n📷 Now send a screenshot of your Telebirr receipt:\n\n💡 የደርስዎትን የአጭር መልዕክት ስክሪንሾት ይላኩ!\n\n⏳ Your deposit will be reviewed manually by admin.`);
                         } else {
-                            ctx.reply('❌ Minimum deposit amount is ETB 10. Please enter a valid amount.');
+                            ctx.reply('❌ Minimum deposit amount is ETB 50. Please enter a valid amount.');
                             return;
                         }
                     } else {
@@ -2069,71 +2149,11 @@ Send your payment proof as a message or image.`;
                     }
                 }
 
-                // User sent image first (from "send message or image") - now sending amount
-                if (depositState && typeof depositState === 'object' && depositState.mode === 'awaiting_image_amount_after_photo') {
-                    const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
-                    if (!amountMatch) {
-                        return ctx.reply('❌ Please enter a valid amount (numbers only). Example: 100');
-                    }
-                    const amount = Number(amountMatch[1]);
-                    if (amount < 10) {
-                        return ctx.reply('❌ Minimum deposit is ETB 10.');
-                    }
-                    const fileId = depositState.fileId;
-                    depositStates.delete(userId);
-                    try {
-                        let user = await UserService.getUserByTelegramId(userId);
-                        if (!user) user = await UserService.createOrUpdateUser(ctx.from);
-                        const userDisplay = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'User';
-                        const apiBase = process.env.API_BASE_URL || 'http://localhost:3001';
-                        const createRes = await fetch(`${apiBase}/sms-forwarder/image-deposit`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                userId: user._id.toString(),
-                                telegramId: userId,
-                                imageFileId: fileId,
-                                userName: userDisplay,
-                                userPhone: user.phone || userId,
-                                amount: amount
-                            })
-                        });
-                        const createData = await createRes.json();
-                        if (!createData.success || !createData.requestId) {
-                            throw new Error(createData.error || 'Failed to create deposit request');
-                        }
-                        const requestId = createData.requestId;
-                        const approveDenyKeyboard = {
-                            inline_keyboard: [[{ text: '✅ Approve', callback_data: `approve_img_${requestId}` }, { text: '❌ Deny', callback_data: `deny_img_${requestId}` }]]
-                        };
-                        const adminUsers = await require('../models/User').find({ role: 'admin' }, { telegramId: 1 });
-                        let forwardedCount = 0;
-                        for (const admin of adminUsers) {
-                            if (admin.telegramId) {
-                                try {
-                                    await bot.telegram.sendPhoto(admin.telegramId, fileId, {
-                                        caption: `📷 Deposit Receipt\n\n👤 ${userDisplay}\n📱 ${user.phone || userId}\n💰 ETB ${amount}\n📋 ${requestId}\n\n⏳ Manual review required.`,
-                                        reply_markup: approveDenyKeyboard
-                                    });
-                                    forwardedCount++;
-                                } catch (e) { console.error('Error forwarding to admin:', e); }
-                            }
-                        }
-                        await ctx.reply('📷 Receipt received! Forwarded to admin for review. You will be notified when approved or denied.', {
-                            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
-                        });
-                    } catch (err) {
-                        console.error('Image deposit (after photo) error:', err);
-                        await ctx.reply('❌ Failed to process. Try again or contact support.');
-                    }
-                    return;
-                }
-
                 // Check if user is trying to enter amount (old flow - redirect to bank selection)
                 const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
                 if (amountMatch) {
                     const amount = Number(amountMatch[1]);
-                    if (amount >= 10) {
+                    if (amount >= 50) {
                         // Redirect to bank selection (new flow)
                         ctx.reply('Please select the bank option you wish to use for the top-up.\n\nእባክዎ ለማስገባት የሚፈልጉትን የባንክ አማራጭ ይምረጡ:', {
                             reply_markup: {
@@ -2145,7 +2165,7 @@ Send your payment proof as a message or image.`;
                         });
                         return;
                     } else {
-                        return ctx.reply('❌ Minimum deposit amount is 10 Birr. Please enter a valid amount.');
+                        return ctx.reply('❌ Minimum deposit amount is 50 Birr. Please enter a valid amount.');
                     }
                 }
 
@@ -2164,7 +2184,7 @@ Send your payment proof as a message or image.`;
                         });
                         // Close deposit session
                         depositStates.delete(userId);
-                        return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 10).\n\n🔙 Session closed. Use /deposit to try again.', {
+                        return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 50).\n\n🔙 Session closed. Use /deposit to try again.', {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }
@@ -2280,16 +2300,23 @@ Send your payment proof as a message or image.`;
         bot.on(['photo', 'video', 'document', 'audio', 'voice', 'sticker', 'animation'], async (ctx) => {
             const userId = String(ctx.from.id);
             
-            // Check if user is in deposit flow
             const depositState = depositStates.get(userId);
+
+            // Image sent while awaiting_receipt - store image, ask for amount, then process (no second image)
             if (depositState === 'awaiting_receipt') {
-                const imageFileId = ctx.message.photo ? ctx.message.photo[ctx.message.photo.length - 1].file_id : ctx.message.document?.file_id;
-                if (imageFileId) {
-                    depositStates.set(userId, { mode: 'awaiting_image_amount_after_photo', fileId: imageFileId });
-                    return ctx.reply('💡 Enter the amount you deposited (ETB, minimum 10):');
-                }
+                const imageFileId = ctx.message.photo
+                    ? ctx.message.photo[ctx.message.photo.length - 1]?.file_id
+                    : ctx.message.document?.file_id;
+                if (!imageFileId) return;
+
+                const isPhoto = !!ctx.message.photo;
+                depositStates.set(userId, { mode: 'awaiting_image_amount', imageFileId, isPhoto });
+                return ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 50):\n\n📋 Example: 100');
             }
-            if (depositState && typeof depositState === 'object' && depositState.mode === 'awaiting_image') {
+
+            // Check if user is in deposit image flow (awaiting_image with amount)
+            const depositStateAgain = depositStates.get(userId);
+            if (depositStateAgain && typeof depositStateAgain === 'object' && depositStateAgain.mode === 'awaiting_image') {
                 // User sent image for deposit - create request and forward to admins with Approve/Deny buttons
                 try {
                     let user = await UserService.getUserByTelegramId(userId);
@@ -2299,7 +2326,7 @@ Send your payment proof as a message or image.`;
                     
                     const userDisplay = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'User';
                     const userPhone = user.phone || userId;
-                    const amount = depositState.amount;
+                    const amount = depositStateAgain.amount;
                     const imageFileId = ctx.message.photo
                         ? ctx.message.photo[ctx.message.photo.length - 1].file_id
                         : ctx.message.document?.file_id;
@@ -2309,7 +2336,7 @@ Send your payment proof as a message or image.`;
                         return ctx.reply('❌ Could not process image. Please send a photo or document.');
                     }
                     
-                    if (!amount || amount < 10) {
+                    if (!amount || amount < 50) {
                         depositStates.delete(userId);
                         return ctx.reply('❌ Invalid amount. Please start over with /deposit.');
                     }
