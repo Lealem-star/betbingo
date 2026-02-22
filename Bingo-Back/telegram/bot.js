@@ -2225,7 +2225,9 @@ Thank you for your dedication! 🙏`;
                         body: JSON.stringify({
                             userId: user._id,
                             message: messageText,
-                            phoneNumber: user.phone
+                            phoneNumber: user.phone,
+                            amount: parsed.amount,
+                            reference: parsed.ref || parsed.reference || null
                         })
                     });
 

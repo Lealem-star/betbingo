@@ -765,12 +765,21 @@ class SmsForwarderService {
         }
     }
 
-    // Fallback: create pending verification using explicit userId (e.g. from bot request when phone resolution fails)
-    static async createPendingVerificationWithExplicitUserId(userSMS, explicitUserId) {
+    // Fallback: create pending verification using explicit userId (e.g. from bot request when phone resolution fails).
+    // options.amount / options.reference from bot request used when backend didn't parse them from SMS.
+    static async createPendingVerificationWithExplicitUserId(userSMS, explicitUserId, options = {}) {
         try {
-            if (!explicitUserId || !userSMS || !userSMS.parsedData?.amount) {
+            const amount = userSMS?.parsedData?.amount ?? options?.amount;
+            if (!explicitUserId || !userSMS || (amount == null && amount !== 0)) {
                 throw new Error('Missing required data for verification');
             }
+            const amt = Number(amount) || 0;
+            const ref = userSMS?.parsedData?.reference ?? options?.reference ?? null;
+            // If backend didn't parse amount/ref, patch userSMS so createDepositVerification gets correct amount
+            if (!userSMS.parsedData) userSMS.parsedData = { amount: null, reference: null, datetime: null, paymentMethod: null, rawMessage: userSMS.message || '' };
+            if (userSMS.parsedData.amount == null) userSMS.parsedData.amount = amt;
+            if (userSMS.parsedData.reference == null) userSMS.parsedData.reference = ref;
+            await userSMS.save();
             const SMSRecord = require('../models/SMSRecord');
             const placeholder = new SMSRecord({
                 phoneNumber: 'unknown',
@@ -778,8 +787,8 @@ class SmsForwarderService {
                 timestamp: userSMS.timestamp || new Date(),
                 source: 'receiver',
                 parsedData: {
-                    amount: userSMS.parsedData?.amount || null,
-                    reference: userSMS.parsedData?.reference || null,
+                    amount: amt,
+                    reference: ref,
                     datetime: userSMS.parsedData?.datetime || null,
                     paymentMethod: userSMS.parsedData?.paymentMethod || null,
                     rawMessage: 'PENDING RECEIVER MATCH'
@@ -790,7 +799,7 @@ class SmsForwarderService {
             await placeholder.save();
 
             const matchResult = {
-                matches: { amountMatch: !!userSMS.parsedData?.amount, referenceMatch: false, timeMatch: false, paymentMethodMatch: false, phoneMatch: false },
+                matches: { amountMatch: !!amt, referenceMatch: false, timeMatch: false, paymentMethodMatch: false, phoneMatch: false },
                 criticalScore: 1,
                 optionalScore: 0,
                 matchScore: 1,

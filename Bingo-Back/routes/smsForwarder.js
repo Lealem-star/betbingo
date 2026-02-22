@@ -47,7 +47,7 @@ router.post('/incoming', async (req, res) => {
 // POST /sms-forwarder/user-sms - User forwards their SMS
 router.post('/user-sms', async (req, res) => {
     try {
-        const { userId, message, phoneNumber } = req.body;
+        const { userId, message, phoneNumber, amount: requestAmount, reference: requestRef } = req.body;
         const mongoose = require('mongoose');
 
         if (!userId || !message) {
@@ -87,8 +87,12 @@ router.post('/user-sms', async (req, res) => {
                     });
                 } else {
                     // Fallback: create verification with explicit userId so admins always get Approve/Deny buttons
+                    // Use request amount/reference if backend didn't parse them from the SMS
                     try {
-                        verification = await SmsForwarderService.createPendingVerificationWithExplicitUserId(userSMS, userId);
+                        verification = await SmsForwarderService.createPendingVerificationWithExplicitUserId(userSMS, userId, {
+                            amount: requestAmount != null ? Number(requestAmount) : undefined,
+                            reference: requestRef != null ? String(requestRef) : undefined
+                        });
                     } catch (fallbackErr) {
                         console.error('Fallback create verification failed:', fallbackErr);
                     }
