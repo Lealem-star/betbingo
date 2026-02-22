@@ -102,15 +102,15 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 const match = text.match(pattern);
                 if (match) {
                     const candidateAmount = Number(match[1]);
-                    // Only accept amounts >= 50 (minimum deposit)
-                    if (candidateAmount >= 50 && candidateAmount <= 1000000) { // Reasonable upper limit
+                    // Only accept amounts >= 10 (minimum deposit)
+                    if (candidateAmount >= 10 && candidateAmount <= 1000000) { // Reasonable upper limit
                         amount = candidateAmount;
                         break;
                     }
                 }
             }
 
-            if (!amount || amount < 50) return null;
+            if (!amount || amount < 10) return null;
 
             // Enhanced datetime patterns (including CBE Birr DD/MM/YY format)
             const whenMatch = text.match(/on\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})\s+at\s+([0-9]{2}:[0-9]{2}:[0-9]{2})/i) ||
@@ -1452,7 +1452,7 @@ Thank you for your dedication! 🙏`;
                     return ctx.reply('❌ This deposit request has already been processed.');
                 }
                 const amount = request.amount;
-                if (!amount || amount < 50) {
+                if (!amount || amount < 10) {
                     await ctx.answerCbQuery('❌ Invalid amount');
                     return ctx.reply('❌ Invalid amount in deposit request.');
                 }
@@ -1624,7 +1624,7 @@ Thank you for your dedication! 🙏`;
             const userId = String(ctx.from.id);
             depositStates.set(userId, 'awaiting_image_amount');
             ctx.answerCbQuery('💰 Enter deposit amount...');
-            ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 50):\n\n📋 Example: 100');
+            ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 10):\n\n📋 Example: 100');
         });
 
         // Keep the old handler for backward compatibility (if amount is provided in callback)
@@ -2067,7 +2067,7 @@ Thank you for your dedication! 🙏`;
                     const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
                     if (amountMatch) {
                         const amount = Number(amountMatch[1]);
-                        if (amount >= 50) {
+                        if (amount >= 10) {
                             // If we have stored imageFileId, process image now (no second image needed)
                             const hasStoredImage = depositState && typeof depositState === 'object' && depositState.imageFileId;
                             if (hasStoredImage) {
@@ -2140,7 +2140,7 @@ Thank you for your dedication! 🙏`;
                             depositStates.set(userId, { mode: 'awaiting_image', amount });
                             return ctx.reply(`✅ Amount: ETB ${amount}\n\n📷 Now send a screenshot of your Telebirr receipt:\n\n💡 የደርስዎትን የአጭር መልዕክት ስክሪንሾት ይላኩ!\n\n⏳ Your deposit will be reviewed manually by admin.`);
                         } else {
-                            ctx.reply('❌ Minimum deposit amount is ETB 50. Please enter a valid amount.');
+                            ctx.reply('❌ Minimum deposit amount is ETB 10. Please enter a valid amount.');
                             return;
                         }
                     } else {
@@ -2153,7 +2153,7 @@ Thank you for your dedication! 🙏`;
                 const amountMatch = messageText.match(/^(\d+(?:\.\d{1,2})?)$/);
                 if (amountMatch) {
                     const amount = Number(amountMatch[1]);
-                    if (amount >= 50) {
+                    if (amount >= 10) {
                         // Redirect to bank selection (new flow)
                         ctx.reply('Please select the bank option you wish to use for the top-up.\n\nእባክዎ ለማስገባት የሚፈልጉትን የባንክ አማራጭ ይምረጡ:', {
                             reply_markup: {
@@ -2165,7 +2165,7 @@ Thank you for your dedication! 🙏`;
                         });
                         return;
                     } else {
-                        return ctx.reply('❌ Minimum deposit amount is 50 Birr. Please enter a valid amount.');
+                        return ctx.reply('❌ Minimum deposit amount is 10 Birr. Please enter a valid amount.');
                     }
                 }
 
@@ -2184,7 +2184,7 @@ Thank you for your dedication! 🙏`;
                         });
                         // Close deposit session
                         depositStates.delete(userId);
-                        return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 50).\n\n🔙 Session closed. Use /deposit to try again.', {
+                        return ctx.reply('❌ Could not detect amount in your message.\n\n💡 Please paste the full receipt from your payment method.\n\n📋 Make sure it contains the amount (minimum ETB 10).\n\n🔙 Session closed. Use /deposit to try again.', {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }
@@ -2311,7 +2311,7 @@ Thank you for your dedication! 🙏`;
 
                 const isPhoto = !!ctx.message.photo;
                 depositStates.set(userId, { mode: 'awaiting_image_amount', imageFileId, isPhoto });
-                return ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 50):\n\n📋 Example: 100');
+                return ctx.reply('ማስገባት የሚፈልጉትን መጠን ያስገቡ?\n\n💡 Enter the amount you want to deposit (minimum ETB 10):\n\n📋 Example: 100');
             }
 
             // Check if user is in deposit image flow (awaiting_image with amount)
@@ -2336,7 +2336,7 @@ Thank you for your dedication! 🙏`;
                         return ctx.reply('❌ Could not process image. Please send a photo or document.');
                     }
                     
-                    if (!amount || amount < 50) {
+                    if (!amount || amount < 10) {
                         depositStates.delete(userId);
                         return ctx.reply('❌ Invalid amount. Please start over with /deposit.');
                     }

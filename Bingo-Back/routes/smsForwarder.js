@@ -188,10 +188,10 @@ router.post('/image-deposit', async (req, res) => {
             });
         }
 
-        if (!amount || isNaN(amount) || Number(amount) < 50) {
+        if (!amount || isNaN(amount) || Number(amount) < 10) {
             return res.status(400).json({
                 success: false,
-                error: 'Valid amount required (minimum 50).'
+                error: 'Valid amount required (minimum 10).'
             });
         }
 
@@ -235,10 +235,10 @@ router.post('/approve-image-deposit/:id', async (req, res) => {
 
         // Use amount from request (user-entered) or from body (if provided for backward compatibility)
         const depositAmount = amount ? Number(amount) : (request.amount || 0);
-        if (!depositAmount || depositAmount < 50) {
+        if (!depositAmount || depositAmount < 10) {
             return res.status(400).json({
                 success: false,
-                error: 'Valid amount required (minimum 50). Amount should be stored in request.'
+                error: 'Valid amount required (minimum 10). Amount should be stored in request.'
             });
         }
 

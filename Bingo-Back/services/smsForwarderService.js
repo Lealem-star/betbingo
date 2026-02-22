@@ -265,7 +265,7 @@ class SmsForwarderService {
             const match = message.match(pattern);
             if (match) {
                 parsed.amount = Number(match[1]);
-                if (parsed.amount >= 50) break; // Minimum deposit amount
+                if (parsed.amount >= 10) break; // Minimum deposit amount
             }
         }
 
