@@ -100,6 +100,24 @@ router.post('/user-sms', async (req, res) => {
             }
         }
 
+        // Final fallback: if we still have no verification but have userId + amount (from request or parsed), create one so admins always get Approve/Deny
+        const hasAmount = requestAmount != null || userSMS?.parsedData?.amount != null;
+        if (!verification && hasAmount) {
+            try {
+                const amt = requestAmount != null ? Number(requestAmount) : Number(userSMS.parsedData?.amount);
+                if (!isNaN(amt) && amt >= 0) {
+                    verification = await SmsForwarderService.createPendingVerificationFromBotContext(userId, {
+                        amount: amt,
+                        reference: requestRef != null ? String(requestRef) : (userSMS?.parsedData?.reference || null),
+                        phoneNumber: phoneNumber || null,
+                        userName: null
+                    });
+                }
+            } catch (e) {
+                console.error('Final fallback create verification from bot context failed:', e);
+            }
+        }
+
         res.json({
             success: true,
             message: 'User SMS received and processed',
