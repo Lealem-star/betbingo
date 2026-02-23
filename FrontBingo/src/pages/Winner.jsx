@@ -133,7 +133,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
         winner.firstName ||
         (winner.cartelaNumber ? `Cartella #${winner.cartelaNumber}` : 'Winner');
 
-    const winnerNames = winners.map(getWinnerDisplayName);
+    // Collect winner names and de-duplicate (in case same user appears multiple times)
+    const winnerNamesRaw = winners.map(getWinnerDisplayName);
+    const winnerNames = Array.from(new Set(winnerNamesRaw));
     const winnerName = winnerNames[0] || 'Winner';
     const winnerInitial = winnerName.charAt(0).toUpperCase();
 
