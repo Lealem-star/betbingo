@@ -126,9 +126,21 @@ export default function Winner({ onNavigate, onResetToGame }) {
     }
 
 
-    // Get winner name/identifier
-    const winnerName = main.name || main.playerName || main.firstName || (main.cartelaNumber ? `Cartella #${main.cartelaNumber}` : 'Winner');
+    // Get winner name/identifier for each winner
+    const getWinnerDisplayName = (winner) =>
+        winner.name ||
+        winner.playerName ||
+        winner.firstName ||
+        (winner.cartelaNumber ? `Cartella #${winner.cartelaNumber}` : 'Winner');
+
+    const winnerNames = winners.map(getWinnerDisplayName);
+    const winnerName = winnerNames[0] || 'Winner';
     const winnerInitial = winnerName.charAt(0).toUpperCase();
+
+    const winnersText =
+        winnerNames.length === 1
+            ? `${winnerNames[0]} has won the game`
+            : `${winnerNames.join(', ')} have won`;
 
     // Try to get card data
                             let cardData = null;
@@ -169,7 +181,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                     {winnerInitial}
                                 </div>
                                 <p className="text-white text-lg md:text-xl font-semibold">
-                                    {winnerName} {isMulti ? `and ${winners.length - 1} other${winners.length > 2 ? 's' : ''} have won` : 'has won the game'}
+                                    {winnersText}
                                 </p>
                             </div>
                         </div>

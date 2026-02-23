@@ -232,14 +232,28 @@ class WalletService {
     // Process game win - add to main wallet
     static async processGameWin(userId, amount, gameId) {
         try {
-            const result = await this.updateBalance(userId, { main: amount, gamesWon: 1 });
+            // Check if user has any deposit history
+            const depositHistory = await Transaction.find({
+                userId,
+                type: 'deposit',
+                status: { $in: ['completed', 'pending'] }
+            }).limit(1);
+
+            const hasDepositHistory = depositHistory.length > 0;
+
+            // If user has never deposited, credit wins to play wallet (bonus balance)
+            // Once they have any deposit history, credit wins to main wallet (withdrawable)
+            const creditField = hasDepositHistory ? 'main' : 'play';
+            const balanceUpdates = { [creditField]: amount, gamesWon: 1 };
+
+            const result = await this.updateBalance(userId, balanceUpdates);
 
             // Create transaction record
             const transaction = new Transaction({
                 userId,
                 type: 'game_win',
                 amount,
-                description: `Game win: ETB ${amount} (credited to main wallet)`,
+                description: `Game win: ETB ${amount} (credited to ${creditField} wallet)`,
                 gameId,
                 balanceBefore: result.balanceBefore,
                 balanceAfter: result.balanceAfter
@@ -304,10 +318,6 @@ class WalletService {
         try {
             const wallet = await this.getWallet(userId);
 
-            if (wallet.main < amount) {
-                return { success: false, error: 'INSUFFICIENT_FUNDS' };
-            }
-
             // Check if user has deposit history
             const depositHistory = await Transaction.find({
                 userId,
@@ -317,15 +327,25 @@ class WalletService {
 
             const hasDepositHistory = depositHistory.length > 0;
 
-            // If no deposit history, user must have at least 300 birr in main wallet
+            // If no deposit history, any main wallet balance should be treated as bonus:
+            // 1) Move full main balance to play wallet
+            // 2) Block withdrawal until user makes a deposit
             if (!hasDepositHistory) {
-                if (wallet.main < 300) {
-                    return { 
-                        success: false, 
-                        error: 'NO_DEPOSIT_HISTORY_MIN_300',
-                        message: 'You can only request withdrawal when your main wallet reaches 300 birr. Please make a deposit first to request withdrawal in any amount.'
-                    };
+                if (wallet.main > 0) {
+                    const migrateAmount = wallet.main;
+                    await this.transferFunds(userId, migrateAmount, 'main-to-play');
                 }
+
+                return { 
+                    success: false, 
+                    error: 'NO_DEPOSIT_HISTORY_MIN_300',
+                    message: 'ያሸነፍከው በተሰጠው ቦነስ ስለሆነ ለተጨማሪ መጫዎቻ ብቻ ነው ያሸነፍከው። እባክዎ ክቡር ደንበኛችን የሚሸነፉት ሙሉ በሙሉ ወጪ እንዲሆንልዎ የDeposit ታሪክ ይኖርዎት። ይህም የተደረገበት ለጭዋታው ፍታሃዊና ሚዛናዊነት ሲባል መሆኑን በቅንነት ይረዱት።'
+                };
+            }
+
+            // For users with deposit history, enforce normal balance check
+            if (wallet.main < amount) {
+                return { success: false, error: 'INSUFFICIENT_FUNDS' };
             }
 
             // Create pending withdrawal transaction
