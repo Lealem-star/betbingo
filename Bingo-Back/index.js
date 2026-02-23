@@ -883,17 +883,21 @@ async function toAnnounce(room) {
         const pot = selectedCount * room.stake;
         const systemCut = Math.floor(pot * 0.2); // 20% system cut
         const prizePool = pot - systemCut;
-        const prizePerWinner = Math.floor(prizePool / room.winners.length);
 
-        room.winners.forEach(async (winner) => {
+        // Split prize by unique winners (by userId), not by winning entries.
+        // One player with 2 winning cartelas is still one winner and gets full prize.
+        const uniqueWinnerIds = [...new Set(room.winners.map(w => w.userId.toString()))];
+        const prizePerWinner = Math.floor(prizePool / uniqueWinnerIds.length);
+
+        for (const userId of uniqueWinnerIds) {
             try {
-                await WalletService.processGameWin(winner.userId, prizePerWinner);
+                await WalletService.processGameWin(userId, prizePerWinner);
 
                 // Send wallet update to the winner
-                const playerObj = room.players.get(winner.userId);
+                const playerObj = room.players.get(userId);
                 const socket = playerObj && playerObj.ws;
                 if (socket && socket.readyState === socket.OPEN) {
-                    const wallet = await WalletService.getWallet(winner.userId);
+                    const wallet = await WalletService.getWallet(userId);
                     socket.send(JSON.stringify({
                         type: 'wallet_update',
                         payload: {
@@ -907,7 +911,7 @@ async function toAnnounce(room) {
             } catch (error) {
                 console.error('Game win processing error:', error);
             }
-        });
+        }
 
         // Give 10 coins to all players who completed the game
         room.selectedPlayers.forEach(async (userId) => {
@@ -942,7 +946,7 @@ async function toAnnounce(room) {
                     { gameId: room.currentGameId },
                     {
                         players: Array.from(room.selectedPlayers).map(userId => ({ userId })),
-                        winners: room.winners.map(w => ({ userId: w.userId, prize: prizePerWinner })),
+                        winners: uniqueWinnerIds.map(userId => ({ userId, prize: prizePerWinner })),
                         calledNumbers: room.calledNumbers,
                         pot,
                         systemCut,

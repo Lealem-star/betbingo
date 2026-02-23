@@ -70,37 +70,6 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
                         </div>
 
-                        {/* Content Section with Light Purple Background */}
-                        <div className="p-6" style={{ background: '#e9d5ff' }}>
-                            {/* Icon and Message */}
-                            <div className="flex flex-col items-center gap-4 mb-6">
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center shadow-xl" style={{ boxShadow: '0 10px 30px rgba(107, 114, 128, 0.4)' }}>
-                                    <span className="text-white text-5xl">🎯</span>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-gray-800 text-xl font-bold mb-2">
-                                        Game Completed
-                        </div>
-                                    <div className="text-gray-700 text-base font-medium">
-                            The game ended without a winner.<br />
-                            Better luck next time!
-                        </div>
-                    </div>
-                            </div>
-
-                            {/* Info Card */}
-                            <div className="rounded-xl border-2 border-gray-300/50 p-4 bg-white/60 backdrop-blur-sm shadow-md mb-4">
-                                <div className="text-center">
-                                    <div className="text-gray-700 text-sm font-semibold mb-1">
-                                        No BINGO Achieved
-                            </div>
-                            <div className="text-gray-600 text-xs">
-                                        No player achieved a winning pattern in this round.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Countdown Section - Orange Background with Large Number */}
                         <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                             <div className="text-center">
