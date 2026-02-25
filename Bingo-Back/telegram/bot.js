@@ -8,6 +8,47 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const connectDB = require('../config/database');
 
+// Shared bot-detection helpers (keep logic consistent with admin routes)
+function isBotTelegramId(telegramId) {
+    if (!telegramId) {
+        return false;
+    }
+
+    const idStr = String(telegramId);
+    const num = parseInt(idStr, 10);
+
+    // Bots have telegramId in range 9000000000-9000000020 (9 billion range, 20 bots)
+    // or contain "bot_user_" pattern
+    const inBotRange = !Number.isNaN(num) && num >= 9000000000 && num <= 9000000020;
+    return inBotRange || idStr.includes('bot_user_');
+}
+
+function getHumanPlayerIdsFromGame(game) {
+    const humanIds = [];
+
+    if (!game || !Array.isArray(game.players)) {
+        return humanIds;
+    }
+
+    game.players.forEach((p) => {
+        if (!p || !p.userId) {
+            return;
+        }
+
+        const user = p.userId;
+        const telegramId = user.telegramId;
+
+        if (!isBotTelegramId(telegramId)) {
+            const id = user._id ? String(user._id) : null;
+            if (id) {
+                humanIds.push(id);
+            }
+        }
+    });
+
+    return humanIds;
+}
+
 function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
     try {
         const { Telegraf } = require('telegraf');
@@ -2712,7 +2753,7 @@ Thank you for your dedication! 🙏`;
 // Helper function to get weekly stats (accessible to both command handlers and notification system)
 async function getWeeklyStats() {
     try {
-        // Build last week's window (7 days ago to today)
+        // Build last week's window (7 days ago to today) in server local time
         const todayLocalMidnight = new Date();
         todayLocalMidnight.setHours(0, 0, 0, 0);
         const end = new Date(todayLocalMidnight); // end is start of "today"
@@ -2724,17 +2765,21 @@ async function getWeeklyStats() {
             end: end.toISOString()
         });
 
-        // Get games from the week
+        // Get games from the week (populate players.userId to detect bots)
         const weekGamesByFinished = await Game.find({
             finishedAt: { $gte: start, $lt: end },
             status: 'finished'
-        }).lean();
+        })
+            .populate('players.userId', 'telegramId')
+            .lean();
 
         const weekGamesByCreated = await Game.find({
             finishedAt: { $exists: false },
             createdAt: { $gte: start, $lt: end },
             status: 'finished'
-        }).lean();
+        })
+            .populate('players.userId', 'telegramId')
+            .lean();
 
         const gameMap = new Map();
         [...weekGamesByFinished, ...weekGamesByCreated].forEach(game => {
@@ -2742,25 +2787,44 @@ async function getWeeklyStats() {
                 gameMap.set(game.gameId, game);
             }
         });
-        const weekGames = Array.from(gameMap.values());
 
-        // Calculate statistics
+        const weekGamesAll = Array.from(gameMap.values());
+
+        // Only count games that include at least one real (non-bot) user
+        const weekGames = weekGamesAll.filter((game) => getHumanPlayerIdsFromGame(game).length > 0);
+
+        // Calculate statistics based on real-user games only
         const totalGames = weekGames.length;
         
         const uniquePlayerIds = new Set();
-        weekGames.forEach(game => {
-            if (game.players && Array.isArray(game.players)) {
-                game.players.forEach(player => {
-                    if (player.userId) {
-                        uniquePlayerIds.add(player.userId.toString());
-                    }
-                });
-            }
+        weekGames.forEach((game) => {
+            getHumanPlayerIdsFromGame(game).forEach((id) => uniquePlayerIds.add(id));
         });
         const totalPlayers = uniquePlayerIds.size;
 
         const totalRevenue = weekGames.reduce((sum, game) => sum + (game.systemCut || 0), 0);
         const totalPrizes = weekGames.reduce((sum, game) => sum + (game.totalPrizes || 0), 0);
+
+        // Calculate how much bots won in games that included real users
+        const weekGamesIds = weekGames.map((g) => g._id);
+        const weekGamesWithWinners = await Game.find({
+            _id: { $in: weekGamesIds }
+        })
+            .select('winners')
+            .populate('winners.userId', 'telegramId')
+            .lean();
+
+        let botWinningsFromRealGames = 0;
+        weekGamesWithWinners.forEach((game) => {
+            if (Array.isArray(game.winners)) {
+                game.winners.forEach((winner) => {
+                    const user = winner?.userId;
+                    if (user && isBotTelegramId(user.telegramId)) {
+                        botWinningsFromRealGames += winner.prize || 0;
+                    }
+                });
+            }
+        });
 
         const weekDeposits = await Transaction.find({
             type: 'deposit',
@@ -2817,6 +2881,7 @@ async function getWeeklyStats() {
             totalPlayers,
             totalRevenue,
             totalPrizes,
+            botWinningsFromRealGames,
             totalDeposits,
             totalNewUsers,
             totalPendingWithdrawals,
@@ -2832,6 +2897,7 @@ async function getWeeklyStats() {
             totalPlayers: 0,
             totalRevenue: 0,
             totalPrizes: 0,
+            botWinningsFromRealGames: 0,
             totalDeposits: 0,
             totalNewUsers: 0,
             totalPendingWithdrawals: 0,
@@ -2876,19 +2942,22 @@ function setupDailyAdminNotifications(bot) {
                 end: end.toISOString()
             });
 
-            // Get today's games - check finishedAt first, fallback to createdAt
-            // Games should have finishedAt set when they finish, but check both for reliability
+            // Get today's games - check finishedAt first, fallback to createdAt.
+            // Populate players.userId so we can detect bots and exclude bot-only games.
             const todayGamesByFinished = await Game.find({
                 finishedAt: { $gte: start, $lte: end },
                 status: 'finished'
-            }).lean();
+            })
+                .populate('players.userId', 'telegramId')
+                .lean();
 
-            // Also check games that finished today but might use createdAt
             const todayGamesByCreated = await Game.find({
                 finishedAt: { $exists: false },
                 createdAt: { $gte: start, $lte: end },
                 status: 'finished'
-            }).lean();
+            })
+                .populate('players.userId', 'telegramId')
+                .lean();
 
             // Combine and deduplicate by gameId
             const gameMap = new Map();
@@ -2897,35 +2966,54 @@ function setupDailyAdminNotifications(bot) {
                     gameMap.set(game.gameId, game);
                 }
             });
-            const todayGames = Array.from(gameMap.values());
 
-            console.log('📊 Found games:', todayGames.length);
+            const todayGamesAll = Array.from(gameMap.values());
 
-            // Calculate total games
+            // Only count games that include at least one real (non-bot) user
+            const todayGames = todayGamesAll.filter((game) => getHumanPlayerIdsFromGame(game).length > 0);
+
+            console.log('📊 Found games (with real users):', todayGames.length);
+
+            // Calculate total games (with at least one real user)
             const totalGames = todayGames.length;
 
-            // Calculate total players (unique players across all games)
+            // Calculate total players (unique real players across all games)
             const uniquePlayerIds = new Set();
-            todayGames.forEach(game => {
-                if (game.players && Array.isArray(game.players)) {
-                    game.players.forEach(player => {
-                        if (player.userId) {
-                            uniquePlayerIds.add(player.userId.toString());
-                        }
-                    });
-                }
+            todayGames.forEach((game) => {
+                getHumanPlayerIdsFromGame(game).forEach((id) => uniquePlayerIds.add(id));
             });
             const totalPlayers = uniquePlayerIds.size;
 
-            // Calculate total system revenue (systemCut)
+            // Calculate total system revenue (systemCut) from real-user games
             const totalRevenue = todayGames.reduce((sum, game) => {
                 return sum + (game.systemCut || 0);
             }, 0);
 
-            // Calculate total prizes distributed
+            // Calculate total prizes distributed from real-user games
             const totalPrizes = todayGames.reduce((sum, game) => {
                 return sum + (game.totalPrizes || 0);
             }, 0);
+
+            // Calculate how much bots won in games that included real users
+            const todayGameIds = todayGames.map((g) => g._id);
+            const todayGamesWithWinners = await Game.find({
+                _id: { $in: todayGameIds }
+            })
+                .select('winners')
+                .populate('winners.userId', 'telegramId')
+                .lean();
+
+            let botWinningsFromRealGames = 0;
+            todayGamesWithWinners.forEach((game) => {
+                if (Array.isArray(game.winners)) {
+                    game.winners.forEach((winner) => {
+                        const user = winner?.userId;
+                        if (user && isBotTelegramId(user.telegramId)) {
+                            botWinningsFromRealGames += winner.prize || 0;
+                        }
+                    });
+                }
+            });
 
             console.log('📊 Total revenue:', totalRevenue);
 
@@ -3001,6 +3089,7 @@ function setupDailyAdminNotifications(bot) {
                 totalPlayers,
                 totalRevenue,
                 totalPrizes,
+                botWinningsFromRealGames,
                 totalDeposits,
                 totalNewUsers,
                 activeUsers,
@@ -3017,6 +3106,7 @@ function setupDailyAdminNotifications(bot) {
                 totalPlayers: 0,
                 totalRevenue: 0,
                 totalPrizes: 0,
+                botWinningsFromRealGames: 0,
                 totalDeposits: 0,
                 totalNewUsers: 0,
                 activeUsers: 0,
@@ -3085,6 +3175,7 @@ ${formattedDate}
 🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
 👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
 💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🤖 *Bot Winnings (Real-User Games):* ${stats.botWinningsFromRealGames.toLocaleString()} ETB
 💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
 👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
 🔄 *Active Users:* ${stats.activeUsers.toLocaleString()}
@@ -3191,6 +3282,7 @@ ${formattedStartDate} - ${formattedEndDate}
 🎮 *Total Games:* ${stats.totalGames.toLocaleString()}
 👥 *Total Players:* ${stats.totalPlayers.toLocaleString()}
 💰 *System Revenue:* ${stats.totalRevenue.toLocaleString()} ETB
+🤖 *Bot Winnings (Real-User Games):* ${stats.botWinningsFromRealGames.toLocaleString()} ETB
 💳 *Total Deposits:* ${stats.totalDeposits.toLocaleString()} ETB
 👤 *New Users:* ${stats.totalNewUsers.toLocaleString()}
 ⏳ *Pending Withdrawals:* ${stats.totalPendingWithdrawals} (${stats.totalPendingWithdrawalAmount.toLocaleString()} ETB)

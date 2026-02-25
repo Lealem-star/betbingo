@@ -117,6 +117,47 @@ function escapeRegExp(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Shared bot-detection helpers (keep bot logic consistent across all stats)
+function isBotTelegramId(telegramId) {
+    if (!telegramId) {
+        return false;
+    }
+
+    const idStr = String(telegramId);
+    const num = parseInt(idStr, 10);
+
+    // Bots have telegramId in range 9000000000-9000000020 (9 billion range, 20 bots)
+    // or contain "bot_user_" pattern
+    const inBotRange = !Number.isNaN(num) && num >= 9000000000 && num <= 9000000020;
+    return inBotRange || idStr.includes('bot_user_');
+}
+
+function getHumanPlayerIds(players) {
+    const humanIds = [];
+
+    if (!Array.isArray(players)) {
+        return humanIds;
+    }
+
+    players.forEach((p) => {
+        if (!p || !p.userId) {
+            return;
+        }
+
+        const user = p.userId;
+        const telegramId = user.telegramId;
+
+        if (!isBotTelegramId(telegramId)) {
+            const id = user._id ? String(user._id) : null;
+            if (id) {
+                humanIds.push(id);
+            }
+        }
+    });
+
+    return humanIds;
+}
+
 async function getAdminDetails(req) {
     let adminId = null;
     let adminTelegramId = null;
@@ -679,25 +720,47 @@ router.get('/stats/today', adminMiddleware, async (req, res) => {
         const end = new Date();
         end.setHours(23, 59, 59, 999);
         
-        const games = await Game.find({ finishedAt: { $gte: start, $lte: end } }, { systemCut: 1, players: 1 }).lean();
+        const games = await Game.find(
+            { finishedAt: { $gte: start, $lte: end } },
+            { systemCut: 1, players: 1, winners: 1 }
+        )
+            .populate('players.userId winners.userId', 'telegramId')
+            .lean();
         
-        // Calculate total players (unique players across all games) - matching bot logic
+        // Calculate total players (unique real users) and system revenue,
+        // excluding games that only have bot players.
+        // Also track how much bots win in games that include at least one real user.
         const uniquePlayerIds = new Set();
-        games.forEach(game => {
-            if (game.players && Array.isArray(game.players)) {
-                game.players.forEach(player => {
-                    // Handle both cases: player object with userId, or direct playerId
-                    const playerId = player?.userId ? player.userId : player;
-                    if (playerId) {
-                        uniquePlayerIds.add(playerId.toString());
+        let systemCut = 0;
+        let botWinningsFromRealGames = 0;
+
+        games.forEach((game) => {
+            const humanIds = getHumanPlayerIds(game.players);
+
+            // Skip games that have only bots (no real players at all)
+            if (humanIds.length === 0) {
+                return;
+            }
+
+            humanIds.forEach((id) => uniquePlayerIds.add(id));
+            systemCut += game.systemCut || 0;
+
+            // For games that have at least one real player, sum bot winners' prizes
+            if (Array.isArray(game.winners) && game.winners.length > 0) {
+                game.winners.forEach((winner) => {
+                    const user = winner?.userId;
+                    if (!user) {
+                        return;
+                    }
+                    if (isBotTelegramId(user.telegramId)) {
+                        botWinningsFromRealGames += winner.prize || 0;
                     }
                 });
             }
         });
+
         const totalPlayers = uniquePlayerIds.size;
-        
-        const systemCut = games.reduce((s, g) => s + (g.systemCut || 0), 0);
-        res.json({ totalPlayers, systemCut });
+        res.json({ totalPlayers, systemCut, botWinningsFromRealGames });
     } catch { res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' }); }
 });
 
@@ -705,9 +768,20 @@ router.get('/stats/revenue/by-day', adminMiddleware, async (req, res) => {
     try {
         const days = Number(req.query.days || 7);
         const since = new Date(); since.setDate(since.getDate() - (days - 1)); since.setHours(0, 0, 0, 0);
-        const games = await Game.find({ finishedAt: { $gte: since } }, { systemCut: 1, finishedAt: 1 }).lean();
+        const games = await Game.find(
+            { finishedAt: { $gte: since } },
+            { systemCut: 1, finishedAt: 1, players: 1 }
+        )
+            .populate('players.userId', 'telegramId')
+            .lean();
         const byDay = {};
         for (const g of games) {
+            const humanIds = getHumanPlayerIds(g.players);
+            // Ignore bot-only games in revenue stats
+            if (humanIds.length === 0) {
+                continue;
+            }
+
             const key = new Date(g.finishedAt).toISOString().slice(0, 10);
             byDay[key] = (byDay[key] || 0) + (g.systemCut || 0);
         }
@@ -727,18 +801,32 @@ router.get('/stats/games', adminMiddleware, async (req, res) => {
         const games = await Game.find({
             finishedAt: { $gte: since },
             status: 'finished'
-        }).sort({ finishedAt: -1 }).lean();
+        })
+            .sort({ finishedAt: -1 })
+            .populate('players.userId', 'telegramId')
+            .lean();
 
-        const gameStats = games.map(game => ({
-            gameId: game.gameId,
-            stake: game.stake,
-            playersCount: game.players ? game.players.length : 0,
-            players: game.players ? game.players.map(p => p.userId?.toString()) : [],
-            systemCut: game.systemCut || 0,
-            totalPrizes: game.totalPrizes || 0,
-            finishedAt: game.finishedAt,
-            winnersCount: game.winners ? game.winners.length : 0
-        }));
+        const gameStats = games
+            .map((game) => {
+                const humanIds = getHumanPlayerIds(game.players);
+
+                // Skip games that only have bot players
+                if (humanIds.length === 0) {
+                    return null;
+                }
+
+                return {
+                    gameId: game.gameId,
+                    stake: game.stake,
+                    playersCount: humanIds.length,
+                    players: humanIds,
+                    systemCut: game.systemCut || 0,
+                    totalPrizes: game.totalPrizes || 0,
+                    finishedAt: game.finishedAt,
+                    winnersCount: game.winners ? game.winners.length : 0
+                };
+            })
+            .filter(Boolean);
 
         res.json({ games: gameStats });
     } catch (error) {
@@ -755,23 +843,35 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         // Today's stats
-        const todayGames = await Game.find({
+        const todayGamesRaw = await Game.find({
             finishedAt: { $gte: today, $lt: tomorrow },
             status: 'finished'
-        }).lean();
+        })
+            .populate('players.userId', 'telegramId')
+            .lean();
+
+        const todayGames = todayGamesRaw.filter((game) => getHumanPlayerIds(game.players).length > 0);
 
         const todayStats = {
             totalGames: todayGames.length,
-            totalPlayers: todayGames.reduce((sum, game) => sum + (game.players ? game.players.length : 0), 0),
+            totalPlayers: todayGames.reduce((sum, game) => {
+                return sum + getHumanPlayerIds(game.players).length;
+            }, 0),
             totalRevenue: todayGames.reduce((sum, game) => sum + (game.systemCut || 0), 0),
             totalPrizes: todayGames.reduce((sum, game) => sum + (game.totalPrizes || 0), 0)
         };
 
         // All time stats
-        const allTimeGames = await Game.find({ status: 'finished' }).lean();
+        const allTimeGamesRaw = await Game.find({ status: 'finished' })
+            .populate('players.userId', 'telegramId')
+            .lean();
+
+        const allTimeGames = allTimeGamesRaw.filter((game) => getHumanPlayerIds(game.players).length > 0);
         const allTimeStats = {
             totalGames: allTimeGames.length,
-            totalPlayers: allTimeGames.reduce((sum, game) => sum + (game.players ? game.players.length : 0), 0),
+            totalPlayers: allTimeGames.reduce((sum, game) => {
+                return sum + getHumanPlayerIds(game.players).length;
+            }, 0),
             totalRevenue: allTimeGames.reduce((sum, game) => sum + (game.systemCut || 0), 0),
             totalPrizes: allTimeGames.reduce((sum, game) => sum + (game.totalPrizes || 0), 0)
         };

@@ -698,15 +698,16 @@ body {
     max-height: calc(100vh - 180px);
     /* Account for header and bottom nav - mobile optimized */
     overflow-y: auto;
-    overflow-x: auto;
+    /* Use the inner table wrapper for horizontal scroll so header + rows move together */
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     /* Smooth scrolling on iOS */
 }
 
 .admin-stats-page .admin-stats-table-content {
-    max-height: 35vh;
-    /* Limit table content height - mobile optimized */
-    overflow-y: auto;
+    /* Let the whole stats page scroll together; avoid inner scroll */
+    max-height: none;
+    overflow-y: visible;
     overflow-x: visible;
 }
 
@@ -717,7 +718,7 @@ body {
     }
     
     .admin-stats-page .admin-stats-table-content {
-        max-height: 40vh;
+        max-height: none;
     }
 }
 
@@ -728,7 +729,7 @@ body {
     }
     
     .admin-stats-page .admin-stats-table-content {
-        max-height: 45vh;
+        max-height: none;
     }
 }
 
