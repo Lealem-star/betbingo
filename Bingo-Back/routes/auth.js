@@ -72,8 +72,8 @@ function verifyTelegramInitData(initData) {
     }
 }
 
-// Auth middleware
-function authMiddleware(req, res, next) {
+// Auth middleware with block check
+async function authMiddleware(req, res, next) {
     try {
         const auth = req.headers['authorization'] || '';
         const sidHeader = req.headers['x-session'] || '';
@@ -84,12 +84,25 @@ function authMiddleware(req, res, next) {
         } else if (typeof sidHeader === 'string' && sidHeader) {
             token = sidHeader;
         }
-        if (token) {
-            const payload = jwt.verify(token, JWT_SECRET);
-            req.userId = String(payload.sub);
-            return next();
+        if (!token) {
+            return res.status(401).json({ error: 'UNAUTHORIZED' });
         }
-        return res.status(401).json({ error: 'UNAUTHORIZED' });
+
+        const payload = jwt.verify(token, JWT_SECRET);
+        req.userId = String(payload.sub);
+
+        // Blocked user check
+        try {
+            const User = require('../models/User');
+            const user = await User.findById(req.userId, { isBlocked: 1 }).lean();
+            if (user && user.isBlocked) {
+                return res.status(403).json({ error: 'USER_BLOCKED' });
+            }
+        } catch (e) {
+            console.error('authMiddleware block check error:', e);
+        }
+
+        return next();
     } catch (e) {
         return res.status(401).json({ error: 'UNAUTHORIZED' });
     }
@@ -218,6 +231,19 @@ router.post('/telegram/verify', async (req, res) => {
 
         if (!user) {
             return res.status(500).json({ error: 'USER_CREATION_FAILED' });
+        }
+
+        // If user is blocked, do not issue a session
+        if (user.isBlocked) {
+            console.warn(`🚫 [${requestId}] Blocked user attempted auth`, {
+                userId: user._id?.toString(),
+                telegramId: user.telegramId
+            });
+            return res.status(403).json({
+                error: 'USER_BLOCKED',
+                requestId,
+                message: 'Your account has been blocked. Please contact support.'
+            });
         }
 
         // Debug logging to identify the issue

@@ -10,7 +10,6 @@ export default function AdminUserBalanceAccess() {
     const [adjustment, setAdjustment] = useState({
         mainDelta: '',
         playDelta: '',
-        coinsDelta: '',
         reason: ''
     });
     const [isAdjusting, setIsAdjusting] = useState(false);
@@ -63,7 +62,6 @@ export default function AdminUserBalanceAccess() {
         setAdjustment({
             mainDelta: '',
             playDelta: '',
-            coinsDelta: '',
             reason: ''
         });
         setFeedback(null);
@@ -90,14 +88,13 @@ export default function AdminUserBalanceAccess() {
 
         const mainDelta = getNumber(adjustment.mainDelta);
         const playDelta = getNumber(adjustment.playDelta);
-        const coinsDelta = getNumber(adjustment.coinsDelta);
 
-        if (Number.isNaN(mainDelta) || Number.isNaN(playDelta) || Number.isNaN(coinsDelta)) {
+        if (Number.isNaN(mainDelta) || Number.isNaN(playDelta)) {
             setFeedback({ type: 'error', message: 'Amounts must be valid numbers.' });
             return;
         }
 
-        if (mainDelta === 0 && playDelta === 0 && coinsDelta === 0) {
+        if (mainDelta === 0 && playDelta === 0) {
             setFeedback({ type: 'error', message: 'Add or subtract at least one amount before saving.' });
             return;
         }
@@ -107,13 +104,12 @@ export default function AdminUserBalanceAccess() {
 
         try {
             const response = await apiFetch(`/admin/users/${selectedUser.id}/wallet-adjust`, {
-                method: 'POST',
-                body: {
-                    mainDelta,
-                    playDelta,
-                    coinsDelta,
-                    reason: adjustment.reason || ''
-                }
+                    method: 'POST',
+                    body: {
+                        mainDelta,
+                        playDelta,
+                        reason: adjustment.reason || ''
+                    }
             });
 
             const updatedWallet = response?.wallet;
@@ -130,8 +126,7 @@ export default function AdminUserBalanceAccess() {
             setAdjustment(prev => ({
                 ...prev,
                 mainDelta: '',
-                playDelta: '',
-                coinsDelta: ''
+                playDelta: ''
             }));
 
             setFeedback({ type: 'success', message: 'Wallet updated successfully.' });
@@ -146,18 +141,15 @@ export default function AdminUserBalanceAccess() {
     const hasPendingChanges = () => {
         const mainDelta = getNumber(adjustment.mainDelta);
         const playDelta = getNumber(adjustment.playDelta);
-        const coinsDelta = getNumber(adjustment.coinsDelta);
         return (
             !Number.isNaN(mainDelta) && mainDelta !== 0 ||
-            !Number.isNaN(playDelta) && playDelta !== 0 ||
-            !Number.isNaN(coinsDelta) && coinsDelta !== 0
+            !Number.isNaN(playDelta) && playDelta !== 0
         );
     };
 
     const canReset =
         adjustment.mainDelta !== '' ||
         adjustment.playDelta !== '' ||
-        adjustment.coinsDelta !== '' ||
         (adjustment.reason || '').trim() !== '';
 
     return (
@@ -202,7 +194,6 @@ export default function AdminUserBalanceAccess() {
                         <div className="admin-user-editor-wallet">
                             <span>Main: {Number(selectedUser.wallet?.main || 0).toLocaleString()}</span>
                             <span>Play: {Number(selectedUser.wallet?.play || 0).toLocaleString()}</span>
-                            <span>Coins: {Number(selectedUser.wallet?.coins || 0).toLocaleString()}</span>
                         </div>
                     </div>
 
@@ -235,17 +226,7 @@ export default function AdminUserBalanceAccess() {
                                 </div>
                             </div>
                             <div className="admin-adjustment-slot">
-                                <label htmlFor="admin-adjust-coins">Coins</label>
-                                <div className="admin-adjustment-controls">
-                                    <input
-                                        id="admin-adjust-coins"
-                                        type="number"
-                                        step="1"
-                                        value={adjustment.coinsDelta}
-                                        onChange={(event) => updateAdjustmentField('coinsDelta', event.target.value)}
-                                        placeholder="+/- coins"
-                                    />
-                                </div>
+                                {/* Coins adjustment removed */}
                             </div>
                         </div>
 
@@ -265,7 +246,6 @@ export default function AdminUserBalanceAccess() {
                                     setAdjustment({
                                         mainDelta: '',
                                         playDelta: '',
-                                        coinsDelta: '',
                                         reason: ''
                                     });
                                     setFeedback(null);
@@ -309,7 +289,6 @@ export default function AdminUserBalanceAccess() {
                     <span>Name</span>
                     <span>Main</span>
                     <span>Play</span>
-                    <span>Coins</span>
                     <span></span>
                 </div>
 
@@ -324,7 +303,6 @@ export default function AdminUserBalanceAccess() {
                         {results.map(user => {
                             const main = Number(user.wallet?.main || 0).toLocaleString();
                             const play = Number(user.wallet?.play || 0).toLocaleString();
-                            const coins = Number(user.wallet?.coins || 0).toLocaleString();
 
                             return (
                                 <div
@@ -337,7 +315,6 @@ export default function AdminUserBalanceAccess() {
                                     </div>
                                     <div className="admin-user-result-cell">{main}</div>
                                     <div className="admin-user-result-cell">{play}</div>
-                                    <div className="admin-user-result-cell">{coins}</div>
                                     <div className="admin-user-result-cell admin-user-result-action">
                                         <button
                                             type="button"

@@ -22,11 +22,6 @@ const walletSchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
-    coins: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
     gamesWon: {
         type: Number,
         default: 0

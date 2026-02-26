@@ -30,7 +30,6 @@ class NotificationService {
             const wallet = await WalletService.getWallet(userId);
             const main = Number(wallet?.main || 0);
             const play = Number(wallet?.play || 0);
-            const coins = Number(wallet?.coins || 0);
 
             const text = [
                 '✅ Withdrawal Approved',
@@ -40,7 +39,6 @@ class NotificationService {
                 '💼 Current Wallet',
                 `• Main: ETB ${main.toFixed(2)}`,
                 `• Play: ETB ${play.toFixed(2)}`,
-                `• Coins: ${coins}`,
                 '',
                 '❓ Questions? Contact support:',
                 '@haset_life  |  @Ipsychic'

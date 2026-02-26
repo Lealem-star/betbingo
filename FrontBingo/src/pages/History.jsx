@@ -74,7 +74,6 @@ export default function History({ onNavigate }) {
             case 'deposit': return '💰';
             case 'game_win': return '🏆';
             case 'game_bet': return '🎮';
-            case 'coin_conversion': return '🔄';
             default: return '📝';
         }
     };
@@ -84,7 +83,6 @@ export default function History({ onNavigate }) {
             case 'deposit': return 'text-green-400';
             case 'game_win': return 'text-yellow-400';
             case 'game_bet': return 'text-red-400';
-            case 'coin_conversion': return 'text-blue-400';
             default: return 'text-gray-400';
         }
     };

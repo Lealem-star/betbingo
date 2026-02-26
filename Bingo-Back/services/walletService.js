@@ -24,8 +24,7 @@ class WalletService {
                 userId: userId.toString(),
                 main: wallet?.main,
                 play: wallet?.play,
-                balance: wallet?.balance,
-                coins: wallet?.coins
+                balance: wallet?.balance
             });
             
             return wallet;
@@ -43,7 +42,6 @@ class WalletService {
                 balance: 0,
                 main: 0,
                 play: 0,
-                coins: 0,
                 gamesWon: 0
             });
             await wallet.save();
@@ -65,15 +63,13 @@ class WalletService {
             const balanceBefore = {
                 balance: wallet.balance,
                 main: wallet.main,
-                play: wallet.play,
-                coins: wallet.coins
+                play: wallet.play
             };
 
             // Update balances
             if (updates.balance !== undefined) wallet.balance = Math.max(0, wallet.balance + updates.balance);
             if (updates.main !== undefined) wallet.main = Math.max(0, wallet.main + updates.main);
             if (updates.play !== undefined) wallet.play = Math.max(0, wallet.play + updates.play);
-            if (updates.coins !== undefined) wallet.coins = Math.max(0, wallet.coins + updates.coins);
             if (updates.gamesWon !== undefined) wallet.gamesWon += updates.gamesWon;
 
             await wallet.save();
@@ -84,8 +80,7 @@ class WalletService {
                 balanceAfter: {
                     balance: wallet.balance,
                     main: wallet.main,
-                    play: wallet.play,
-                    coins: wallet.coins
+                    play: wallet.play
                 }
             };
         } catch (error) {
@@ -131,50 +126,9 @@ class WalletService {
         }
     }
 
-    // Convert coins to play wallet at 100 coins = 1 birr
-    static async convertCoins(userId, coins, targetWallet = 'play') {
-        try {
-            const wallet = await Wallet.findOne({ userId });
-            if (!wallet) {
-                throw new Error('Wallet not found');
-            }
-
-            if (wallet.coins < coins) {
-                throw new Error('Insufficient coins');
-            }
-
-            // Conversion rate: 100 coins -> 1 birr
-            const birrAmount = Math.floor(coins / 100);
-            if (birrAmount <= 0) {
-                throw new Error('MIN_CONVERSION_NOT_MET');
-            }
-
-            const coinsToDeduct = birrAmount * 100;
-
-            // Convert to play wallet only
-            const updates = {
-                coins: -coinsToDeduct,
-                play: birrAmount
-            };
-
-            const result = await this.updateBalance(userId, updates);
-
-            // Create transaction record
-            const transaction = new Transaction({
-                userId,
-                type: 'coin_conversion',
-                amount: birrAmount,
-                description: `Converted ${coinsToDeduct} coins to ETB ${birrAmount} (added to play wallet)`,
-                balanceBefore: result.balanceBefore,
-                balanceAfter: result.balanceAfter
-            });
-            await transaction.save();
-
-            return { wallet: result.wallet, transaction };
-        } catch (error) {
-            console.error('Error converting coins:', error);
-            throw error;
-        }
+    // Coin conversion feature removed – keep stub to avoid runtime errors if called accidentally.
+    static async convertCoins() {
+        throw new Error('COIN_FEATURE_DISABLED');
     }
 
     // Process game bet - use main wallet first, then play wallet
@@ -267,24 +221,12 @@ class WalletService {
         }
     }
 
-    // Process game completion - give 10 coins as gift
+    // Process game completion - coin gifts disabled
     static async processGameCompletion(userId, gameId) {
         try {
-            const result = await this.updateBalance(userId, { coins: 10 });
-
-            // Create transaction record
-            const transaction = new Transaction({
-                userId,
-                type: 'game_completion',
-                amount: 10,
-                description: `Game completion gift: 10 coins`,
-                gameId,
-                balanceBefore: result.balanceBefore,
-                balanceAfter: result.balanceAfter
-            });
-            await transaction.save();
-
-            return { wallet: result.wallet, transaction };
+            // Keep method for compatibility but do not modify balances or create transactions.
+            const wallet = await this.getWallet(userId);
+            return { wallet, transaction: null };
         } catch (error) {
             console.error('Error processing game completion:', error);
             throw error;
@@ -398,14 +340,6 @@ class WalletService {
             // Add deposits to play wallet by default
             const result = await this.updateBalance(userId, { play: amount });
 
-            // Gift coins: 10% of deposit amount
-            const giftCoins = Math.floor(amount * 0.1);
-            if (giftCoins > 0) {
-                await this.updateBalance(userId, { coins: giftCoins });
-            }
-
-            // NOTE: Referral reward is handled on invitee registration (contact share), not on deposits.
-
             return { success: true, wallet: result.wallet };
         } catch (error) {
             console.error('Error processing deposit approval:', error);
@@ -423,8 +357,7 @@ class WalletService {
 
             const balanceBefore = {
                 main: wallet.main,
-                play: wallet.play,
-                coins: wallet.coins
+                play: wallet.play
             };
 
             let sourceWallet, targetWallet, sourceField, targetField;
@@ -461,8 +394,7 @@ class WalletService {
                 balanceBefore: balanceBefore,
                 balanceAfter: {
                     main: wallet.main,
-                    play: wallet.play,
-                    coins: wallet.coins
+                    play: wallet.play
                 }
             });
             await transaction.save();

@@ -50,7 +50,6 @@ router.get('/profile', authMiddleware, async (req, res) => {
                     balance: 0,
                     main: 0,
                     play: 0,
-                    coins: 0,
                     gamesWon: 0
                 };
             }
@@ -83,7 +82,6 @@ router.get('/profile', authMiddleware, async (req, res) => {
             },
             wallet: {
                 balance: userData.wallet?.balance ?? 0,
-                coins: userData.wallet?.coins ?? 0,
                 gamesWon: userData.wallet?.gamesWon ?? 0,
                 main: userData.wallet?.main ?? userData.wallet?.balance ?? 0,
                 play: userData.wallet?.play ?? userData.wallet?.balance ?? 0

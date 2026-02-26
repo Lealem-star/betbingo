@@ -452,7 +452,6 @@ function startGame(room) {
                                 payload: {
                                     main: wallet.main,
                                     play: wallet.play,
-                                    coins: wallet.coins,
                                     source: result.source
                                 }
                             }));
@@ -491,7 +490,6 @@ function startGame(room) {
                                             payload: {
                                                 main: wallet.main,
                                                 play: wallet.play,
-                                                coins: wallet.coins,
                                                 source: result.source
                                             }
                                         }));
@@ -903,7 +901,6 @@ async function toAnnounce(room) {
                         payload: {
                             main: wallet.main,
                             play: wallet.play,
-                            coins: wallet.coins,
                             source: 'win'
                         }
                     }));
@@ -913,30 +910,7 @@ async function toAnnounce(room) {
             }
         }
 
-        // Give 10 coins to all players who completed the game
-        room.selectedPlayers.forEach(async (userId) => {
-            try {
-                await WalletService.processGameCompletion(userId, room.currentGameId);
-
-                // Send wallet update to the player
-                const playerObj = room.players.get(userId);
-                const socket = playerObj && playerObj.ws;
-                if (socket && socket.readyState === socket.OPEN) {
-                    const wallet = await WalletService.getWallet(userId);
-                    socket.send(JSON.stringify({
-                        type: 'wallet_update',
-                        payload: {
-                            main: wallet.main,
-                            play: wallet.play,
-                            coins: wallet.coins,
-                            source: 'completion'
-                        }
-                    }));
-                }
-            } catch (error) {
-                console.error('Game completion processing error:', error);
-            }
-        });
+        // Coin completion gifts removed – no additional rewards for game completion.
 
         // Update existing game record with final results (only if game was actually played)
         try {

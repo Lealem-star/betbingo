@@ -5,8 +5,7 @@ import { apiFetch } from '../lib/api/client.js';
 
 export default function Wallet({ onNavigate }) {
     const { sessionId, user, isLoading: authLoading } = useAuth();
-    const [wallet, setWallet] = useState({ main: 0, play: 0, coins: 0 });
-    const [coins, setCoins] = useState('');
+    const [wallet, setWallet] = useState({ main: 0, play: 0 });
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('balance');
     const [transactions, setTransactions] = useState([]);
@@ -23,19 +22,16 @@ export default function Wallet({ onNavigate }) {
     useEffect(() => {
         const handleWalletUpdate = (event) => {
             if (event.detail && event.detail.type === 'wallet_update') {
-                const { main, play, coins, source } = event.detail.payload;
+                const { main, play, source } = event.detail.payload;
                 setWallet(prev => ({
                     ...prev,
                     main: main || prev.main,
-                    play: play || prev.play,
-                    coins: coins || prev.coins
+                    play: play || prev.play
                 }));
 
                 // Show notification based on source
                 if (source === 'win') {
                     showSuccess('Congratulations! You won the game!');
-                } else if (source === 'completion') {
-                    showSuccess('Game completed! You received 10 coins!');
                 } else if (source === 'main' || source === 'play') {
                     showSuccess(`Stake deducted from ${source} wallet`);
                 }
@@ -71,7 +67,6 @@ export default function Wallet({ onNavigate }) {
                         main: walletData.main,
                         play: walletData.play,
                         balance: walletData.balance,
-                        coins: walletData.coins,
                         fullResponse: walletData
                     });
 
@@ -85,8 +80,7 @@ export default function Wallet({ onNavigate }) {
 
                     setWallet({
                         main: mainValue,
-                        play: playValue,
-                        coins: walletData.coins ?? 0
+                        play: playValue
                     });
                 } catch (walletError) {
                     console.error('Wallet fetch error:', walletError);
@@ -98,25 +92,24 @@ export default function Wallet({ onNavigate }) {
                         setDisplayRegistered(!!profile?.user?.isRegistered);
 
                         // Extract wallet data from profile response
-                        if (profile?.wallet) {
-                            const mainValue = (profile.wallet.main !== null && profile.wallet.main !== undefined) 
-                                ? profile.wallet.main 
-                                : (profile.wallet.balance ?? 0);
-                            const playValue = (profile.wallet.play !== null && profile.wallet.play !== undefined) 
-                                ? profile.wallet.play 
-                                : 0;
-                            setWallet({
-                                main: mainValue,
-                                play: playValue,
-                                coins: profile.wallet.coins ?? 0
-                            });
-                        }
+                            if (profile?.wallet) {
+                                const mainValue = (profile.wallet.main !== null && profile.wallet.main !== undefined) 
+                                    ? profile.wallet.main 
+                                    : (profile.wallet.balance ?? 0);
+                                const playValue = (profile.wallet.play !== null && profile.wallet.play !== undefined) 
+                                    ? profile.wallet.play 
+                                    : 0;
+                                setWallet({
+                                    main: mainValue,
+                                    play: playValue
+                                });
+                            }
                     } catch (e) {
                         console.error('Profile fetch error:', e);
                     }
                 }
             } catch (error) {
-                console.error('Failed to fetch wallet data:', error);
+                        console.error('Failed to fetch wallet data:', error);
             } finally {
                 setLoading(false);
             }
@@ -143,43 +136,6 @@ export default function Wallet({ onNavigate }) {
         };
         fetchTransactions();
     }, [sessionId, activeTab]);
-
-    const convert = async () => {
-        if (!sessionId) return;
-        const amt = Number(coins || 0);
-        if (!amt) return;
-        try {
-            // Convert coins to Birr and add to Play Wallet
-            const out = await apiFetch('/wallet/convert', {
-                method: 'POST',
-                body: {
-                    coins: amt,
-                    targetWallet: 'play' // Add to Play Wallet instead of Main
-                },
-                sessionId
-            });
-            setWallet(out.wallet);
-            setCoins('');
-            // Refresh transactions if on history tab
-            if (activeTab === 'history') {
-                const transactionData = await apiFetch('/user/transactions', { sessionId });
-                setTransactions(transactionData.transactions?.transactions || []);
-            }
-        } catch (error) {
-            console.error('Coin conversion failed:', error);
-            if (error?.error === 'MIN_CONVERSION_NOT_MET' || error?.message === 'MIN_CONVERSION_NOT_MET') {
-                alert('Minimum conversion is 100 coins.');
-            } else if (error?.error === 'INSUFFICIENT_COINS' || error?.message === 'INSUFFICIENT_COINS') {
-                alert('You don\'t have enough coins. Please check your coin balance.');
-            } else if (error?.error === 'WALLET_NOT_FOUND' || error?.message === 'WALLET_NOT_FOUND') {
-                alert('Wallet not found. Please try again later.');
-            } else if (error?.error === 'INVALID_AMOUNT' || error?.message === 'INVALID_AMOUNT') {
-                alert('Invalid amount. Please enter a valid number of coins.');
-            } else {
-                alert('Coin conversion failed. Please try again.');
-            }
-        }
-    };
 
     // Transfer functions removed - main and play wallets serve different purposes
     return (
@@ -271,19 +227,6 @@ export default function Wallet({ onNavigate }) {
                             </div>
                         </div>
 
-                        {/* Coins */}
-                        <div className="wallet-card">
-                            <div className="wallet-card-content">
-                                <div className="wallet-card-label">
-                                    <span className="wallet-label-text">Coins</span>
-                                    <span className="wallet-label-icon">🪙</span>
-                                </div>
-                                <span className="wallet-value wallet-value-yellow">{wallet.coins?.toLocaleString() || 0}</span>
-                            </div>
-                            <div className="wallet-card-description">
-                                Earned coins that can be converted to wallet funds
-                            </div>
-                        </div>
                     </div>
                 ) : (
                     /* Transaction History */
@@ -324,31 +267,6 @@ export default function Wallet({ onNavigate }) {
                 )}
 
                 {/* Transfer Section removed - main and play wallets serve different purposes */}
-
-                {/* Convert Section - show only on Balance tab */}
-                {activeTab === 'balance' && (
-                    <div className="wallet-convert">
-                        <h3 className="wallet-convert-title">Convert Coins to Birr</h3>
-                        <div className="wallet-convert-description">
-                            Convert your earned coins to Birr and add to your Play Wallet for gaming
-                        </div>
-                        <div className="wallet-convert-controls">
-                            <input
-                                value={coins}
-                                onChange={(e) => setCoins(e.target.value)}
-                                className="wallet-convert-input"
-                                placeholder="Enter coins to convert to Birr"
-                            />
-                            <button
-                                onClick={convert}
-                                className="wallet-convert-button"
-                            >
-                                <span>🪙→💰</span>
-                                <span>Convert to Play Wallet</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
             </main>
             <BottomNav current="wallet" onNavigate={onNavigate} />
         </div>

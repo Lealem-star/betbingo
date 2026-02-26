@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-    enum: ['deposit', 'withdrawal', 'game_bet', 'game_win', 'game_completion', 'coin_conversion', 'bonus', 'refund', 'wallet_transfer', 'invite_reward', 'registration_bonus', 'admin_adjustment'],
+        enum: ['deposit', 'withdrawal', 'game_bet', 'game_win', 'bonus', 'refund', 'wallet_transfer', 'invite_reward', 'registration_bonus', 'admin_adjustment'],
         required: true
     },
     amount: {
@@ -42,13 +42,11 @@ const transactionSchema = new mongoose.Schema({
     },
     balanceBefore: {
         main: { type: Number, default: 0 },
-        play: { type: Number, default: 0 },
-        coins: { type: Number, default: 0 }
+        play: { type: Number, default: 0 }
     },
     balanceAfter: {
         main: { type: Number, default: 0 },
-        play: { type: Number, default: 0 },
-        coins: { type: Number, default: 0 }
+        play: { type: Number, default: 0 }
     },
     processedBy: {
         adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

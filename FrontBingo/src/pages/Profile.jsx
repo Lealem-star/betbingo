@@ -17,7 +17,6 @@ export default function Profile({ onNavigate }) {
         },
         wallet: {
             balance: 0,
-            coins: 0,
             gamesWon: 0
         }
     });
@@ -56,7 +55,7 @@ export default function Profile({ onNavigate }) {
                 apiFetch('/wallet', { sessionId }).catch(err => {
                     // If wallet fetch fails, use default values
                     console.warn('Wallet fetch failed:', err);
-                    return { balance: 0, main: 0, play: 0, coins: 0, gamesWon: 0 };
+                    return { balance: 0, main: 0, play: 0, gamesWon: 0 };
                 }),
                 apiFetch('/user/invite-stats', { sessionId }).catch(() => null)
             ]);
@@ -76,7 +75,6 @@ export default function Profile({ onNavigate }) {
                 main: walletRes.main,
                 play: walletRes.play,
                 balance: walletRes.balance,
-                coins: walletRes.coins,
                 fullResponse: walletRes
             });
 
@@ -92,7 +90,6 @@ export default function Profile({ onNavigate }) {
                 balance: walletRes.balance ?? 0,
                 main: mainValue,
                 play: playValue,
-                coins: walletRes.coins ?? 0,
                 gamesWon: walletRes.gamesWon ?? 0
             };
 
@@ -182,16 +179,6 @@ export default function Profile({ onNavigate }) {
                                 </div>
                                 <div className="profile-card-value profile-card-value-green">{profileData.wallet.play?.toLocaleString() || 0}</div>
                                 <div className="profile-card-subtitle">Game funds</div>
-                            </div>
-
-                            {/* Total Coins */}
-                            <div className="profile-card">
-                                <div className="profile-card-title">
-                                    <span className="profile-card-icon">🪙</span>
-                                    <span className="profile-card-label">Total Coins</span>
-                                </div>
-                                <div className="profile-card-value profile-card-value-yellow">{profileData.wallet.coins?.toLocaleString() || 0}</div>
-                                <div className="profile-card-subtitle">Earned coins</div>
                             </div>
 
                             {/* Games Won */}

@@ -96,6 +96,24 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    // Blocking fields (for admin-controlled access)
+    isBlocked: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    blockedAt: {
+        type: Date,
+        default: null
+    },
+    blockedBy: {
+        type: String,
+        default: null // admin telegramId or system identifier
+    },
+    blockedReason: {
+        type: String,
+        default: null
+    },
     role: {
         type: String,
         enum: ['user', 'admin'],

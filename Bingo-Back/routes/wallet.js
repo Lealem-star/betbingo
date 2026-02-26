@@ -38,12 +38,10 @@ router.get('/', authMiddleware, async (req, res) => {
             walletMain: wallet.main,
             walletPlay: wallet.play,
             walletBalance: wallet.balance,
-            walletCoins: wallet.coins,
             walletRaw: {
                 main: wallet.main,
                 play: wallet.play,
-                balance: wallet.balance,
-                coins: wallet.coins
+                balance: wallet.balance
             }
         });
 
@@ -57,48 +55,18 @@ router.get('/', authMiddleware, async (req, res) => {
             balance: wallet.balance ?? 0,
             main: mainValue,
             play: playValue,
-            coins: wallet.coins ?? 0,
             gamesWon: wallet.gamesWon ?? 0
         };
 
         console.log(`📤 [${requestId}] Sending wallet response:`, {
             main: response.main,
             play: response.play,
-            balance: response.balance,
-            coins: response.coins
+            balance: response.balance
         });
 
         res.json(response);
     } catch (error) {
         console.error(`❌ [${requestId}] Wallet fetch error:`, error);
-        res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
-    }
-});
-
-// POST /wallet/convert - convert coins to play wallet only
-router.post('/convert', authMiddleware, async (req, res) => {
-    try {
-        const { coins, targetWallet } = req.body;
-        const dbUserId = req.userId;
-        if (!coins || isNaN(coins) || Number(coins) <= 0) {
-            return res.status(400).json({ error: 'INVALID_AMOUNT' });
-        }
-        const user = await UserService.getUserById(dbUserId);
-        if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' });
-
-        const result = await WalletService.convertCoins(user._id, Number(coins), 'play');
-        return res.json({ wallet: result.wallet });
-    } catch (error) {
-        console.error('Convert error:', error);
-        if (error.message === 'MIN_CONVERSION_NOT_MET') {
-            return res.status(400).json({ error: 'MIN_CONVERSION_NOT_MET' });
-        }
-        if (error.message === 'Insufficient coins') {
-            return res.status(400).json({ error: 'INSUFFICIENT_COINS' });
-        }
-        if (error.message === 'Wallet not found') {
-            return res.status(404).json({ error: 'WALLET_NOT_FOUND' });
-        }
         res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
     }
 });

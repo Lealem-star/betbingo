@@ -92,7 +92,6 @@ function sanitizeWallet(walletDoc) {
         return {
             main: 0,
             play: 0,
-            coins: 0,
             balance: 0,
             totalDeposited: 0,
             lastDepositDate: null
@@ -106,7 +105,6 @@ function sanitizeWallet(walletDoc) {
     return {
         main: walletDoc.main || 0,
         play: walletDoc.play || 0,
-        coins: walletDoc.coins || 0,
         balance: balanceValue,
         totalDeposited: walletDoc.totalDeposited || 0,
         lastDepositDate: walletDoc.lastDepositDate || null
@@ -272,14 +270,13 @@ router.post('/users/:id/wallet-adjust', adminMiddleware, async (req, res) => {
     try {
         const mainDelta = parseDelta(req.body?.mainDelta);
         const playDelta = parseDelta(req.body?.playDelta);
-        const coinsDelta = parseDelta(req.body?.coinsDelta, { allowFloat: false });
         const reason = (req.body?.reason || '').trim();
 
-        if (mainDelta === null || playDelta === null || coinsDelta === null) {
+        if (mainDelta === null || playDelta === null) {
             return res.status(400).json({ error: 'INVALID_AMOUNT' });
         }
 
-        if (mainDelta === 0 && playDelta === 0 && coinsDelta === 0) {
+        if (mainDelta === 0 && playDelta === 0) {
             return res.status(400).json({ error: 'NO_CHANGES' });
         }
 
@@ -291,7 +288,6 @@ router.post('/users/:id/wallet-adjust', adminMiddleware, async (req, res) => {
         const updates = {};
         if (mainDelta !== 0) updates.main = mainDelta;
         if (playDelta !== 0) updates.play = playDelta;
-        if (coinsDelta !== 0) updates.coins = coinsDelta;
 
         const result = await WalletService.updateBalance(user._id, updates);
         const walletAfter = await Wallet.findOne({ userId: user._id }).lean();
@@ -301,7 +297,6 @@ router.post('/users/:id/wallet-adjust', adminMiddleware, async (req, res) => {
         const deltasSummary = [];
         if (mainDelta !== 0) deltasSummary.push(`main ${mainDelta > 0 ? '+' : ''}${mainDelta}`);
         if (playDelta !== 0) deltasSummary.push(`play ${playDelta > 0 ? '+' : ''}${playDelta}`);
-        if (coinsDelta !== 0) deltasSummary.push(`coins ${coinsDelta > 0 ? '+' : ''}${coinsDelta}`);
         const summaryText = deltasSummary.join(', ') || 'No changes';
 
         const transaction = new Transaction({

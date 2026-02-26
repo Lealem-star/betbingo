@@ -12,7 +12,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     const [cards, setCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [wallet, setWallet] = useState({ main: 0, play: 0, coins: 0 });
+    const [wallet, setWallet] = useState({ main: 0, play: 0 });
     const [walletLoading, setWalletLoading] = useState(true);
     const [alertBanners, setAlertBanners] = useState([]);
     const alertTimersRef = useRef(new Map());
@@ -159,7 +159,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     main: walletResponse.main,
                     play: walletResponse.play,
                     balance: walletResponse.balance,
-                    coins: walletResponse.coins,
                     fullResponse: walletResponse
                 });
 
@@ -173,8 +172,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
                 setWallet({
                     main: mainValue,
-                    play: playValue,
-                    coins: walletResponse.coins ?? 0
+                    play: playValue
                 });
             } catch (walletErr) {
                 console.error('Error fetching wallet from /wallet:', walletErr);
@@ -184,14 +182,12 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     if (profileResponse.wallet) {
                         setWallet({
                             main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
-                            play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
-                            coins: profileResponse.wallet.coins ?? 0
+                            play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0
                         });
                     } else {
                         setWallet({
                             main: 0,
-                            play: 0,
-                            coins: 0
+                            play: 0
                         });
                     }
                 } catch (profileErr) {
@@ -199,8 +195,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     // Set safe defaults if everything fails
                     setWallet({
                         main: 0,
-                        play: 0,
-                        coins: 0
+                        play: 0
                     });
                 }
             } finally {
@@ -217,8 +212,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         const update = gameState.walletUpdate;
         setWallet(prev => ({
             main: update.main ?? prev.main ?? 0,
-            play: update.play ?? prev.play ?? 0,
-            coins: update.coins ?? prev.coins ?? 0
+            play: update.play ?? prev.play ?? 0
         }));
     }, [gameState.walletUpdate]);
 
@@ -520,8 +514,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             const walletResponse = await apiFetch('/wallet', { sessionId });
             setWallet({
                 main: walletResponse.main ?? walletResponse.balance ?? 0,
-                play: walletResponse.play ?? walletResponse.balance ?? 0,
-                coins: walletResponse.coins ?? 0
+                play: walletResponse.play ?? walletResponse.balance ?? 0
             });
         } catch (walletErr) {
             console.error('Error refreshing wallet from /wallet:', walletErr);
@@ -531,8 +524,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 if (profileResponse.wallet) {
                     setWallet({
                         main: profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
-                        play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0,
-                        coins: profileResponse.wallet.coins ?? 0
+                        play: profileResponse.wallet.play ?? profileResponse.wallet.balance ?? 0
                     });
                 }
             } catch (profileErr) {

@@ -201,6 +201,35 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
             }
         }
 
+        async function isUserBlockedByTelegramId(telegramId) {
+            try {
+                const user = await require('../models/User').findOne(
+                    { telegramId: String(telegramId) },
+                    { isBlocked: 1 }
+                );
+                return !!(user && user.isBlocked);
+            } catch (e) {
+                console.error('Block check error:', e);
+                return false;
+            }
+        }
+
+        async function ensureNotBlocked(ctx) {
+            try {
+                const telegramId = ctx.from?.id;
+                if (!telegramId) return true;
+                const blocked = await isUserBlockedByTelegramId(telegramId);
+                if (blocked) {
+                    await ctx.reply('🚫 Your account has been blocked by an admin. Please contact support if you believe this is a mistake.');
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error('ensureNotBlocked error:', e);
+                return true;
+            }
+        }
+
         /**
          * Updates Telegram command menu for a user based on their role.
          * Uses chat scope to set commands per-user, ensuring role-based command visibility.
@@ -655,9 +684,72 @@ Thank you for your dedication! 🙏`;
             } catch { return ctx.reply('Failed to demote.'); }
         });
 
+        // Admin: block a user by Telegram ID
+        bot.command('block', async (ctx) => {
+            if (!(await ensureAdmin(ctx))) return;
+            const parts = (ctx.message.text || '').trim().split(/\s+/);
+            const targetId = parts[1];
+            const reason = parts.slice(2).join(' ') || null;
+            if (!targetId) return ctx.reply('Usage: /block <telegramId> [reason]');
+            try {
+                const User = require('../models/User');
+                const adminTelegramId = String(ctx.from.id);
+                const targetUser = await User.findOneAndUpdate(
+                    { telegramId: String(targetId) },
+                    {
+                        $set: {
+                            isBlocked: true,
+                            blockedAt: new Date(),
+                            blockedBy: adminTelegramId,
+                            blockedReason: reason
+                        }
+                    },
+                    { new: true }
+                );
+                if (!targetUser) return ctx.reply('User not found.');
+                const targetName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.phone || targetId;
+                await ctx.reply(`🚫 Blocked ${targetName} (ID: ${targetId}).`);
+            } catch (e) {
+                console.error('Block command error:', e);
+                return ctx.reply('Failed to block user.');
+            }
+        });
+
+        // Admin: unblock a user by Telegram ID
+        bot.command('unblock', async (ctx) => {
+            if (!(await ensureAdmin(ctx))) return;
+            const parts = (ctx.message.text || '').trim().split(/\s+/);
+            const targetId = parts[1];
+            if (!targetId) return ctx.reply('Usage: /unblock <telegramId>');
+            try {
+                const User = require('../models/User');
+                const targetUser = await User.findOneAndUpdate(
+                    { telegramId: String(targetId) },
+                    {
+                        $set: {
+                            isBlocked: false
+                        },
+                        $unset: {
+                            blockedAt: '',
+                            blockedBy: '',
+                            blockedReason: ''
+                        }
+                    },
+                    { new: true }
+                );
+                if (!targetUser) return ctx.reply('User not found.');
+                const targetName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.phone || targetId;
+                await ctx.reply(`✅ Unblocked ${targetName} (ID: ${targetId}).`);
+            } catch (e) {
+                console.error('Unblock command error:', e);
+                return ctx.reply('Failed to unblock user.');
+            }
+        });
+
         // User commands
         bot.command('play', async (ctx) => {
             try {
+                if (!(await ensureNotBlocked(ctx))) return;
                 await UserService.createOrUpdateUser(ctx.from);
                 const isAdmin = await isAdminByDB(ctx.from.id);
 
@@ -710,6 +802,7 @@ Thank you for your dedication! 🙏`;
 
         bot.command('balance', async (ctx) => {
             try {
+                if (!(await ensureNotBlocked(ctx))) return;
                 const telegramId = String(ctx.from.id);
                 const userData = await UserService.getUserWithWallet(telegramId);
                 if (!userData || !userData.wallet) {
@@ -724,8 +817,7 @@ Thank you for your dedication! 🙏`;
                     userId: user._id.toString(),
                     walletMain: w.main,
                     walletPlay: w.play,
-                    walletBalance: w.balance,
-                    walletCoins: w.coins
+                    walletBalance: w.balance
                 });
 
                 // Use actual wallet values - if main/play are null/undefined, fall back to balance
@@ -753,6 +845,7 @@ Thank you for your dedication! 🙏`;
 
         bot.command('deposit', async (ctx) => {
             const userId = String(ctx.from.id);
+            if (!(await ensureNotBlocked(ctx))) return;
             // Clear any withdrawal state to prevent conflicts
             if (typeof withdrawalStates !== 'undefined' && withdrawalStates instanceof Map) {
                 withdrawalStates.delete(userId);
@@ -769,6 +862,7 @@ Thank you for your dedication! 🙏`;
         // Add /withdraw command to initiate withdrawal flow
         bot.command('withdraw', async (ctx) => {
             try {
+                if (!(await ensureNotBlocked(ctx))) return;
                 if (!(await requireRegistration(ctx))) return;
                 // Start the same flow as pressing the Withdraw button
                 const userId = String(ctx.from.id);
@@ -1098,8 +1192,7 @@ Thank you for your dedication! 🙏`;
                     userId: user._id.toString(),
                     walletMain: w.main,
                     walletPlay: w.play,
-                    walletBalance: w.balance,
-                    walletCoins: w.coins
+                    walletBalance: w.balance
                 });
 
                 // Use actual wallet values - if main/play are null/undefined, fall back to balance
@@ -2059,7 +2152,7 @@ Thank you for your dedication! 🙏`;
                                 const userWithWallet = await UserService.getUserWithWallet(userId);
                                 const w = userWithWallet && userWithWallet.wallet;
                                 if (w) {
-                                    walletLine = `\n👛 User Wallet:\n- Main: ETB ${Number(w.main || 0).toFixed(2)}\n- Play: ETB ${Number(w.play || 0).toFixed(2)}\n- Coins: ${Number(w.coins || 0).toFixed(0)}`;
+                                    walletLine = `\n👛 User Wallet:\n- Main: ETB ${Number(w.main || 0).toFixed(2)}\n- Play: ETB ${Number(w.play || 0).toFixed(2)}`;
                                 }
                             } catch { }
 

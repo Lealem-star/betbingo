@@ -578,7 +578,6 @@ export function WebSocketProvider({ children }) {
                                 walletUpdate: {
                                     main: event.payload.main,
                                     play: event.payload.play,
-                                    coins: event.payload.coins,
                                     source: event.payload.source
                                 }
                             }));
