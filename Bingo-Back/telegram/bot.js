@@ -899,10 +899,16 @@ Thank you for your dedication! 🙏`;
                 // Build window [start, end] for target date; default today
                 const todayMidnight = new Date();
                 todayMidnight.setHours(0, 0, 0, 0);
-                let start = new Date(todayMidnight);
+
+                let start;
                 if (target) {
+                    // If admin passes an explicit date, use that date's full window
                     start = new Date(target);
                     start.setHours(0, 0, 0, 0);
+                } else {
+                    // Default: last fully completed day (yesterday)
+                    start = new Date(todayMidnight);
+                    start.setDate(start.getDate() - 1);
                 }
                 const end = new Date(start);
                 end.setHours(23, 59, 59, 999);
@@ -1002,15 +1008,16 @@ Thank you for your dedication! 🙏`;
             await ctx.editMessageText(adminText, keyboard).catch(() => ctx.reply(adminText, keyboard));
         });
 
-        // Admin inline: generate daily report for yesterday
+        // Admin inline: generate daily report for the last fully completed day (yesterday)
         bot.action('admin_daily_report', async (ctx) => {
             if (!(await ensureAdmin(ctx))) return;
             try {
-                // Today window (matching API endpoint)
+                // Yesterday window in local time
                 const todayMidnight = new Date();
                 todayMidnight.setHours(0, 0, 0, 0);
                 const start = new Date(todayMidnight);
-                const end = new Date(todayMidnight);
+                start.setDate(start.getDate() - 1); // move to yesterday
+                const end = new Date(start);
                 end.setHours(23, 59, 59, 999);
                 const message = await generateDailyReportMessage(start, end);
                 await ctx.answerCbQuery().catch(() => { });
@@ -3021,14 +3028,18 @@ function setupDailyAdminNotifications(bot) {
     }
 
     // Function to get daily statistics
-    async function getDailyStats() {
+    // If targetOffsetDays = -1, fetch "yesterday" (full previous local day).
+    async function getDailyStats(targetOffsetDays = 0) {
         try {
-            // Build today's local-day window (assumes TZ is set to Africa/Addis_Ababa in env)
-            const todayLocalMidnight = new Date();
-            todayLocalMidnight.setHours(0, 0, 0, 0);
-            const start = new Date(todayLocalMidnight); // start of local "today"
-            const end = new Date(todayLocalMidnight);
-            end.setHours(23, 59, 59, 999); // end of local "today"
+            // Build target local-day window (assumes TZ is set to Africa/Addis_Ababa in env)
+            const targetLocalMidnight = new Date();
+            targetLocalMidnight.setHours(0, 0, 0, 0);
+            if (targetOffsetDays !== 0) {
+                targetLocalMidnight.setDate(targetLocalMidnight.getDate() + targetOffsetDays);
+            }
+            const start = new Date(targetLocalMidnight); // start of target local day
+            const end = new Date(targetLocalMidnight);
+            end.setHours(23, 59, 59, 999); // end of target local day
 
             console.log('📊 Fetching daily stats for:', {
                 start: start.toISOString(),
@@ -3087,7 +3098,7 @@ function setupDailyAdminNotifications(bot) {
                 return sum + (game.totalPrizes || 0);
             }, 0);
 
-            // Calculate how much bots won in games that included real users
+            // Calculate how many games (with real users) were won by bots
             const todayGameIds = todayGames.map((g) => g._id);
             const todayGamesWithWinners = await Game.find({
                 _id: { $in: todayGameIds }
@@ -3096,26 +3107,30 @@ function setupDailyAdminNotifications(bot) {
                 .populate('winners.userId', 'telegramId')
                 .lean();
 
-            let botWinningsFromRealGames = 0;
+            let botGamesWonFromRealGames = 0;
             todayGamesWithWinners.forEach((game) => {
                 if (Array.isArray(game.winners)) {
+                    let hasBotWinner = false;
                     game.winners.forEach((winner) => {
                         const user = winner?.userId;
                         if (user && isBotTelegramId(user.telegramId)) {
-                            botWinningsFromRealGames += winner.prize || 0;
+                            hasBotWinner = true;
                         }
                     });
+                    if (hasBotWinner) {
+                        botGamesWonFromRealGames += 1;
+                    }
                 }
             });
 
             console.log('📊 Total revenue:', totalRevenue);
 
             // Get today's deposits - use createdAt as the primary date field
-            // Status defaults to 'completed' but we'll include all deposits created today
+            // Only count completed deposits, to match AdminStats logic
             const todayDeposits = await Transaction.find({
                 type: 'deposit',
                 createdAt: { $gte: start, $lte: end },
-                status: { $ne: 'failed' } // Exclude failed deposits
+                status: 'completed'
             }).lean();
 
             console.log('📊 Found deposits:', todayDeposits.length);
@@ -3182,14 +3197,14 @@ function setupDailyAdminNotifications(bot) {
                 totalPlayers,
                 totalRevenue,
                 totalPrizes,
-                botWinningsFromRealGames,
+                botWinningsFromRealGames: botGamesWonFromRealGames,
                 totalDeposits,
                 totalNewUsers,
                 activeUsers,
                 totalPendingWithdrawals,
                 totalPendingWithdrawalAmount,
                 adminWithdrawals,
-                // Display the local date for the day being reported (today)
+                // Display the local date for the day being reported
                 date: start.toISOString().split('T')[0] // Format: YYYY-MM-DD
             };
         } catch (error) {
@@ -3223,8 +3238,9 @@ function setupDailyAdminNotifications(bot) {
                 return;
             }
 
-            // Get daily statistics
-            const stats = await getDailyStats();
+            // Get daily statistics for the *previous* full local day
+            // Example: On Feb 27 at 9 AM, this reports Feb 26 (yesterday).
+            const stats = await getDailyStats(-1);
 
             // Format date for display
             const dateObj = new Date(stats.date);
