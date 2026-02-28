@@ -938,6 +938,81 @@ router.get('/stats/daily', adminMiddleware, async (req, res) => {
     }
 });
 
+// Game history for last N days (for AdminStats page). Uses game.stake, total pool, who won (Bot/Real/Both), real cost = (botPlayers * stake) - botWonAmount, net = systemCut - real cost.
+router.get('/stats/game-history', adminMiddleware, async (req, res) => {
+    try {
+        const days = Math.max(1, Math.min(14, Number(req.query.days || 2)));
+        const since = new Date();
+        since.setDate(since.getDate() - days);
+        since.setHours(0, 0, 0, 0);
+
+        const games = await Game.find({
+            finishedAt: { $gte: since },
+            status: 'finished'
+        })
+            .sort({ finishedAt: -1 })
+            .populate('players.userId', 'telegramId')
+            .populate('winners.userId', 'telegramId')
+            .lean();
+
+        const list = [];
+        for (const g of games) {
+            const humanIds = getHumanPlayerIds(g.players);
+            if (humanIds.length === 0) continue;
+
+            const stake = g.stake || 0;
+            let botPlayers = 0;
+            let realPlayers = 0;
+            (g.players || []).forEach((p) => {
+                if (!p || !p.userId) return;
+                const tid = p.userId.telegramId;
+                if (isBotTelegramId(tid)) botPlayers += 1;
+                else realPlayers += 1;
+            });
+
+            let botWonAmount = 0;
+            let hasBotWinner = false;
+            let hasRealWinner = false;
+            (g.winners || []).forEach((w) => {
+                if (!w || !w.userId) return;
+                const tid = w.userId.telegramId;
+                const prize = w.prize || 0;
+                if (isBotTelegramId(tid)) {
+                    botWonAmount += prize;
+                    hasBotWinner = true;
+                } else {
+                    hasRealWinner = true;
+                }
+            });
+
+            let whoWon = 'Real';
+            if (hasBotWinner && hasRealWinner) whoWon = 'Both';
+            else if (hasBotWinner) whoWon = 'Bot';
+
+            const realCost = Math.max(0, (botPlayers * stake) - botWonAmount);
+            const netRevenue = (g.systemCut || 0) - realCost;
+
+            list.push({
+                gameId: g.gameId,
+                totalPlayers: (g.players || []).length,
+                prizePool: g.totalPrizes || 0,
+                systemRevenue: g.systemCut || 0,
+                botPlayers,
+                realPlayers,
+                whoWon,
+                netRevenue,
+                finishedAt: g.finishedAt,
+                stake
+            });
+        }
+
+        res.json({ games: list });
+    } catch (error) {
+        console.error('Game history error:', error);
+        res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
+    }
+});
+
 // --- Additional Admin Endpoints ---
 router.get('/stats/games', adminMiddleware, async (req, res) => {
     try {

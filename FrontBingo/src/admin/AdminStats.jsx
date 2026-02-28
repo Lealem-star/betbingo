@@ -8,6 +8,7 @@ export default function AdminStats() {
         botWinningsFromRealGames: 0
     });
     const [dailyStats, setDailyStats] = useState([]);
+    const [gameHistory, setGameHistory] = useState([]);
     const [todayFinance, setTodayFinance] = useState({ totalGames: 0, totalDeposit: 0, totalWithdraw: 0 });
     const [totalMainWallet, setTotalMainWallet] = useState(0);
     const [totalPlayWallet, setTotalPlayWallet] = useState(0);
@@ -36,6 +37,7 @@ export default function AdminStats() {
             const [
                 todayRes,
                 dailyRes,
+                gameHistoryRes,
                 overviewRes,
                 depositsRes,
                 withdrawalsCompletedRes,
@@ -44,6 +46,7 @@ export default function AdminStats() {
             ] = await Promise.allSettled([
                 apiFetch('/admin/stats/today', { timeoutMs: 15000 }),
                 apiFetch('/admin/stats/daily?days=14', { timeoutMs: 30000 }),
+                apiFetch('/admin/stats/game-history?days=2', { timeoutMs: 20000 }),
                 apiFetch('/admin/stats/overview', { timeoutMs: 20000 }),
                 apiFetch(`/admin/balances/deposits?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { timeoutMs: 20000 }),
                 apiFetch('/admin/balances/withdrawals?status=completed', { timeoutMs: 20000 }),
@@ -64,6 +67,13 @@ export default function AdminStats() {
                 nextDailyStats = dailyRes.value?.days || [];
             } else {
                 console.error('Error fetching daily stats:', dailyRes.reason);
+            }
+
+            let nextGameHistory = [];
+            if (gameHistoryRes.status === 'fulfilled') {
+                nextGameHistory = gameHistoryRes.value?.games || [];
+            } else {
+                console.error('Error fetching game history:', gameHistoryRes.reason);
             }
 
             const overview = overviewRes.status === 'fulfilled' ? overviewRes.value : null;
@@ -94,6 +104,7 @@ export default function AdminStats() {
             // Update everything together to avoid "card-by-card" pop-in
             setToday(nextToday);
             setDailyStats(nextDailyStats);
+            setGameHistory(nextGameHistory);
             setTodayFinance(nextTodayFinance);
             setTotalMainWallet(nextTotalMain);
             setTotalPlayWallet(nextTotalPlay);
@@ -206,6 +217,45 @@ export default function AdminStats() {
                 </div>
             </div>
 
+            {/* Game History (Last 2 Days) */}
+            <div
+                className="admin-stats-table-container"
+                style={{ '--stats-table-cols': 9, minHeight: '200px', marginTop: '1.5rem' }}
+            >
+                <h3 className="admin-stats-table-title">Game History (Last 2 Days)</h3>
+                <div className="admin-stats-table-wrapper">
+                    <div className="admin-stats-table-header">
+                        <div className="admin-stats-table-header-item">Game ID</div>
+                        <div className="admin-stats-table-header-item">Players</div>
+                        <div className="admin-stats-table-header-item">Stake</div>
+                        <div className="admin-stats-table-header-item">Prize Pool</div>
+                        <div className="admin-stats-table-header-item">System Revenue</div>
+                        <div className="admin-stats-table-header-item">Bot</div>
+                        <div className="admin-stats-table-header-item">Real</div>
+                        <div className="admin-stats-table-header-item">Who Won</div>
+                        <div className="admin-stats-table-header-item">Net Revenue</div>
+                    </div>
+                    <div className="admin-stats-table-content">
+                        {!isLoading && gameHistory.length > 0 ? (
+                            gameHistory.map((game, index) => (
+                                <div key={game.gameId || index} className="admin-stats-table-row">
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">{game.gameId || '—'}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">{game.totalPlayers ?? 0}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">ETB {game.stake ?? 0}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-right">ETB {(game.prizePool ?? 0).toFixed(2)}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-right">ETB {(game.systemRevenue ?? 0).toFixed(2)}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">{game.botPlayers ?? 0}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">{game.realPlayers ?? 0}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-center">{game.whoWon ?? '—'}</div>
+                                    <div className="admin-stats-table-cell admin-stats-table-cell-right">ETB {(game.netRevenue ?? 0).toFixed(2)}</div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="admin-stats-empty">{isLoading ? 'Loading...' : 'No game history for last 2 days'}</div>
+                        )}
+                    </div>
+                </div>
+            </div>
 
         </div>
     );
