@@ -261,7 +261,7 @@ export default function AdminStats() {
             {/* Game History (Last 2 Days) */}
             <div
                 className="admin-stats-table-container"
-                style={{ '--stats-table-cols': 9, minHeight: '200px', marginTop: '1.5rem' }}
+                style={{ '--stats-table-cols': 9, minHeight: '200px', marginTop: '2.5rem' }}
             >
                 <h3 className="admin-stats-table-title">Game History (Last 2 Days)</h3>
                 <div className="admin-stats-table-wrapper">
