@@ -223,7 +223,10 @@ export default function AdminStats() {
             >
                 <h3 className="admin-stats-table-title">Daily Statistics</h3>
 
-                <div className="admin-stats-table-wrapper">
+                <div
+                    className="admin-stats-table-wrapper"
+                    style={{ maxHeight: '260px', overflowY: 'auto' }}
+                >
                     {/* Table Header */}
                     <div className="admin-stats-table-header">
                         <div className="admin-stats-table-header-item">Day</div>
@@ -237,10 +240,7 @@ export default function AdminStats() {
                     </div>
 
                     {/* Table Content */}
-                    <div
-                        className="admin-stats-table-content"
-                        style={{ maxHeight: '260px', overflowY: 'auto' }}
-                    >
+                    <div className="admin-stats-table-content">
                         {!isLoading && weeklyStats.length > 0 ? (
                             weeklyStats.map((stat, index) => (
                                 <div key={index} className="admin-stats-table-row">
@@ -267,7 +267,10 @@ export default function AdminStats() {
                 style={{ '--stats-table-cols': 9, minHeight: '200px', marginTop: '2.5rem' }}
             >
                 <h3 className="admin-stats-table-title">Game History</h3>
-                <div className="admin-stats-table-wrapper">
+                <div
+                    className="admin-stats-table-wrapper"
+                    style={{ maxHeight: '260px', overflowY: 'auto' }}
+                >
 
                     <div className="admin-stats-table-header">
                         <div className="admin-stats-table-header-item">Game ID</div>
@@ -280,10 +283,7 @@ export default function AdminStats() {
                         <div className="admin-stats-table-header-item">Who Won</div>
                         <div className="admin-stats-table-header-item">Net Revenue</div>
                     </div>
-                    <div
-                        className="admin-stats-table-content"
-                        style={{ maxHeight: '260px', overflowY: 'auto' }}
-                    >
+                    <div className="admin-stats-table-content">
                         {!isLoading && groupedGameHistory.length > 0 ? (
                             groupedGameHistory.map((group) => (
                                 <React.Fragment key={group.dateKey}>
