@@ -271,34 +271,28 @@ export default function AdminStats() {
                     className="admin-stats-table-wrapper"
                     style={{ maxHeight: '260px', overflowY: 'auto' }}
                 >
-
-                    <div className="admin-stats-table-header">
-                        <div className="admin-stats-table-header-item">Game ID</div>
-                        <div className="admin-stats-table-header-item">Players</div>
-                        <div className="admin-stats-table-header-item">Stake</div>
-                        <div className="admin-stats-table-header-item">Prize</div>
-                        <div className="admin-stats-table-header-item">System Cut</div>
-                        <div className="admin-stats-table-header-item">Bot</div>
-                        <div className="admin-stats-table-header-item">Real</div>
-                        <div className="admin-stats-table-header-item">Who Won</div>
-                        <div className="admin-stats-table-header-item">Net Revenue</div>
-                    </div>
                     <div className="admin-stats-table-content">
                         {!isLoading && groupedGameHistory.length > 0 ? (
                             groupedGameHistory.map((group) => (
                                 <React.Fragment key={group.dateKey}>
                                     <div className="admin-stats-table-row admin-stats-table-row-day">
-                                        <div className="admin-stats-table-cell admin-stats-table-cell-left">
+                                        <div
+                                            className="admin-stats-table-cell admin-stats-table-cell-left"
+                                            style={{ gridColumn: '1 / -1' }}
+                                        >
                                             {group.dateLabel} — Net Revenue: ETB {group.netRevenueSum.toFixed(2)}
                                         </div>
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
-                                        <div className="admin-stats-table-cell" />
+                                    </div>
+                                    <div className="admin-stats-table-header admin-stats-table-header-inner">
+                                        <div className="admin-stats-table-header-item">Game ID</div>
+                                        <div className="admin-stats-table-header-item">Players</div>
+                                        <div className="admin-stats-table-header-item">Stake</div>
+                                        <div className="admin-stats-table-header-item">Prize</div>
+                                        <div className="admin-stats-table-header-item">System Cut</div>
+                                        <div className="admin-stats-table-header-item">Bot</div>
+                                        <div className="admin-stats-table-header-item">Real</div>
+                                        <div className="admin-stats-table-header-item">Who Won</div>
+                                        <div className="admin-stats-table-header-item">Net Revenue</div>
                                     </div>
                                     {group.games.map((game, index) => (
                                         <div
