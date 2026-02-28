@@ -41,7 +41,7 @@ class NotificationService {
                 `• Play: ETB ${play.toFixed(2)}`,
                 '',
                 '❓ Questions? Contact support:',
-                '@haset_life  |  @Ipsychic'
+                '@Funbingosupport1'
             ].join('\n');
 
             const reply_markup = {
@@ -83,7 +83,7 @@ class NotificationService {
             ].filter(Boolean).join('\n');
             const reply_markup = {
                 inline_keyboard: [
-                    [{ text: '💬 Contact Support', url: 'https://t.me/haset_life' }],
+                    [{ text: '💬 Contact Support', url: 'https://t.me/Funbingosupport1' }],
                     [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
@@ -109,7 +109,7 @@ class NotificationService {
             ].filter(Boolean).join('\n');
             const reply_markup = {
                 inline_keyboard: [
-                    [{ text: '💬 Contact Support', url: 'https://t.me/haset_life' }],
+                    [{ text: '💬 Contact Support', url: 'https://t.me/Funbingosupport1' }],
                     [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
