@@ -1908,7 +1908,7 @@ Thank you for your dedication! 🙏`;
                     // Private welcome message to the registering user (no broadcast, no phone number)
                     if (isNewRegistration) {
                         await ctx.reply(
-                            `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!`,
+                            `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
                             { reply_markup: { remove_keyboard: true } }
                         );
                     } else {
@@ -1922,7 +1922,7 @@ Thank you for your dedication! 🙏`;
                         (ctx.from?.first_name || '').trim() ||
                         'User';
                     ctx.reply(
-                        `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!`,
+                        `${displayName} welcome to Fun Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
                         { reply_markup: { remove_keyboard: true } }
                     );
                 }
@@ -2408,44 +2408,9 @@ Thank you for your dedication! 🙏`;
                     const result = await response.json();
                     console.log('📥 API response:', { success: result.success, verificationId: result.verificationId, isVerified: result.isVerified });
 
-                    if (result.success) {
+                    if (result.success && result.verificationId) {
                         // Admin notification with Approve/Deny is sent by smsForwarderService.notifyAdminsNewVerification
-                        // when verification is created. If verificationId exists, service already sent. If null, send fallback with buttons if we have ID.
-                        if (!result.verificationId) {
-                            // Fallback: no verification created - create via bot context so admins get Approve/Deny buttons
-                            try {
-                                const fallbackUrl = `${process.env.API_BASE_URL || 'http://localhost:3001'}/sms-forwarder/create-pending-from-bot`;
-                                const fallbackRes = await fetch(fallbackUrl, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        userId: user._id,
-                                        amount: parsed.amount,
-                                        reference: parsed.ref || parsed.reference || null,
-                                        phoneNumber: user.phone || null,
-                                        userName: `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim()
-                                    })
-                                });
-                                if (fallbackRes.ok) {
-                                    const fallbackData = await fallbackRes.json();
-                                    if (fallbackData.verificationId) {
-                                        // Service already sent admin notification with Approve/Deny via notifyAdminsNewVerification
-                                        // Nothing more to do
-                                    }
-                                } else {
-                                    // Last resort: notify admins without buttons
-                                    const adminUsers = await require('../models/User').find({ role: 'admin' }, { telegramId: 1 });
-                                    for (const admin of adminUsers) {
-                                        try {
-                                            await bot.telegram.sendMessage(
-                                                admin.telegramId,
-                                                `📝 Pending Deposit Receipt (No Match Yet)\n\n👤 User: ${ctx.from.first_name} ${ctx.from.last_name || ''}\n📱 Phone: ${user.phone || user.telegramId || ctx.from.id}\n💰 Amount: ETB ${parsed.amount?.toFixed(2) || 'N/A'}\n🔎 Reference: ${parsed.ref || parsed.reference || 'N/A'}\n\n⏳ Could not create verification. User may need to resend or contact support.`
-                                            );
-                                        } catch (e) { }
-                                    }
-                                }
-                            } catch { }
-                        }
+                        // when verification is created. If verificationId exists, service already sent.
 
                         // Close deposit session
                         depositStates.delete(userId);
@@ -2457,9 +2422,11 @@ Thank you for your dedication! 🙏`;
                         return ctx.reply(`📱 SMS Received!\n\n✅ Your payment receipt has been received.\n\n💰 Amount: ETB ${parsed.amount.toFixed(2)}\n🔄 Status: ${statusText}\n\n${nextStep}`, {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
-                    } else {
-                        throw new Error('Failed to process SMS');
                     }
+
+                    // Any other combination (success without verificationId, or explicit failure)
+                    // is treated as an error so we don't fall back to half-broken admin notifications.
+                    throw new Error('Failed to process SMS or create verification');
                 } catch (error) {
                     // Close deposit session on error
                     depositStates.delete(userId);

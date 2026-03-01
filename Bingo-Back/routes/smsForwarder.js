@@ -118,6 +118,16 @@ router.post('/user-sms', async (req, res) => {
             }
         }
 
+        // If this was a deposit SMS (we have an amount) but still could not create a verification
+        // after all fallbacks, treat it as an error instead of "success with null verificationId"
+        if (!verification && hasAmount) {
+            console.error('User SMS had amount but no verification created after all fallbacks. Treating as error.');
+            return res.status(500).json({
+                success: false,
+                error: 'Could not create deposit verification. Please try again.'
+            });
+        }
+
         res.json({
             success: true,
             message: 'User SMS received and processed',
