@@ -211,8 +211,13 @@ class PlayerBot {
             return this.token;
         }
         // If token has no exp (old), or is near-expiry, refresh via secret if available.
-        const refreshed = await this.refreshTokenIfPossible();
-        if (refreshed) return refreshed;
+        // Important: if refresh fails (DB/API temporarily down), fall back to existing token.
+        try {
+            const refreshed = await this.refreshTokenIfPossible();
+            if (refreshed) return refreshed;
+        } catch (e) {
+            console.warn('⚠️  Bot token refresh failed, using existing JWT_TOKEN if available:', e.message);
+        }
 
         if (!this.token) {
             throw new Error('No authentication token. Provide JWT_TOKEN or set PLAYER_BOT_SECRET + BOT_TELEGRAM_ID.');
@@ -277,7 +282,11 @@ class PlayerBot {
     }
 
     async handleAuthFailureReconnect() {
-        await this.refreshTokenIfPossible();
+        try {
+            await this.refreshTokenIfPossible();
+        } catch (e) {
+            console.warn('⚠️  Token refresh failed after 1008 close:', e.message);
+        }
         // Reset reconnect attempts after fresh token
         this.reconnectAttempts = 0;
         await this.connectWithFreshToken();
