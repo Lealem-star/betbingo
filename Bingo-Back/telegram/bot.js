@@ -1159,7 +1159,10 @@ Thank you for your dedication! 🙏`;
             if (!(await ensureAdmin(ctx))) return;
             adminStates.set(String(ctx.from.id), { mode: 'broadcast' });
             await ctx.answerCbQuery('');
-            await ctx.reply('📣 Send the message to broadcast now (text, photo, video, document, etc.).', { reply_markup: { inline_keyboard: [[{ text: '🔙 Cancel', callback_data: 'back_to_admin' }]] } });
+            await ctx.reply(
+                '📣 Send the message to broadcast now (text, photo, video, document, etc.).\n\n👉 You can type your message here, or reply to this message with your content.\n\n🔒 BROADCAST_PROMPT',
+                { reply_markup: { inline_keyboard: [[{ text: '🔙 Cancel', callback_data: 'back_to_admin' }]] } }
+            );
         });
 
         async function isUserRegistered(userId) {
@@ -1947,13 +1950,20 @@ Thank you for your dedication! 🙏`;
         });
 
         bot.on('text', async (ctx, next) => {
+            const adminId = String(ctx.from.id);
+            const state = adminStates.get(adminId);
+            const replyTo = ctx.message.reply_to_message;
+            const isReplyToBroadcastPrompt = replyTo
+                && replyTo.from
+                && replyTo.from.is_bot
+                && (replyTo.text && replyTo.text.includes('BROADCAST_PROMPT'));
+            const isBroadcastMode = (state && state.mode === 'broadcast') || isReplyToBroadcastPrompt;
+
             try {
-                const adminId = String(ctx.from.id);
-                const state = adminStates.get(adminId);
                 const isAdmin = await isAdminByDB(adminId);
 
-                // Handle broadcast mode for text messages
-                if (state && state.mode === 'broadcast') {
+                // Handle broadcast: either state-based or reply-to-prompt (survives bot restart)
+                if (isBroadcastMode) {
                     if (!isAdmin) {
                         adminStates.delete(adminId);
                         await ctx.reply('❌ Unauthorized. Only admins can broadcast.', { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
