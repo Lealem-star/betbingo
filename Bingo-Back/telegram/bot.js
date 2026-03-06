@@ -1953,7 +1953,12 @@ Thank you for your dedication! 🙏`;
                 const isAdmin = await isAdminByDB(adminId);
 
                 // Handle broadcast mode for text messages
-                if (state && state.mode === 'broadcast' && isAdmin) {
+                if (state && state.mode === 'broadcast') {
+                    if (!isAdmin) {
+                        adminStates.delete(adminId);
+                        await ctx.reply('❌ Unauthorized. Only admins can broadcast.', { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+                        return;
+                    }
                     adminStates.delete(adminId);
                     const adminTelegramId = String(ctx.from.id);
                     const adminName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim() || ctx.from.username || 'Admin';
@@ -1979,7 +1984,10 @@ Thank you for your dedication! 🙏`;
                         );
                     } catch (error) {
                         console.error('Broadcast error:', error);
-                        await ctx.reply(`❌ Failed to broadcast: ${error.message || 'Unknown error'}.`, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
+                        const msg = (error && error.message === 'NO_RECIPIENTS')
+                            ? '❌ No recipients found in database. Add users first.'
+                            : `❌ Failed to broadcast: ${error.message || 'Unknown error'}.`;
+                        await ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'back_to_admin' }]] } });
                     }
                     return;
                 }
