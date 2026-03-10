@@ -14,7 +14,7 @@ async function verifyTelegram(initData) {
 
         (window.location.hostname === 'localhost' ? 'http://localhost:3001' :
 
-            'https://markbingo.com');
+            'https://markbingo.vercel.app');
 
     console.log('🔐 Verifying Telegram auth:', {
         apiBase,

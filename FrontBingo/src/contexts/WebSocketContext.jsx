@@ -138,7 +138,7 @@ export function WebSocketProvider({ children }) {
             // No timeout - require real WebSocket connection
             const wsBase = import.meta.env.VITE_WS_URL ||
                 (window.location.hostname === 'localhost' ? 'ws://localhost:3001' :
-                    'wss://markbingo.com');
+                    'ws://84.247.178.86');
             const wsUrl = `${wsBase}/ws?token=${safeSessionId}`;
             console.log('Connecting to general WebSocket:', wsUrl);
 
