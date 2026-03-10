@@ -15,8 +15,8 @@ module.exports = {
                 BOT_TOKEN: '8603012890:AAH4P7QaCV_P2DV4B1BizGjENW-67JfhI78',
                 RUN_TELEGRAM_BOT: 'false',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
-                WEBAPP_URL: 'https://markbingo.com',
-                API_BASE_URL: 'http://localhost:3001',
+                WEBAPP_URL: 'https://markbingo.vercel.app',
+                API_BASE_URL: 'https://84.247.178.86',
                 JWT_SECRET: 'your_super_secret_jwt_key_here_change_this',
                 // Player-bot auth (used by /api/auth/bot/token)
                 PLAYER_BOT_SECRET: process.env.PLAYER_BOT_SECRET || 'CHANGE_ME_LONG_RANDOM_SECRET',
@@ -52,9 +52,9 @@ module.exports = {
                 BOT_TOKEN: '8603012890:AAH4P7QaCV_P2DV4B1BizGjENW-67JfhI78',
                 RUN_TELEGRAM_BOT: 'true',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
-                WEBAPP_URL: 'https://markbingo.com',
-                API_BASE_URL: 'http://localhost:3001',
-                API_URL: 'http://localhost:3001',
+                WEBAPP_URL: 'https://markbingo.vercel.app',
+                API_BASE_URL: 'https://84.247.178.86',
+                API_URL: 'https://84.247.178.86',
                 MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:wVq78YDL0MIrUx8E@cluster0.znjhsec.mongodb.net/?appName=Cluster0'
             },
             error_file: './logs/bot-err.log',
