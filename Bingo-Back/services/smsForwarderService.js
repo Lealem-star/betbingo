@@ -929,18 +929,22 @@ class SmsForwarderService {
             const userTelegramId = verification.userId?.telegramId;
 
             if (BOT_TOKEN && userTelegramId) {
-                const header = isAutoApproved ? '✅ Deposit Auto-Approved!' : '✅ Deposit Approved';
-                const text = `${header}\n\n💰 Amount: ETB ${Number(verification.amount).toFixed(2)}\n✅ Credited to: Play Wallet\n\nYour balance has been updated. Good luck!`;
-                const reply_markup = {
-                    inline_keyboard: [
-                        [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }],
-                        [{ text: '💼 Check Balance', callback_data: 'balance' }]
-                    ]
-                };
+                const amount = Number(verification.amount || 0);
+                const wallet = depositResult?.wallet || {};
+                const totalBalance = ((wallet.main || 0) + (wallet.play || 0));
+
+                const text =
+                    `Your balance has been credited with ${amount.toFixed(1)} birr.\n\n` +
+                    `<pre>Current Balance:      ${totalBalance.toFixed(1)}</pre>`;
+
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: String(userTelegramId), text, reply_markup })
+                    body: JSON.stringify({
+                        chat_id: String(userTelegramId),
+                        text,
+                        parse_mode: 'HTML'
+                    })
                 }).catch(() => { });
             }
         } catch (e) {

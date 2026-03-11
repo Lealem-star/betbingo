@@ -2500,8 +2500,12 @@ body {
 .cartela-numbers-grid {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
-    gap: 4px;
+    gap: 6px;
+    padding: 6px;
     margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    border: 2px solid #ffffff;
 }
 
 .cartela-preview-section {
@@ -2647,8 +2651,8 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 25px;
-    border-radius: 8px;
+    height: 30px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -4309,6 +4313,11 @@ body {
     align-items: center;
     gap: 6px;
     margin-bottom: 8px;
+    background: #e9d5ff;
+    border-radius: 12px;
+    padding: 6px 8px;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 6px rgba(148, 27, 176, 0.15);
 }
 
 /* Reduced Size Status Box */
@@ -4467,12 +4476,13 @@ body {
 /* Current Call Bar */
 .current-call-bar {
     background: #6b21a8; /* Dark purple */
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-radius: 16px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
+    box-shadow: 0 4px 10px rgba(88, 28, 135, 0.35);
 }
 
 .current-call-label {
@@ -4484,8 +4494,8 @@ body {
 .current-call-ball {
     background: #f97316; /* Orange */
     color: white;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -4515,11 +4525,11 @@ body {
 }
 
 .recent-number-circle {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     color: white;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     display: flex;
     align-items: center;

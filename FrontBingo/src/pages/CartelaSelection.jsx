@@ -270,7 +270,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         const hasCards = Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0;
         const isGameRunning = gameState.phase === 'running' && gameState.gameId;
         const isGameStarting = gameState.phase === 'starting' && gameState.gameId;
-        const shouldGoToGameLayout = isGameRunning || isGameStarting;
+        const hasPlayers = typeof gameState.playersCount === 'number' && gameState.playersCount > 0;
+        // Only move into GameLayout when a real game with at least one player is starting/running.
+        const shouldGoToGameLayout = hasPlayers && (isGameRunning || isGameStarting);
         
         console.log('🎮 CartelaSelection - Game state changed:', {
             phase: gameState.phase,
@@ -279,11 +281,13 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             hasSelectedCard: selectedNumbers.length > 0,
             yourCardsCount: gameState.yourCards?.length || 0,
             hasCards,
+            playersCount: gameState.playersCount,
+            hasPlayers,
             isGameRunning,
             isGameStarting
         });
 
-        // When a game is starting or running, always move into GameLayout:
+        // When a game with players is starting or running, move into GameLayout:
         // - Players with cards see their boards.
         // - Users without cards see watch mode.
         if (shouldGoToGameLayout) {
@@ -538,48 +542,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         }
     };
 
-    // Handle refresh button click - refresh data in-place without wiping UI
-    const handleRefresh = async () => {
-        console.log('Refreshing CartelaSelection data (lightweight)...');
-        try {
-            // Show immediate feedback
-            showSuccess('🔄 Refreshing data...');
-
-            // Light wallet refresh (keeps UI visible)
-            await refreshWallet();
-
-            // Light cartellas refresh (no full-screen loading)
-            try {
-                const response = await apiFetch('/api/cartellas');
-                if (response?.success && Array.isArray(response.cards)) {
-                    setCards(response.cards);
-                    console.log('✅ Cartellas refreshed successfully');
-                } else {
-                    console.warn('Refresh: cartellas API returned unexpected response');
-                    showWarning('⚠️ Some data may be outdated');
-                }
-            } catch (err) {
-                console.warn('Refresh: error fetching cartellas (non-fatal)', err);
-                showWarning('⚠️ Could not refresh cartellas, but game data is updated');
-            }
-
-            // Ensure we have the latest game snapshot for this stake
-            if (stake && sessionId) {
-                connectToStake(stake);
-                console.log('✅ WebSocket reconnected for fresh game state');
-            }
-
-            // Clear any previous errors and show success
-            setError(null);
-            showSuccess('✅ Data refreshed successfully!');
-            console.log('CartelaSelection lightweight refresh complete');
-        } catch (error) {
-            console.error('Error refreshing data:', error);
-            setError('Failed to refresh data. Please try again.');
-            showError('❌ Failed to refresh data. Please check your connection.');
-        }
-    };
-
     console.log('CartelaSelection render - loading:', loading, 'error:', error, 'cards:', cards.length);
 
     // Derive a fresh timer value from registrationEndTime to avoid getting stuck at 0
@@ -599,13 +561,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         return (
             <div className="app-container">
                 <header className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <button onClick={() => {
-                            onResetToGame?.();
-                        }} className="header-button">
-                            ← Back
-                        </button>
-                    </div>
                     {/* Wallet info during loading */}
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
@@ -665,13 +620,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         return (
             <div className="app-container">
                 <header className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <button onClick={() => {
-                            onResetToGame?.();
-                        }} className="header-button">
-                            ← Back
-                        </button>
-                    </div>
                     {/* Wallet info during error */}
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
@@ -768,22 +716,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             )}
 
             <header className="p-4 mb-0">
-                {/* Top Row: Back and Refresh buttons */}
-                <div className="flex items-center justify-between mb-4">
-                    <button onClick={() => {
-                        onResetToGame?.();
-                    }} className="header-button">
-                        ← Back
-                    </button>
-                    <button
-                        onClick={handleRefresh}
-                        className="header-button"
-                        disabled={walletLoading || loading}
-                    >
-                        {walletLoading || loading ? '⟳ Loading...' : '↻ Refresh'}
-                    </button>
-                </div>
-
                 {/* Second Row: Wallet info and Timer - White boxes style */}
                 <div className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap mobile-info-bar" style={{ marginBottom: '1rem' }}>
                     <div className="info-box flex-1">

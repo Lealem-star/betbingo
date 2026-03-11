@@ -834,21 +834,26 @@ Thank you for your dedication! 🙏`;
                     return ctx.reply(regText, regKeyboard);
                 }
 
-                // Registered user - show web app button
+                // Registered user - show Play-10 button like design in screenshot
                 if (isHttpsWebApp) {
                     const keyboard = {
                         reply_markup: {
                             inline_keyboard: [
-                                [{ text: '🎮 Open Game', web_app: { url: webAppUrl + '?stake=10' } }],
-                                [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+                                [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
                             ]
                         }
                     };
-                    return ctx.reply('🎮 Ready to play Mark Bingo!', keyboard);
+                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\n🎮 Play-10', keyboard);
                 } else {
                     // Fallback if no HTTPS web app URL
-                    const keyboard = { reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] } };
-                    return ctx.reply('🎮 To play Mark Bingo, please use our web app:\n\n' + webAppUrl, keyboard);
+                    const keyboard = {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '🎮 Play-10', callback_data: 'play' }]
+                            ]
+                        }
+                    };
+                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\nTo play Mark Bingo, tap Play-10 below.', keyboard);
                 }
             } catch {
                 return ctx.reply('❌ Database unavailable. Please try again later.');
@@ -2627,11 +2632,8 @@ Thank you for your dedication! 🙏`;
                         // Close deposit session
                         depositStates.delete(userId);
 
-                        const statusText = result.isVerified ? 'verified' : 'pending review';
-                        const nextStep = result.isVerified
-                            ? '✅ Deposit matched and will be credited shortly.'
-                            : '⏳ Awaiting admin approval. You will be notified when approved.';
-                        return ctx.reply(`📱 SMS Received!\n\n✅ Your payment receipt has been received.\n\n💰 Amount: ETB ${parsed.amount.toFixed(2)}\n🔄 Status: ${statusText}\n\n${nextStep}`, {
+                        // Simple confirmation message – detailed status will be sent when approved/credited
+                        return ctx.reply('Deposit request received. Your top-up will be done in 1 minute.', {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }

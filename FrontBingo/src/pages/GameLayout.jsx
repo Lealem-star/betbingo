@@ -654,7 +654,7 @@ export default function GameLayout({
                             }}
                         >
                             {/* B Column - Yellow */}
-                            <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-b">
                                     <span>B</span>
                                 </div>
@@ -680,7 +680,7 @@ export default function GameLayout({
                             </div>
 
                             {/* I Column - Green */}
-                            <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-i">
                                     <span>I</span>
                                 </div>
@@ -705,7 +705,7 @@ export default function GameLayout({
                             </div>
 
                             {/* N Column - Purple */}
-                            <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-n">
                                     <span>N</span>
                                 </div>
@@ -730,7 +730,7 @@ export default function GameLayout({
                             </div>
 
                             {/* G Column - Red */}
-                            <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-g">
                                     <span>G</span>
                                 </div>
@@ -755,7 +755,7 @@ export default function GameLayout({
                             </div>
 
                             {/* O Column - Pink/Magenta */}
-                            <div className="space-y-0" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-o">
                                     <span>O</span>
                                 </div>
