@@ -4331,7 +4331,7 @@ body {
     align-items: center;
     gap: 6px;
     margin-bottom: 8px;
-    background: #cec2eb; /* Joy Bingo STARTED box background */
+    background: transparent;
     border-radius: 12px;
     padding: 6px 8px;
     border: 1px solid rgba(139, 92, 246, 0.3);
@@ -4340,7 +4340,7 @@ body {
 
 /* Reduced Size Status Box */
 .game-status-box-small {
-    background: #e9d5ff;
+    background: #cfade0;
     border-radius: 8px;
     padding: 6px 10px;
     text-align: center;
@@ -4351,7 +4351,7 @@ body {
 .game-status-text-small {
     font-size: 12px;
     font-weight: 800;
-    color: #6b21a8;
+    color: #800080;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

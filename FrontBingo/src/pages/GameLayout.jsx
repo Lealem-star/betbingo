@@ -792,8 +792,10 @@ export default function GameLayout({
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '0.5rem',
-                            marginLeft: '0.25rem'
+                            gap: '0.75rem',
+                            marginLeft: '0.25rem',
+                            height: '100%',
+                            justifyContent: 'space-between'
                         }}
                     >
                         {/* Control Bar - Status Only (Joy Bingo style STARTED box) */}
