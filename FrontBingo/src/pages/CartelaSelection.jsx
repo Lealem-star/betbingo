@@ -99,20 +99,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
 
     // Debug authentication
     useEffect(() => {
-        console.log('CartelaSelection - Authentication Debug:', {
-            sessionId: sessionId ? 'Present' : 'Missing',
-            sessionIdLength: sessionId?.length || 0,
-            stake: stake,
-            connected: connected,
-            wsReadyState: wsReadyState,
-            isConnecting: isConnecting,
-            readyStateNames: {
-                0: 'CONNECTING',
-                1: 'OPEN',
-                2: 'CLOSING',
-                3: 'CLOSED'
-            }
-        });
     }, [sessionId, stake, connected, wsReadyState, isConnecting]);
 
     // Handle page visibility changes to maintain connection
@@ -216,53 +202,40 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         }));
     }, [gameState.walletUpdate]);
 
+    const [retryCount, setRetryCount] = useState(0);
+
     // Fetch all cards from server
     useEffect(() => {
         const fetchCards = async () => {
             if (!sessionId) {
-                // Keep the loading animation until sessionId exists, then fetch.
                 console.log('Skipping cartellas fetch - missing sessionId (will retry when available)');
                 return;
             }
-
             try {
-                console.log('Fetching cartellas from /api/cartellas...');
-                console.log('API Base URL:', import.meta.env.VITE_API_URL || 'http://84.247.178.86');
-                console.log('Session ID:', sessionId ? 'present' : 'missing');
                 setLoading(true);
-
+                setError(null);
                 const response = await apiFetch('/api/cartellas', { sessionId });
-                console.log('Cartellas API response:', response);
                 if (response.success && Array.isArray(response.cards)) {
                     if (response.cards.length === 0) {
                         console.error('Cartellas API returned empty cards array');
                         setError('No cards available right now. Please refresh.');
                         setCards([]);
                     } else {
-                        console.log('Cartellas loaded successfully:', response.cards.length, 'cards');
-                    setCards(response.cards);
+                        setCards(response.cards);
                         setError(null);
                     }
                 } else {
-                    console.error('Cartellas API returned error:', response);
                     setError('Failed to load cards');
                 }
             } catch (err) {
                 console.error('Error fetching cards:', err);
-                console.error('Error details:', {
-                    message: err.message,
-                    status: err.status,
-                    url: '/api/cartellas',
-                    sessionId: sessionId ? 'present' : 'missing'
-                });
                 setError('Failed to load cards from server');
             } finally {
                 setLoading(false);
             }
         };
-
         fetchCards();
-    }, [sessionId]);
+    }, [sessionId, retryCount]);
 
     // Handle game state changes and navigation
     useEffect(() => {
@@ -270,8 +243,10 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
         const hasCards = Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0;
         const isGameRunning = gameState.phase === 'running' && gameState.gameId;
         const isGameStarting = gameState.phase === 'starting' && gameState.gameId;
-        // When there's an ongoing game, go to game-layout (watch mode or play). No need to show "please wait" on this page.
-        const shouldGoToGameLayout = isGameRunning || isGameStarting;
+        const hasPlayers = typeof gameState.playersCount === 'number' && gameState.playersCount >= 2;
+        // Only go to game-layout when a real game is running or starting with at least one player.
+        // If timer hits 0 but not enough players selected, game is cancelled → stay on cartela selection.
+        const shouldGoToGameLayout = (isGameRunning || isGameStarting) && hasPlayers;
         
         console.log('🎮 CartelaSelection - Game state changed:', {
             phase: gameState.phase,
@@ -281,6 +256,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             yourCardsCount: gameState.yourCards?.length || 0,
             hasCards,
             playersCount: gameState.playersCount,
+            hasPlayers,
             isGameRunning,
             isGameStarting
         });
@@ -589,23 +565,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 </header>
                 <main className="p-4 flex items-center justify-center min-h-96">
                     <div className="text-center">
-                        {/* Loading Animation */}
-                        <div className="relative mb-4">
-                            <div className="w-16 h-16 mx-auto">
-                                {/* Spinning circle */}
-                                <div className="w-16 h-16 border-4 border-purple-200/30 border-t-purple-500 rounded-full animate-spin"></div>
-                                {/* Inner pulsing dot */}
-                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
-                            </div>
-                        </div>
-
-
-                        {/* Animated dots */}
-                        <div className="flex justify-center mt-3 space-x-1">
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
+                        {/* Circular loading spinner */}
+                        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
+                        <p className="text-purple-600 font-medium mt-3">Loading...</p>
                     </div>
                 </main>
                 {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
@@ -652,9 +614,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                     </div>
                 </header>
 
-                {/* Show error message but still allow interaction */}
-                <div className="p-4">
-                    <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                {/* Show error message with Retry */}
+                <main className="p-4 flex flex-col items-center justify-center min-h-64">
+                    <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg max-w-md">
                         <div className="flex items-center gap-2 text-yellow-400">
                             <span className="text-lg">⚠️</span>
                             <div>
@@ -663,17 +625,21 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <main className="p-4">
-
+                    <button
+                        type="button"
+                        onClick={() => setRetryCount((c) => c + 1)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Retry
+                    </button>
                 </main>
                 {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
             </div>
         );
     }
-
-    console.log('Rendering main CartelaSelection interface with', cards.length, 'cards');
 
     return (
         <div className="app-container relative">
@@ -747,7 +713,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 
                 {/* Number Selection Grid - Inside Scrollable Box */}
                 <div className="my-4 mx-4">
-                    <div className="bg-purple-200 rounded-lg p-4 max-h-[320px] min-h-[260px] overflow-y-auto" style={{ background: '#e9d5ff' }}>
+                    <div className="cartela-grid-scrollable bg-purple-200 rounded-lg p-4 max-h-[320px] min-h-[260px] overflow-y-auto" style={{ background: '#e9d5ff' }}>
                         <div className="cartela-numbers-grid">
                             {Array.from({ length: cards.length }, (_, i) => i + 1).map((cartelaNumber) => {
                                 // Ensure type consistency for comparison (convert to number)

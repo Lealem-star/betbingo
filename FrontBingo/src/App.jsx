@@ -97,10 +97,11 @@ function AppContent() {
       connected
     });
 
-    // If we have an active game:
+    // If we have an active game (only when there are players; otherwise game may be cancelled):
     // - Players who have cartellas go to game layout.
     // - Users without cards can still go to game layout in watch mode.
-    if (gameState.phase === 'running' && gameState.gameId) {
+    const hasPlayers = typeof gameState.playersCount === 'number' && gameState.playersCount >= 2;
+    if (gameState.phase === 'running' && gameState.gameId && hasPlayers) {
       const hasCards =
         (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
         selectedCartelas.length > 0;
@@ -114,8 +115,8 @@ function AppContent() {
       return 'game-layout';
     }
 
-    // If registration just closed and game is about to start, show game layout (watch mode for users without cards)
-    if (gameState.phase === 'starting' && gameState.gameId) {
+    // If registration just closed and game is about to start with players, show game layout
+    if (gameState.phase === 'starting' && gameState.gameId && hasPlayers) {
       console.log('→ Routing to game-layout (starting game)');
       return 'game-layout';
     }
@@ -129,6 +130,12 @@ function AppContent() {
     // If we have a stake and game is in registration, go to cartela selection
     if (selectedStake && gameState.phase === 'registration' && gameState.gameId) {
       console.log('→ Routing to cartela-selection (registration open)');
+      return 'cartela-selection';
+    }
+
+    // If stake selected but game didn't start (e.g. not enough players) — stay on cartela selection
+    if (selectedStake && (gameState.phase === 'starting' || gameState.phase === 'running') && gameState.gameId && !hasPlayers) {
+      console.log('→ Routing to cartela-selection (game cancelled / not enough players)');
       return 'cartela-selection';
     }
 
