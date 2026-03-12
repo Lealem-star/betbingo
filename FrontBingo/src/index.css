@@ -2667,7 +2667,7 @@ body {
 
 /* Normal (unselected) - light purple background with black text */
 .cartela-number-btn-light.cartela-normal-light {
-    background: #e9d5ff;
+    background: #cec2eb;
     color: #1e1b4b;
     border-color: rgba(0, 0, 0, 0.1);
 }
@@ -4533,7 +4533,7 @@ body {
     gap: 8px;
     margin: 0 auto 8px;
     padding: 6px 10px;
-    background: #cfade0;
+    background: #cec2eb;
     border-radius: 12px;
     justify-content: center;
     align-items: center;
