@@ -4350,7 +4350,7 @@ body {
 .game-controls-bar {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
     margin-bottom: 8px;
     /* Single outer pill background for STARTED text */
@@ -4369,7 +4369,7 @@ body {
 }
 
 .game-status-text-small {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 800;
     color: #800080;
     white-space: nowrap;
