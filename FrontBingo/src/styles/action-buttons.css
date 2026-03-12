@@ -120,6 +120,34 @@
     font-weight: 800;
 }
 
+/* GameLayout BINGO button (Joy Bingo style) */
+.game-bingo-button {
+    background: #f97316;
+    border-radius: 12px;
+    border: none;
+    min-height: 56px;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.35);
+}
+
+.game-bingo-button:hover:not(:disabled) {
+    background: #fb923c;
+}
+
+.game-bingo-button:active:not(:disabled) {
+    background: #ea580c;
+}
+
+.game-bingo-button:disabled {
+    background: rgba(249, 115, 22, 0.45);
+    box-shadow: none;
+}
+
+.game-bingo-button::before {
+    display: none;
+}
+
 .bingo-button:hover {
     background: linear-gradient(135deg, #fcd34d, #fbbf24, #f87171);
     border-color: rgba(251, 191, 36, 0.5);

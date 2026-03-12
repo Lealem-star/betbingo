@@ -132,9 +132,9 @@ export default function CartellaCard({
 
     return (
         <div className={`cartela-card ${isPreview ? 'cartela-preview' : 'cartela-full'}`}>
-            <div className="cartela-header">
+            {/* <div className="cartela-header">
                 <span className="cartela-title">Cartela No: {id}</span>
-            </div>
+            </div> */}
 
             <div className="cartela-grid">
                 {/* BINGO Header */}

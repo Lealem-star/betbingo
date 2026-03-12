@@ -306,7 +306,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             showWarning('Not Enough Player');
         }
         if (lastEvent.type === 'selection_rejected' && lastEvent.payload?.reason === 'LIMIT_REACHED') {
-            showError('You can select maximum 2 cartelas.');
+            showError('You can select only 1 cartela.');
         }
     }, [lastEvent, showWarning, showError]);
 
@@ -429,9 +429,9 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             return;
         }
 
-        // Max 2 cartelas per user
-        if (selectedNumbers.length >= 2) {
-            showError('You can select maximum 2 cartelas.');
+        // Max 1 cartela per user
+        if (selectedNumbers.length >= 1) {
+            showError('You can select only 1 cartela.');
             return;
         }
 
@@ -755,51 +755,14 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                 </div>
 
 
-                {/* Selected Cartella Preview (up to 2 cartelas, side-by-side) */}
+                {/* Selected Cartella Preview (single cartela) */}
                 {/* Only show preview during registration phase or if user has cards in running game */}
                 {selectedCards.length > 0 && (gameState.phase === 'registration' || (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0)) && (
                     <div className="mt-6">
                         {/* <h3 className="text-lg font-semibold text-gray-800 mb-3 text-center">Your Selected Cartella</h3> */}
-                        <div className={`bg-purple-200 rounded-lg p-4 ${selectedCards.length === 2 ? 'two-cartelas' : ''}`} style={{ background: '#e9d5ff' }}>
-                            {selectedCards.length === 2 ? (
-                                <div
-                                    className="user-cartelas-two-grid"
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '0.5rem',
-                                        alignItems: 'stretch',
-                                        width: '100%',
-                                        boxSizing: 'border-box'
-                                    }}
-                                >
-                                    {selectedCards.map(({ number, card }) => (
-                                        <div
-                                            key={number}
-                                            className="user-cartela-item-two"
-                                        >
-                                            <CartellaCard
-                                                id={number}
-                                                card={card}
-                                                called={gameState.calledNumbers || []}
-                                                selectedNumber={null}
-                                                isPreview={true}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div 
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        gap: '1rem',
-                                        flexWrap: 'wrap',
-                                        width: '100%',
-                                        boxSizing: 'border-box'
-                                    }}
-                                >
-                                {selectedCards.map(({ number, card }) => (
+                        <div className="bg-purple-200 rounded-lg p-4" style={{ background: '#e9d5ff' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', boxSizing: 'border-box' }}>
+                                {selectedCards.slice(0, 1).map(({ number, card }) => (
                                     <CartellaCard
                                         key={number}
                                         id={number}
@@ -810,7 +773,6 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
                                     />
                                 ))}
                             </div>
-                            )}
                             {/* <div className="text-center text-sm text-gray-700 mt-3">
                                 🎫 {selectedNumbers.map(n => `Cartella #${n}`).join('  |  ')}
                             </div> */}

@@ -204,7 +204,7 @@ function makeRoom(stake) {
         cartellas: new Map(), // userId -> cartella
         winners: [],
         takenCards: new Set(), // numbers chosen during registration (1-100)
-        userCardSelections: new Map(), // userId -> [cardNumber, ...] (max 2)
+        userCardSelections: new Map(), // userId -> [cardNumber] (max 1)
         // Prevent duplicate announce/payout and manage call timer lifecycle
         announceProcessed: false,
         callTimerId: null,
@@ -1219,11 +1219,11 @@ wss.on('connection', async (ws, request) => {
                         return;
                     }
 
-                    // Max 2 cartelas per user
-                    if (selections.length >= 2) {
+                    // Max 1 cartela per user
+                    if (selections.length >= 1) {
                         ws.send(JSON.stringify({
                             type: 'selection_rejected',
-                            payload: { reason: 'LIMIT_REACHED', limit: 2, cardNumber, selections }
+                            payload: { reason: 'LIMIT_REACHED', limit: 1, cardNumber, selections }
                         }));
                         return;
                     }

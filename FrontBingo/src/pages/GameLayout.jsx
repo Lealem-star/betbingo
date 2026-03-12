@@ -100,18 +100,7 @@ export default function GameLayout({
         }
     }, [isAutoMarkOn]);
     
-    // Automatically enable auto-mark when user has 2 cartelas (but user can still toggle it off)
-    useEffect(() => {
-        if (yourCards.length === 2 && !isAutoMarkOn && !userManuallyDisabledRef.current) {
-            // Only auto-enable if it's currently off AND user hasn't manually disabled it
-            setIsAutoMarkOn(true);
-            userManuallyDisabledRef.current = false; // Reset flag when auto-enabling
-        }
-        // When user has less than 2 cartelas, reset the manual disable flag
-        if (yourCards.length < 2) {
-            userManuallyDisabledRef.current = false;
-        }
-    }, [yourCards.length, isAutoMarkOn]);
+    // Single-cartela mode: no auto-mark forcing based on card count
     
     // Track if we've already claimed bingo for this game to prevent duplicate claims
     const claimedBingoRef = useRef(false);
@@ -542,16 +531,11 @@ export default function GameLayout({
 
     // Determine game phase display
     const gamePhaseDisplay = (gameState.phase === 'running' || gameState.phase === 'playing') ? 'STARTED' : gameState.phase === 'registration' ? 'REGISTRATION' : 'WAITING';
-    const hasTwoCartelas = yourCards.length === 2;
     const hasSingleCartela = yourCards.length === 1;
     const statusText = startCountdown > 0 ? startCountdown : gamePhaseDisplay;
     // For a single cartela, keep a fixed main content height so the left BINGO grid can stretch
     // and distribute numbers vertically (fills the empty space).
-    const mainContentHeight = hasTwoCartelas
-        ? 'auto'
-        : hasSingleCartela
-            ? '500px'
-            : 'calc(100vh - 180px)';
+    const mainContentHeight = hasSingleCartela ? '500px' : 'calc(100vh - 180px)';
     // Make left BINGO columns narrower and right side larger when showing single cartela,
     // otherwise keep 1:1 split.
     const gridTemplateColumns = hasSingleCartela ? '0.8fr 1.2fr' : '1fr 1fr';
@@ -598,7 +582,7 @@ export default function GameLayout({
                 {/* Top Information Bar - Light Purple Style */}
                 <div
                     className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap mobile-info-bar"
-                    style={{ marginBottom: hasTwoCartelas ? '0.4rem' : '1rem' }}
+                    style={{ marginBottom: '1rem' }}
                 >
                     <div className="info-box flex-1">
                         <div className="info-label">Derash</div>
@@ -630,10 +614,10 @@ export default function GameLayout({
                     style={{
                         display: 'grid',
                         gridTemplateColumns,
-                        gap: hasTwoCartelas ? '0.2rem' : '0.3rem',
-                        padding: hasTwoCartelas ? '0.15rem' : '0.25rem',
-                        marginTop: hasTwoCartelas ? '0.4rem' : '0.75rem',
-                        marginBottom: hasTwoCartelas ? '0.4rem' : '0.75rem',
+                        gap: '0.3rem',
+                        padding: '0.25rem',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.75rem',
                         marginRight: '0.15rem',
                         height: mainContentHeight,
                         maxHeight: '500px'
@@ -643,18 +627,18 @@ export default function GameLayout({
                     <div
                         className="bingo-grid-container"
                         style={{
-                            height: hasTwoCartelas ? 'auto' : '100%',
+                            height: '100%',
                             overflow: 'hidden'
                         }}
                     >
                         <div
                             className="grid grid-cols-5 gap-1"
                             style={{
-                                height: hasTwoCartelas ? 'auto' : '100%'
+                                height: '100%'
                             }}
                         >
                             {/* B Column - Yellow */}
-                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-b">
                                     <span>B</span>
                                 </div>
@@ -672,10 +656,9 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: hasTwoCartelas ? '0 0 auto' : '1',
+                                                flex: '1',
                                                 minHeight: '20px',
-                                                marginBottom: hasTwoCartelas ? 3 : 4,
-                                                ...(hasTwoCartelas ? { maxHeight: '24px' } : {})
+                                                marginBottom: 4
                                             }}
                                         >
                                             {n}
@@ -685,7 +668,7 @@ export default function GameLayout({
                             </div>
 
                             {/* I Column - Green */}
-                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-i">
                                     <span>I</span>
                                 </div>
@@ -702,10 +685,9 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: hasTwoCartelas ? '0 0 auto' : '1',
+                                                flex: '1',
                                                 minHeight: '20px',
-                                                marginBottom: hasTwoCartelas ? 3 : 4,
-                                                ...(hasTwoCartelas ? { maxHeight: '24px' } : {})
+                                                marginBottom: 4
                                             }}
                                         >
                                             {n}
@@ -715,7 +697,7 @@ export default function GameLayout({
                             </div>
 
                             {/* N Column - Purple */}
-                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-n">
                                     <span>N</span>
                                 </div>
@@ -732,10 +714,9 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: hasTwoCartelas ? '0 0 auto' : '1',
+                                                flex: '1',
                                                 minHeight: '20px',
-                                                marginBottom: hasTwoCartelas ? 3 : 4,
-                                                ...(hasTwoCartelas ? { maxHeight: '24px' } : {})
+                                                marginBottom: 4
                                             }}
                                         >
                                             {n}
@@ -745,7 +726,7 @@ export default function GameLayout({
                             </div>
 
                             {/* G Column - Red */}
-                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-g">
                                     <span>G</span>
                                 </div>
@@ -762,10 +743,9 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: hasTwoCartelas ? '0 0 auto' : '1',
+                                                flex: '1',
                                                 minHeight: '20px',
-                                                marginBottom: hasTwoCartelas ? 3 : 4,
-                                                ...(hasTwoCartelas ? { maxHeight: '24px' } : {})
+                                                marginBottom: 4
                                             }}
                                         >
                                             {n}
@@ -775,7 +755,7 @@ export default function GameLayout({
                             </div>
 
                             {/* O Column - Pink/Magenta */}
-                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: hasTwoCartelas ? 'auto' : '100%' }}>
+                            <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                 <div className="bingo-letter-square bingo-letter-o">
                                     <span>O</span>
                                 </div>
@@ -792,10 +772,9 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: hasTwoCartelas ? '0 0 auto' : '1',
+                                                flex: '1',
                                                 minHeight: '20px',
-                                                marginBottom: hasTwoCartelas ? 3 : 4,
-                                                ...(hasTwoCartelas ? { maxHeight: '24px' } : {})
+                                                marginBottom: 4
                                             }}
                                         >
                                             {n}
@@ -813,11 +792,11 @@ export default function GameLayout({
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: hasTwoCartelas ? '0.3rem' : '0.5rem',
+                            gap: '0.5rem',
                             marginLeft: '0.25rem'
                         }}
                     >
-                        {/* Control Bar - Status, Auto-Mark, Sound Toggle in One Line */}
+                        {/* Control Bar - Status Only (Joy Bingo style STARTED box) */}
                         <div className="game-controls-bar">
                             {/* Reduced Size Status Box / Big 3-2-1 Countdown */}
                             <div className="game-status-box-small">
@@ -834,39 +813,6 @@ export default function GameLayout({
                                     </span>
                                 )}
                             </div>
-                            
-                            {/* Auto-Mark Toggle (Toggle Switch Style) */}
-                            <button
-                                onClick={() => {
-                                    const newValue = !isAutoMarkOn;
-                                    setIsAutoMarkOn(newValue);
-                                    // Track if user manually turns it off when they have 2 cartelas
-                                    if (yourCards.length === 2 && !newValue) {
-                                        userManuallyDisabledRef.current = true;
-                                    } else if (newValue) {
-                                        // Reset flag when user turns it back on
-                                        userManuallyDisabledRef.current = false;
-                                    }
-                                }}
-                                className={`auto-mark-toggle-switch ${isAutoMarkOn ? 'auto-mark-on' : 'auto-mark-off'}`}
-                                title={isAutoMarkOn ? 'Auto-mark ON' : 'Auto-mark OFF'}
-                            >
-                                <div className="toggle-switch-thumb"></div>
-                            </button>
-                            
-                            {/* Sound Toggle (Loudspeaker Icon) */}
-                            <button
-                                onClick={() => setIsSoundOn(!isSoundOn)}
-                                className={`sound-toggle ${isSoundOn ? 'sound-on' : 'sound-off'}`}
-                                title={isSoundOn ? 'Sound ON' : 'Sound OFF'}
-                            >
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" style={{ position: 'relative' }}>
-                                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                                    {!isSoundOn && (
-                                        <line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                                    )}
-                                </svg>
-                            </button>
                         </div>
 
                         {/* Current Call Bar */}
@@ -952,76 +898,13 @@ export default function GameLayout({
                             style={{ width: '100%' }}
                         >
                             <div className="button-content">
-                                <span className="button-icon bingo-icon">🎉</span>
-                                <span className="button-text">BINGO</span>
+                                <span className="button-text">BINGO!</span>
                             </div>
-                            <div className="bingo-overlay"></div>
                         </button>
                     </div>
                 )}
 
-                {/* User Cartelas - Below Both Columns (only for multiple cartelas) */}
-                {yourCards.length > 1 && (
-                    <div className={`user-cartelas-container-full ${hasTwoCartelas ? 'two-cartelas' : ''}`}>
-                        {hasTwoCartelas ? (
-                            // Special compact layout for exactly two cartelas (better fit on mobile)
-                            <div
-                                className="user-cartelas-two-grid"
-                                style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr',
-                                    gap: '0.5rem',
-                                    alignItems: 'stretch',
-                                    width: '100%',
-                                    boxSizing: 'border-box'
-                                }}
-                            >
-                                {yourCards.map(({ cardNumber, card }) => {
-                                    const markedNumbers = isAutoMarkOn 
-                                        ? calledNumbers 
-                                        : (manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : []);
-
-                                    return (
-                                        <div
-                                            key={cardNumber}
-                                            className="user-cartela-item-two"
-                                        >
-                                            <CartellaCard
-                                                id={cardNumber}
-                                                card={card}
-                                                called={isAutoMarkOn ? calledNumbers : markedNumbers}
-                                                isPreview={true}
-                                                isAutoMarkOn={isAutoMarkOn}
-                                                onNumberToggle={!isAutoMarkOn ? (number) => handleNumberToggle(cardNumber, number) : undefined}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="user-cartelas-list">
-                                {yourCards.map(({ cardNumber, card }) => {
-                                    // Determine which numbers to show as marked
-                                    const markedNumbers = isAutoMarkOn 
-                                        ? calledNumbers 
-                                        : (manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : []);
-                                    
-                                    return (
-                                        <CartellaCard
-                                            key={cardNumber}
-                                            id={cardNumber}
-                                            card={card}
-                                            called={isAutoMarkOn ? calledNumbers : markedNumbers}
-                                            isPreview={false}
-                                            isAutoMarkOn={isAutoMarkOn}
-                                            onNumberToggle={!isAutoMarkOn ? (number) => handleNumberToggle(cardNumber, number) : undefined}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* Single-cartela mode: no multi-cartela layout below columns */}
 
                 {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
 
