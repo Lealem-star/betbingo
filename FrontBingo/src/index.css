@@ -2787,7 +2787,7 @@ body {
 .cartela-numbers {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     flex: 1 1 auto;
     min-height: 0;
 }
@@ -2795,7 +2795,7 @@ body {
 .cartela-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 2px;
+    gap: 1px;
     flex: 1 1 0;
 }
 
