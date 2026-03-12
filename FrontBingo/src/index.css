@@ -4350,27 +4350,20 @@ body {
 .game-controls-bar {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     margin-bottom: 8px;
-    background: transparent;
+    background: #cec2eb;
     border-radius: 12px;
-    padding: 6px 8px;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 10px 16px;
+    min-height: 60px;
+    border: none;
     box-shadow: 0 2px 6px rgba(148, 27, 176, 0.15);
 }
 
 /* Reduced Size Status Box */
 .game-status-box-small {
-    background: #cec2eb;
-    border-radius: 8px;
-    padding: 10px 14px;
-    text-align: center;
-    min-height: 60px; /* keep same height as countdown state */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    min-width: 0;
+    /* no-op: inner box no longer used; pill styling is on .game-controls-bar */
 }
 
 .game-status-text-small {

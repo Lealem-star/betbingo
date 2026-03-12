@@ -733,23 +733,20 @@ export default function GameLayout({
                             justifyContent: 'space-between'
                         }}
                     >
-                        {/* Control Bar - Status Only (Joy Bingo style STARTED box) */}
+                        {/* Control Bar - Joy Bingo style STARTED pill (single box) */}
                         <div className="game-controls-bar">
-                            {/* Reduced Size Status Box / Big 3-2-1 Countdown */}
-                            <div className="game-status-box-small">
-                                {startCountdown > 0 ? (
-                                    <div className="countdown-circle">
-                                        <div className="countdown-glow"></div>
-                                        <span className="countdown-number">
-                                            {startCountdown}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span className="game-status-text-small">
-                                        {gamePhaseDisplay}
+                            {startCountdown > 0 ? (
+                                <div className="countdown-circle">
+                                    <div className="countdown-glow"></div>
+                                    <span className="countdown-number">
+                                        {startCountdown}
                                     </span>
-                                )}
-                            </div>
+                                </div>
+                            ) : (
+                                <span className="game-status-text-small">
+                                    {gamePhaseDisplay}
+                                </span>
+                            )}
                         </div>
 
                         {/* Current Call Bar */}
