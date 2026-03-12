@@ -207,72 +207,7 @@ export default function GameLayout({
         }
     }, [claimBingo, connected, currentGameId, gameState.phase, isManualClaiming, showError, showSuccess]);
 
-    // Automatic winning pattern detection and auto-claim
-    // When auto-mark is OFF + single cartela: NO auto-claim — only manual BINGO button can trigger a claim
-    useEffect(() => {
-        // Only check during running phase and if we have cards
-        if (gameState.phase !== 'running' || !currentGameId || yourCards.length === 0) {
-            return;
-        }
-
-        // When auto-mark is OFF and user has single cartela: never auto-claim (manual only)
-        if (!isAutoMarkOn && yourCards.length === 1) {
-            return;
-        }
-
-        // Don't claim if we've already claimed for this game
-        if (claimedBingoRef.current) {
-            return;
-        }
-
-        // Determine which numbers to use for winning detection
-        // If auto-mark is ON: use calledNumbers
-        // If auto-mark is OFF (and 2 cartelas): use manuallyMarkedNumbers (or calledNumbers if no manual marks)
-        const getNumbersForDetection = (cardNumber) => {
-            if (isAutoMarkOn) {
-                return calledNumbers;
-            } else {
-                const manualMarks = manuallyMarkedNumbers[cardNumber];
-                // If user has manually marked numbers, use those; otherwise use calledNumbers
-                if (manualMarks && manualMarks.size > 0) {
-                    return Array.from(manualMarks);
-                } else {
-                    return calledNumbers; // Fallback to calledNumbers if no manual marks
-                }
-            }
-        };
-
-        // Check each cartela for winning pattern
-        let hasWinningPattern = false;
-        for (const { card, cardNumber } of yourCards) {
-            const numbersToCheck = getNumbersForDetection(cardNumber);
-            if (checkBingoPattern(card, numbersToCheck)) {
-                hasWinningPattern = true;
-                break;
-            }
-        }
-
-        // Auto-claim bingo if winning pattern detected
-        if (hasWinningPattern && connected) {
-            console.log('🎉 Automatic BINGO detected! Auto-claiming...', {
-                isAutoMarkOn,
-                hasManualMarks: Object.keys(manuallyMarkedNumbers).length > 0
-            });
-            claimedBingoRef.current = true;
-            try {
-                const result = claimBingo();
-                if (!result) {
-                    // If send failed, reset so we can retry
-                    console.warn('Failed to send bingo claim, will retry on next check');
-                    claimedBingoRef.current = false;
-                }
-            } catch (error) {
-                console.error('Error auto-claiming bingo:', error);
-                // Reset on error so we can retry
-                claimedBingoRef.current = false;
-            }
-        }
-    }, [calledNumbers, yourCards, gameState.phase, currentGameId, connected, claimBingo, isAutoMarkOn, manuallyMarkedNumbers]);
+    // NO automatic winning or auto-claim: players must always tap the BINGO button.
 
     // Local 3-2-1 countdown before showing "STARTED" in status box
     useEffect(() => {
