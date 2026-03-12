@@ -119,7 +119,7 @@ export default function CartellaCard({
     if (!grid) return <div className="text-xs opacity-60">Loading...</div>;
 
     const letters = ['B', 'I', 'N', 'G', 'O'];
-    const letterColors = ['bg-yellow-500', 'bg-green-500', 'bg-purple-500', 'bg-red-500', 'bg-pink-500'];
+    const letterColors = ['cartela-letter-b', 'cartela-letter-i', 'cartela-letter-n', 'cartela-letter-g', 'cartela-letter-o'];
     
     // Detect winning pattern if needed
     const winningPattern = showWinningPattern ? detectWinningPattern(grid, called) : new Set();

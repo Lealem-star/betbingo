@@ -2784,6 +2784,27 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* Cartela header letter colors - match left BINGO grid */
+.cartela-letter-b {
+    background: #fbbf24; /* same as .bingo-letter-b */
+}
+
+.cartela-letter-i {
+    background: #10b981; /* same as .bingo-letter-i */
+}
+
+.cartela-letter-n {
+    background: #8b5cf6; /* same as .bingo-letter-n */
+}
+
+.cartela-letter-g {
+    background: #ef4444; /* same as .bingo-letter-g */
+}
+
+.cartela-letter-o {
+    background: #e60edb; /* same as .bingo-letter-o */
+}
+
 .cartela-numbers {
     display: flex;
     flex-direction: column;
