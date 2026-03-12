@@ -12,7 +12,7 @@ module.exports = {
                 NODE_ENV: 'production',
                 PORT: 3001,
                 TZ: 'Africa/Addis_Ababa',
-                BOT_TOKEN: '8603012890:AAH4P7QaCV_P2DV4B1BizGjENW-67JfhI78',
+                BOT_TOKEN: '7981707343:AAHqLiFk-zSBfyl3OMDBmcFCXx4O8igs0BI',
                 RUN_TELEGRAM_BOT: 'false',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingo.vercel.app',
@@ -21,7 +21,7 @@ module.exports = {
                 // Player-bot auth (used by /api/auth/bot/token)
                 PLAYER_BOT_SECRET: process.env.PLAYER_BOT_SECRET || 'CHANGE_ME_LONG_RANDOM_SECRET',
                 PLAYER_BOT_TOKEN_TTL: process.env.PLAYER_BOT_TOKEN_TTL || '24h',
-                MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:wVq78YDL0MIrUx8E@cluster0.znjhsec.mongodb.net/?appName=Cluster0',
+                MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:YmlZmwUyO6LsvFtA@bet.x4nvgzd.mongodb.net/?appName=bet',
                 // Comma‑separated list of agent/receiver phone numbers used to detect bank SMS
                 // Updated to current SIM number for SMS forwarding
                 AGENT_PHONE_NUMBERS: '+251722399868',
@@ -49,13 +49,13 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 TZ: 'Africa/Addis_Ababa',
-                BOT_TOKEN: '8603012890:AAH4P7QaCV_P2DV4B1BizGjENW-67JfhI78',
+                BOT_TOKEN: '7981707343:AAHqLiFk-zSBfyl3OMDBmcFCXx4O8igs0BI',
                 RUN_TELEGRAM_BOT: 'true',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingo.vercel.app',
                 API_BASE_URL: 'https://yesterday-presented-referrals-leg.trycloudflare.com',
                 API_URL: 'https://yesterday-presented-referrals-leg.trycloudflare.com',
-                MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:wVq78YDL0MIrUx8E@cluster0.znjhsec.mongodb.net/?appName=Cluster0'
+                MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:YmlZmwUyO6LsvFtA@bet.x4nvgzd.mongodb.net/?appName=bet'
             },
             error_file: './logs/bot-err.log',
             out_file: './logs/bot-out.log',
