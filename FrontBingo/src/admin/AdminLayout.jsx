@@ -121,13 +121,13 @@ export default function AdminLayout({ onNavigate }) {
     if (isAdmin === null) {
         return (
             <div className="min-h-screen" style={{ backgroundColor: '#e6e6fa' }}>
-                <div className="max-w-md mx-auto p-4 text-white text-center">
+                        <div className="max-w-md mx-auto p-4 text-white text-center">
                     <div className="mt-20">
-                        {/* Animated Mark Bingo Logo */}
+                        {/* Animated Bet Bingo Logo */}
                         <div className="relative mb-6">
                             <img
                                 src="/lb.png"
-                                alt="Mark Bingo Logo"
+                                alt="Bet Bingo Logo"
                                 className="w-16 h-16 mx-auto animate-pulse"
                             />
                             {/* Search animation overlay */}
@@ -183,8 +183,8 @@ export default function AdminLayout({ onNavigate }) {
             <header className="p-4">
                 <div className="app-header">
                     <div className="app-logo">
-                        <div className="logo-circle">
-                            <img src="/lb.png" alt="Mark Bingo Logo" className="logo-image" />
+                            <div className="logo-circle">
+                            <img src="/lb.png" alt="Bet Bingo Logo" className="logo-image" />
                         </div>
                         <span className="app-title">Admin</span>
                     </div>

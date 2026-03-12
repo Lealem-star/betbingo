@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Mark Bingo Bot Deployment Script
-echo "🚀 Deploying Mark Bingo Bot..."
+# Bet Bingo Bot Deployment Script
+echo "🚀 Deploying Bet Bingo Bot..."
 
 # Create logs directory
 mkdir -p logs

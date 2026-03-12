@@ -20,7 +20,7 @@ class NotificationService {
     static async notifyWithdrawalApproved(userId, amount) {
         try {
             const BOT_TOKEN = process.env.BOT_TOKEN;
-            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://markbingo.vercel.app';
+            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://betbingo.vercel.app';
 
             const user = await User.findById(userId).lean();
             if (!user || !user.telegramId || !BOT_TOKEN) {
@@ -41,7 +41,7 @@ class NotificationService {
                 `• Play: ETB ${play.toFixed(2)}`,
                 '',
                 '❓ Questions? Contact support:',
-                '@markbingosupport'
+                '@betbingosupport'
             ].join('\n');
 
             const reply_markup = {
@@ -70,7 +70,7 @@ class NotificationService {
 
     static async notifyWithdrawalDenied(userId, amount, reason) {
         try {
-            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://markbingo.vercel.app';
+            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://betbingo.vercel.app';
             const user = await User.findById(userId).lean();
             if (!user) return false;
             const text = [
@@ -83,7 +83,7 @@ class NotificationService {
             ].filter(Boolean).join('\n');
             const reply_markup = {
                 inline_keyboard: [
-                    [{ text: '💬 Contact Support', url: 'https://t.me/markbingosupport' }],
+                    [{ text: '💬 Contact Support', url: 'https://t.me/betbingosupport' }],
                     [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };
@@ -95,7 +95,7 @@ class NotificationService {
 
     static async notifyDepositDenied(userId, amount, verificationId, reason) {
         try {
-            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://markbingo.vercel.app';
+            const WEBAPP_URL = process.env.WEBAPP_URL || 'https://betbingo.vercel.app';
             const user = await User.findById(userId).lean();
             if (!user) return false;
             const text = [
@@ -109,7 +109,7 @@ class NotificationService {
             ].filter(Boolean).join('\n');
             const reply_markup = {
                 inline_keyboard: [
-                    [{ text: '💬 Contact Support', url: 'https://t.me/markbingosupport' }],
+                    [{ text: '💬 Contact Support', url: 'https://t.me/betbingosupport' }],
                     [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }]
                 ]
             };

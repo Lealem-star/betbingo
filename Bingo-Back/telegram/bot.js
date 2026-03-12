@@ -317,7 +317,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                             if (inviter.telegramId) {
                                 await ctx.telegram.sendMessage(
                                     inviter.telegramId,
-                                    `🎉 Great news! Someone joined Mark Bingo using your invite link!`
+                                    `🎉 Great news! Someone joined Bet Bingo using your invite link!`
                                 ).catch(() => { }); // Ignore errors if user blocked bot
                             }
                         }
@@ -340,7 +340,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 const adminText = '🛠️ Admin Panel';
 
                 // Construct admin URL using query parameters instead of hash
-                let adminUrl = 'https://markbingo.vercel.app?admin=true';
+                let adminUrl = 'https://betbingo.vercel.app?admin=true';
                 if (WEBAPP_URL && WEBAPP_URL !== 'undefined') {
                     const baseUrl = WEBAPP_URL.replace(/\/$/, '');
                     adminUrl = `${baseUrl}?admin=true`;
@@ -358,12 +358,12 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 registered = !!(user && (user.isRegistered || user.phone));
                 if (!registered) {
                     const regKeyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
-                    const regText = '👋 Welcome to Mark Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
+                    const regText = '👋 Welcome to Bet Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
                     const photoPath = path.join(__dirname, '..', 'static', 'lb.png');
                     const photo = fs.existsSync(photoPath) ? { source: fs.createReadStream(photoPath) } : (WEBAPP_URL || '').replace(/\/$/, '') + '/lb.png';
                     return ctx.replyWithPhoto(photo, { caption: regText, reply_markup: regKeyboard.reply_markup });
                 }
-                const welcomeText = `👋 Welcome to Mark Bingo! Choose an Option below.`;
+                const welcomeText = `👋 Welcome to Bet Bingo! Choose an Option below.`;
                 const playBtn = isHttpsWebApp
                     ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
                     : [{ text: '🎮 Play-10', callback_data: 'play' }];
@@ -372,7 +372,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                         inline_keyboard: [
                             playBtn,
                             [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
-                            [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                            [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
                             [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
                         ]
                     }
@@ -567,7 +567,7 @@ Thank you for your dedication! 🙏`;
             const adminText = '🛠️ Admin Panel';
 
             // Construct admin URL using query parameters instead of hash
-            let adminUrl = 'https://markbingo.vercel.app?admin=true';
+            let adminUrl = 'https://betbingo.vercel.app?admin=true';
             if (WEBAPP_URL && WEBAPP_URL !== 'undefined') {
                 const baseUrl = WEBAPP_URL.replace(/\/$/, '');
                 adminUrl = `${baseUrl}?admin=true`;
@@ -811,7 +811,7 @@ Thank you for your dedication! 🙏`;
                 if (isAdmin) {
                     // Admin gets admin panel
                     const adminText = '🛠️ Admin Panel';
-                    let adminUrl = 'https://markbingo.vercel.app?admin=true';
+                    let adminUrl = 'https://betbingo.vercel.app?admin=true';
                     if (WEBAPP_URL && WEBAPP_URL !== 'undefined') {
                         const baseUrl = WEBAPP_URL.replace(/\/$/, '');
                         adminUrl = `${baseUrl}?admin=true`;
@@ -830,7 +830,7 @@ Thank you for your dedication! 🙏`;
 
                 if (!registered) {
                     const regKeyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
-                    const regText = '👋 Welcome to Mark Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
+                    const regText = '👋 Welcome to Bet Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
                     return ctx.reply(regText, regKeyboard);
                 }
 
@@ -853,7 +853,7 @@ Thank you for your dedication! 🙏`;
                             ]
                         }
                     };
-                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\nTo play Mark Bingo, tap Play-10 below.', keyboard);
+                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\nTo play Bet Bingo, tap Play-10 below.', keyboard);
                 }
             } catch {
                 return ctx.reply('❌ Database unavailable. Please try again later.');
@@ -941,9 +941,9 @@ Thank you for your dedication! 🙏`;
 
         bot.command('support', (ctx) => {
             ctx.reply('Please click the button below to get in touch with our support team.', {
-                reply_markup: {
+            reply_markup: {
                     inline_keyboard: [
-                        [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }]
+                        [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }]
                     ]
                 }
             });
@@ -984,7 +984,7 @@ Thank you for your dedication! 🙏`;
             try {
                 if (!(await ensureNotBlocked(ctx))) return;
                 const inviteLink = `https://t.me/${ctx.botInfo.username}?start=invite_${ctx.from.id}`;
-                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Mark Bingo!')}`;
+                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Bet Bingo!')}`;
                 return ctx.reply('Here is your referral link', {
                     reply_markup: {
                         inline_keyboard: [
@@ -999,19 +999,19 @@ Thank you for your dedication! 🙏`;
 
         bot.command('agent', async (ctx) => {
             return ctx.reply('Register As Agent is not available yet. Please contact support if you need agent access.', {
-                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }]] }
+                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }]] }
             });
         });
 
         bot.command('invitesubagent', async (ctx) => {
             return ctx.reply('Invite Sub-Agent is not available yet. Please contact support for assistance.', {
-                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }]] }
+                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }]] }
             });
         });
 
         bot.command('sale', async (ctx) => {
             return ctx.reply('Sale is not available yet. Please contact support for assistance.', {
-                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }]] }
+                reply_markup: { inline_keyboard: [[{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }]] }
             });
         });
 
@@ -1126,7 +1126,7 @@ Thank you for your dedication! 🙏`;
             const adminText = '🛠️ Admin Panel';
 
             // Construct admin URL using query parameters instead of hash
-            let adminUrl = 'https://markbingo.vercel.app?admin=true';
+            let adminUrl = 'https://betbingo.vercel.app?admin=true';
             if (WEBAPP_URL && WEBAPP_URL !== 'undefined') {
                 const baseUrl = WEBAPP_URL.replace(/\/$/, '');
                 adminUrl = `${baseUrl}?admin=true`;
@@ -1416,7 +1416,7 @@ Thank you for your dedication! 🙏`;
             ctx.reply('Please click the button below to get in touch with our support team.', {
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }]
+                        [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }]
                     ]
                 }
             });
@@ -1895,7 +1895,7 @@ Thank you for your dedication! 🙏`;
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('🔗 Invite friends...');
             const inviteLink = `https://t.me/${ctx.botInfo.username}?start=invite_${ctx.from.id}`;
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Mark Bingo!')}`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Bet Bingo!')}`;
             return ctx.reply('Here is your referral link', {
                 reply_markup: {
                     inline_keyboard: [
@@ -1908,7 +1908,7 @@ Thank you for your dedication! 🙏`;
         bot.action('back_to_menu', async (ctx) => {
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('🔙 Back to menu');
-            const welcomeText = `👋 Welcome to Mark Bingo! Choose an Option below.`;
+            const welcomeText = `👋 Welcome to Bet Bingo! Choose an Option below.`;
             const playBtn = isHttpsWebApp
                 ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
                 : [{ text: '🎮 Play-10', callback_data: 'play' }];
@@ -1917,7 +1917,7 @@ Thank you for your dedication! 🙏`;
                     inline_keyboard: [
                         playBtn,
                         [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
-                        [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                        [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
                         [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
                     ]
                 }
@@ -1940,7 +1940,7 @@ Thank you for your dedication! 🙏`;
 3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
 \`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
+የሚያጋጥማቹ የክፍያ ችግር ካለ @betbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
             
             depositStates.set(userId, 'awaiting_receipt');
             ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
@@ -1984,7 +1984,7 @@ Thank you for your dedication! 🙏`;
 3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
 \`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
+የሚያጋጥማቹ የክፍያ ችግር ካለ @betbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
             
             ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
         });
@@ -2042,7 +2042,7 @@ Thank you for your dedication! 🙏`;
         bot.action('deposit_cbe', (ctx) => {
             const userId = String(ctx.from.id);
             ctx.answerCbQuery('💳 CBE Birr deposit...');
-            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Eyob Mengist\n💳 CBE Birr: \`096 509 0929\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 096 509 0929\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
+            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Eyob Mengist\n💳 CBE Birr: \`096 509 0929\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 096 509 0929\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @betbingosupport  በዚ ሳፖርት ማዉራት ይችላሉ`;
             if (typeof depositStates !== 'undefined' && depositStates instanceof Map) {
                 depositStates.set(userId, 'awaiting_receipt');
             }
@@ -2066,7 +2066,7 @@ Thank you for your dedication! 🙏`;
                                 inline_keyboard: [
                                     playBtn,
                                     [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
-                                    [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                                    [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
                                     [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
                                 ]
                             }
@@ -2092,7 +2092,7 @@ Thank you for your dedication! 🙏`;
                     // Private welcome message to the registering user (no broadcast, no phone number)
                     if (isNewRegistration) {
                         await ctx.reply(
-                            `${displayName} welcome to Mark Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
+                            `${displayName} welcome to Bet Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
                             { reply_markup: { remove_keyboard: true } }
                         );
                     } else {
@@ -2106,7 +2106,7 @@ Thank you for your dedication! 🙏`;
                         (ctx.from?.first_name || '').trim() ||
                         'User';
                     ctx.reply(
-                        `${displayName} welcome to Mark Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
+                        `${displayName} welcome to Bet Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
                         { reply_markup: { remove_keyboard: true } }
                     );
                 }
@@ -2122,7 +2122,7 @@ Thank you for your dedication! 🙏`;
                     inline_keyboard: [
                         playBtn,
                         [{ text: '💵 Check Balance', callback_data: 'balance' }, { text: '💰 Deposit', callback_data: 'deposit' }],
-                        [{ text: 'Contact Support', url: 'https://t.me/markbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
+                        [{ text: 'Contact Support', url: 'https://t.me/betbingosupport' }, { text: '📖 Instruction', callback_data: 'instruction' }],
                         [{ text: '🤑 Withdraw', callback_data: 'withdraw' }, { text: '🔗 Invite', callback_data: 'invite' }]
                     ]
                 }
@@ -2505,7 +2505,7 @@ Thank you for your dedication! 🙏`;
                                     depositStates.delete(userId);
                                     const msg = forwardedCount > 0
                                         ? '📷 Receipt image received!\n\n✅ Your deposit receipt has been forwarded to admin for manual review.\n\n⏳ You will be notified when your deposit is approved or denied.'
-                                        : '❌ Failed to forward receipt. Please contact support @markbingosupport';
+                                        : '❌ Failed to forward receipt. Please contact support @betbingosupport';
                                     return ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] } });
                                 } catch (error) {
                                     console.error('Error processing deposit image:', error);
@@ -2777,7 +2777,7 @@ Thank you for your dedication! 🙏`;
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     } else {
-                        await ctx.reply('❌ Failed to forward receipt. Please contact support @markbingosupport', {
+                        await ctx.reply('❌ Failed to forward receipt. Please contact support @betbingosupport', {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }
@@ -3720,7 +3720,7 @@ module.exports = { startTelegramBot };
 // Allow running this file directly via PM2/node
 if (require.main === module) {
     const BOT_TOKEN = process.env.BOT_TOKEN;
-    const WEBAPP_URL = process.env.WEBAPP_URL || 'https://markbingo.vercel.app';
+    const WEBAPP_URL = process.env.WEBAPP_URL || 'https://betbingo.vercel.app';
     try {
         startTelegramBot({ BOT_TOKEN, WEBAPP_URL });
         if (typeof process.send === 'function') {

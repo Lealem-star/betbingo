@@ -14,7 +14,7 @@ async function verifyTelegram(initData) {
 
         (window.location.hostname === 'localhost' ? 'http://localhost:3001' :
 
-            'https://markbingo.vercel.app');
+            'https://betbingo.vercel.app');
 
     console.log('🔐 Verifying Telegram auth:', {
         apiBase,
@@ -432,12 +432,12 @@ export function AuthProvider({ children }) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#e6e6fa' }}>
                 <div className="text-center w-full max-w-sm">
-                    {/* Animated Mark Bingo Logo - Mobile First */}
+                    {/* Animated Bet Bingo Logo - Mobile First */}
                     <div className="relative mb-6 mx-auto w-fit">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto">
                             <img
                                 src="/lb.png"
-                                alt="Mark Bingo Logo"
+                                alt="Bet Bingo Logo"
                                 className="w-full h-full object-contain animate-pulse"
                             />
                             {/* Spinning loader overlay */}
@@ -488,7 +488,7 @@ export function AuthProvider({ children }) {
 
                             <strong>How to access:</strong><br />
 
-                            1. Open the Mark Bingo bot in Telegram<br />
+                            1. Open the Bet Bingo bot in Telegram<br />
 
                             2. Click the "Play" button<br />
 

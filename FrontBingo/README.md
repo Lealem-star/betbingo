@@ -1,4 +1,4 @@
-# Mark Bingo - React Frontend
+# Bet Bingo - React Frontend
 
 A modern, mobile-first bingo game application built with React and Tailwind CSS.
 
