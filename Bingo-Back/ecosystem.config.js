@@ -16,7 +16,7 @@ module.exports = {
                 RUN_TELEGRAM_BOT: 'false',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingo.vercel.app',
-                API_BASE_URL: 'https://endorsed-correct-patients-earn.trycloudflare.com',
+                API_BASE_URL: 'https://territory-hundred-guarantee-obvious.trycloudflare.com',
                 JWT_SECRET: 'your_super_secret_jwt_key_here_change_this',
                 // Player-bot auth (used by /api/auth/bot/token)
                 PLAYER_BOT_SECRET: process.env.PLAYER_BOT_SECRET || 'CHANGE_ME_LONG_RANDOM_SECRET',
@@ -53,8 +53,8 @@ module.exports = {
                 RUN_TELEGRAM_BOT: 'true',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingo.vercel.app',
-                API_BASE_URL: 'https://endorsed-correct-patients-earn.trycloudflare.com',
-                API_URL: 'https://endorsed-correct-patients-earn.trycloudflare.com',
+                API_BASE_URL: 'https://territory-hundred-guarantee-obvious.trycloudflare.com',
+                API_URL: 'https://territory-hundred-guarantee-obvious.trycloudflare.com',
                 MONGODB_URI: 'mongodb+srv://meseretlealem8_db_user:YmlZmwUyO6LsvFtA@bet.x4nvgzd.mongodb.net/?appName=bet'
             },
             error_file: './logs/bot-err.log',
