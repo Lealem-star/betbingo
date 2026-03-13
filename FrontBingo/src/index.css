@@ -2806,6 +2806,7 @@ body {
 .cartela-numbers {
     display: flex;
     flex-direction: column;
+    /* Joy Bingo-style compact vertical gap between rows */
     gap: 10px;
     flex: 1 1 auto;
     min-height: 0;
@@ -2814,27 +2815,30 @@ body {
 .cartela-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    flex: 1 1 0;
+    /* Joy Bingo-style compact, equal gap between cells */
+    column-gap: 10px;
+    row-gap: 10px;
+    flex: 0 0 auto;
 }
 
 .cartela-cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 34px;
-    border-radius: 8px;
-    font-weight: 600;
+    /* Auto height: keep cells slightly rounded rectangles like Joy Bingo */
+    height: 30px;
+    border-radius: 10px;
+    font-weight: 700;
     font-size: 14px;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .cartela-normal {
-    /* Default tiles: soft light squares with dark text (second image style) */
-    background: #fdf2f8;
+    /* Default tiles: Joy Bingo-style light violet squares */
+    background: #e5e0ff;
     color: #111827;
-    border: 1px solid rgba(148, 163, 184, 0.6);
+    border: none;
 }
 
 .cartela-selected {
@@ -2879,24 +2883,8 @@ body {
 
 .cartela-number {
     font-weight: 700;
-}
-
-/* Fine-tuned preview card spacing (CartelaSelection preview) */
-.cartela-preview .cartela-numbers {
-    gap: 2px;            /* small, even vertical gaps between rows */
-}
-
-.cartela-preview .cartela-row {
-    gap: 2px;            /* same 2px gap horizontally */
-}
-
-.cartela-preview .cartela-cell {
-    height: 30px;        /* slightly slimmer cells for compact preview */
-}
-
-.cartela-preview .cartela-number {
-    font-size: 15px;     /* a little larger numbers in preview */
-    font-weight: 700;
+    /* Slightly larger number text inside each cell */
+    font-size: 15px;
 }
 
 .cartela-clickable {
