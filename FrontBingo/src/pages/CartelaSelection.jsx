@@ -429,9 +429,23 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
             return;
         }
 
-        // Max 1 cartela per user
+        // If user already has a cartela selected and selects another, replace: deselect old, select new
         if (selectedNumbers.length >= 1) {
-            showError('You can select only 1 cartela.');
+            const oldCardNum = selectedNumbers[0];
+            try {
+                console.log('Replacing cartella:', oldCardNum, '->', cardNum);
+                deselectCartella(oldCardNum);
+                const success = selectCartella(cardNum);
+                if (success) {
+                    showSuccess(`Cartella #${cardNum} selected! Waiting for game to start...`);
+                    console.log('Cartella selection replacement sent successfully');
+                } else {
+                    showError('Failed to select cartella. Please try again.');
+                }
+            } catch (err) {
+                console.error('Error replacing cartella:', err);
+                showError('Failed to select cartella. Please try again.');
+            }
             return;
         }
 
