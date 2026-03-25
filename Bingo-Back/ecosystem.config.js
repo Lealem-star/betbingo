@@ -26,7 +26,11 @@ module.exports = {
                 // Updated to current SIM number for SMS forwarding
                 AGENT_PHONE_NUMBERS: '+251722399868',
                 AGENT_SERVICES: 'CBEBirr,CBE',
-                SMS_WEBHOOK_SECRET: 'i_secreted_lealem'
+                SMS_WEBHOOK_SECRET: 'i_secreted_lealem',
+
+                // Bot fairness gate (Option B)
+                BOT_WIN_STREAK_LIMIT: '15',
+                BOT_HUMAN_ALLOW_GAMES: '3'
             },
             error_file: './logs/api-err.log',
             out_file: './logs/api-out.log',

