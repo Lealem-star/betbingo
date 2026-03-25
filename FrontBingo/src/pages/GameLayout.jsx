@@ -608,7 +608,7 @@ export default function GameLayout({
                         gap: '0.1rem',
                         padding: '0.15rem',
                         marginTop: '0.75rem',
-                        marginBottom: '1.5rem',
+                        marginBottom: '10.5rem',
                         marginRight: '0.15rem',
                         height: mainContentHeight,
                         maxHeight: (hasSingleCartela || isWatchMode) ? '420px' : '500px'
