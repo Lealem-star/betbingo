@@ -110,6 +110,7 @@ class PlayerBot {
             gamesWon: 0,
             totalWinnings: 0
         };
+        this.claimSentForGame = false;
     }
 
     /**
@@ -405,9 +406,14 @@ class PlayerBot {
             console.warn('⚠️  Cannot claim bingo - game not running');
             return false;
         }
+        if (this.claimSentForGame) {
+            return true;
+        }
 
         console.log('🎉 CLAIMING BINGO!');
-        return this.send('bingo_claim', {});
+        const sent = this.send('bingo_claim', {});
+        if (sent) this.claimSentForGame = true;
+        return sent;
     }
 
     /**
@@ -520,13 +526,20 @@ class PlayerBot {
                 this.gameState.phase = 'running';
                 this.gameState.gameId = payload.gameId;
                 this.gameState.playersCount = payload.playersCount || 0;
-                this.gameState.myCard = payload.card;
-                this.gameState.myCardNumber = payload.cardNumber;
+                // Backend sends cards as array: [{ cardNumber, card }]. Keep compatibility with legacy payload.card.
+                if (Array.isArray(payload.cards) && payload.cards.length > 0) {
+                    this.gameState.myCard = payload.cards[0].card || null;
+                    this.gameState.myCardNumber = payload.cards[0].cardNumber || null;
+                } else {
+                    this.gameState.myCard = payload.card || null;
+                    this.gameState.myCardNumber = payload.cardNumber || this.gameState.myCardNumber || null;
+                }
                 this.gameState.calledNumbers = payload.calledNumbers || [];
                 this.stats.gamesPlayed++;
+                this.claimSentForGame = false;
 
                 console.log(`🎮 Game ${payload.gameId} started!`);
-                console.log(`   Card: ${payload.cardNumber}, Players: ${payload.playersCount}, Prize Pool: ${payload.prizePool || 0}`);
+                console.log(`   Card: ${this.gameState.myCardNumber}, Players: ${payload.playersCount}, Prize Pool: ${payload.prizePool || 0}`);
                 this.clearSelectionTimeout();
                 break;
 
@@ -544,6 +557,7 @@ class PlayerBot {
 
             case 'game_finished':
                 this.gameState.phase = 'announce';
+                this.claimSentForGame = false;
                 console.log('\n🏁 Game finished!');
                 if (payload.winners && payload.winners.length > 0) {
                     const isWinner = payload.winners.some(w =>
