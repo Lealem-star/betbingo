@@ -522,7 +522,11 @@ export default function GameLayout({
     const statusText = startCountdown > 0 ? startCountdown : gamePhaseDisplay;
     // For a single cartela, keep a fixed main content height so the left BINGO grid can stretch
     // and distribute numbers vertically (fills the empty space).
-    const mainContentHeight = (hasSingleCartela || isWatchMode) ? '500px' : 'calc(100vh - 180px)';
+    // Use responsive height on mobile; fixed 500px can cause the BINGO button
+    // to clip upward into the top control area on short screens.
+    const mainContentHeight = (hasSingleCartela || isWatchMode)
+        ? 'calc(100vh - 260px)'
+        : 'calc(100vh - 180px)';
     // Make left BINGO columns narrower and right side larger when showing single cartela,
     // otherwise keep 1:1 split.
     const gridTemplateColumns = (hasSingleCartela || isWatchMode) ? '0.8fr 1.2fr' : '1fr 1fr';
@@ -886,7 +890,7 @@ export default function GameLayout({
 
                 {/* Manual BINGO button for single cartela (below main content) */}
                 {hasSingleCartela && gameState.phase === 'running' && (
-                    <div className="mt-40 mb-4 flex justify-center">
+                    <div className="mt-10 mb-4 flex justify-center">
                         <button
                             onClick={handleManualBingo}
                             className={`action-button bingo-button game-bingo-button ${isManualClaiming ? 'loading' : ''}`}
