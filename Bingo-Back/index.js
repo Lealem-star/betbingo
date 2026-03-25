@@ -796,15 +796,20 @@ function callNextNumber(room) {
         ? room.activeNumberPool
         : FULL_NUMBER_POOL;
 
-    // If we're using a single-cartela biased pool, we intentionally allow repeats.
-    // Otherwise we can never reach 75 unique called numbers from ~24 cartela cells.
-    const allowDuplicates = Array.isArray(room.activeNumberPool) &&
+    let number;
+    const isSingleCartelaPool =
+        Array.isArray(room.activeNumberPool) &&
         room.activeNumberPool.length > 0 &&
         room.activeNumberPool.length < FULL_NUMBER_POOL.length;
 
-    let number;
-    if (allowDuplicates) {
-        number = pool[Math.floor(Math.random() * pool.length)];
+    if (isSingleCartelaPool) {
+        // Bot-advantage mode: NO repeats. When pool is exhausted, force-announce the winner bot.
+        const available = pool.filter(n => !calledSet.has(n));
+        if (available.length === 0) {
+            forceWinnerBotAnnounceIfPossible(room);
+            return;
+        }
+        number = available[Math.floor(Math.random() * available.length)];
     } else {
         // Normal mode: draw unique numbers (no repeats) from the available set.
         const available = pool.filter(n => !calledSet.has(n));
@@ -835,6 +840,50 @@ function callNextNumber(room) {
         callNextNumber(room);
     }, 5000);
     console.log('✅ Timer scheduled, callTimerId:', room.callTimerId);
+}
+
+function forceWinnerBotAnnounceIfPossible(room) {
+    try {
+        if (!room || room.phase !== 'running') return;
+        if (room.announceProcessed) return;
+        if (room.botCooldownGamesLeft > 0) return; // only force during bot-advantage games
+        if (room.winners && room.winners.length > 0) {
+            scheduleAnnounce(room, 'winner_already_present');
+            return;
+        }
+
+        const winnerBotUserId = room.winnerBotUserId;
+        if (!winnerBotUserId) {
+            scheduleAnnounce(room, 'no_winner_bot_selected');
+            return;
+        }
+
+        const cartellasByNumber = room.cartellas.get(winnerBotUserId);
+        const entries = cartellasByNumber instanceof Map
+            ? Array.from(cartellasByNumber.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }))
+            : [];
+
+        const winning = entries.find(e => e.cartella && checkBingo(e.cartella, room.calledNumbers));
+        if (!winning) {
+            scheduleAnnounce(room, 'winner_bot_not_winning_unexpected');
+            return;
+        }
+
+        room.gameHadBotWinner = true;
+        room.winners.push({ userId: winnerBotUserId, cartelaNumber: winning.cartelaNumber, cartella: winning.cartella });
+
+        broadcast('bingo_accepted', {
+            gameId: room.currentGameId,
+            winners: room.winners,
+            calledNumbers: room.calledNumbers,
+            called: room.calledNumbers
+        }, room);
+
+        scheduleAnnounce(room, 'forced_winner_bot_after_pool_exhausted');
+    } catch (e) {
+        console.error('⚠️ forceWinnerBotAnnounceIfPossible failed:', e);
+        scheduleAnnounce(room, 'force_winner_bot_error');
+    }
 }
 
 async function checkWinners(room) {
