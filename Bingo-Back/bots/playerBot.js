@@ -455,6 +455,21 @@ class PlayerBot {
             return true;
         }
 
+        // Check four corners
+        const topLeft = card[0]?.[0];
+        const topRight = card[0]?.[4];
+        const bottomLeft = card[4]?.[0];
+        const bottomRight = card[4]?.[4];
+        if (
+            (topLeft === 0 || called.includes(topLeft)) &&
+            (topRight === 0 || called.includes(topRight)) &&
+            (bottomLeft === 0 || called.includes(bottomLeft)) &&
+            (bottomRight === 0 || called.includes(bottomRight))
+        ) {
+            console.log('✅ Winning four corners!');
+            return true;
+        }
+
         return false;
     }
 
