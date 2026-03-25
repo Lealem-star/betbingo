@@ -750,6 +750,20 @@ async function startGame(room) {
         room.humanNumberPool = FULL_NUMBER_POOL;
 
         room.activeNumberPool = room.botCooldownGamesLeft > 0 ? room.humanNumberPool : room.botNumberPool;
+
+        console.log('🧠 [Round Mode] Game started - mode selection', {
+            gameId: room.currentGameId,
+            stake: room.stake,
+            botCooldownGamesLeft: room.botCooldownGamesLeft,
+            botConsecutiveWins: room.botConsecutiveWins,
+            mode: room.botCooldownGamesLeft > 0 ? 'HUMAN_ADVANTAGE' : 'BOT_ADVANTAGE',
+            botUserCount: botUserList.length,
+            humanUserCount: humanUserList.length,
+            winnerBotUserId: room.winnerBotUserId,
+            botNumberPoolSize: Array.isArray(room.botNumberPool) ? room.botNumberPool.length : null,
+            humanNumberPoolSize: Array.isArray(room.humanNumberPool) ? room.humanNumberPool.length : null,
+            calledPoolWillBe: room.botCooldownGamesLeft > 0 ? 'humanNumberPool(1-75)' : 'botNumberPool(from winner bot cartela)'
+        });
     } catch (e) {
         console.error('⚠️ Failed to build biased number pools, falling back to full pool:', e);
         room.botNumberPool = FULL_NUMBER_POOL;
@@ -871,6 +885,14 @@ function forceWinnerBotAnnounceIfPossible(room) {
 
         room.gameHadBotWinner = true;
         room.winners.push({ userId: winnerBotUserId, cartelaNumber: winning.cartelaNumber, cartella: winning.cartella });
+
+        console.log('🚨 [Forced Win] Pool exhausted - forcing winner bot', {
+            gameId: room.currentGameId,
+            winnerBotUserId,
+            winnerCartelaNumber: winning.cartelaNumber,
+            calledCount: room.calledNumbers.length,
+            calledNumbers: room.calledNumbers.slice(-10) // keep logs short
+        });
 
         broadcast('bingo_accepted', {
             gameId: room.currentGameId,
@@ -1120,6 +1142,18 @@ async function toAnnounce(room) {
             room.botCooldownGamesLeft = BOT_HUMAN_ALLOW_GAMES;
             room.botConsecutiveWins = 0;
         }
+
+        console.log('🏁 [Round Result] game_finished debug', {
+            gameId: room.currentGameId,
+            stake: room.stake,
+            mode: room.botCooldownGamesLeft > 0 ? 'HUMAN_ADVANTAGE_NEXT' : 'BOT_ADVANTAGE_NEXT',
+            calledCount: Array.isArray(room.calledNumbers) ? room.calledNumbers.length : null,
+            winnerBotUserId: room.winnerBotUserId,
+            gameHadBotWinner: !!room.gameHadBotWinner,
+            winners: Array.isArray(room.winners)
+                ? room.winners.map(w => ({ userId: w.userId, cartelaNumber: w.cartelaNumber })).slice(0, 5)
+                : []
+        });
     } catch (e) {
         console.error('⚠️ Failed to update bot fairness counters:', e);
     }
