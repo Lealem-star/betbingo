@@ -734,6 +734,7 @@ async function startGame(room) {
 
         // Bot-advantage pool (single winner bot)
         const botUserList = Array.from(room.botUserIds).sort((a, b) => String(a).localeCompare(String(b)));
+        const humanUserList = Array.from(room.humanUserIds).sort((a, b) => String(a).localeCompare(String(b)));
         const seededIdx = botUserList.length > 0 ? (hashStringToInt(gameSeed) % botUserList.length) : 0;
         const seededBotUserId = botUserList.length > 0 ? botUserList[seededIdx] : null;
         const overrideBotUserId =
