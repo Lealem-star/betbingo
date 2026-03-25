@@ -711,9 +711,9 @@ async function startGame(room) {
         }
     });
 
-    // Option B (biased calling): when bots are in the "allowed/advantage" window,
-    // draw called numbers from all bot cartelas in this room.
-    // When bots are blocked (human-advantage window), draw called numbers from all human cartelas.
+    // Option B (biased calling):
+    // - During bot-advantage windows: draw called numbers only from ONE bot's chosen cartela grid.
+    // - During human-advantage (bot cooldown) windows: draw called numbers only from ONE human's chosen cartela grid.
     try {
         const selectedUserIds = Array.from(room.selectedPlayers || []);
         room.botUserIds = new Set();
@@ -727,8 +727,16 @@ async function startGame(room) {
             })
         );
 
-        room.botNumberPool = getUnionNumbersFromCartellas(room, room.botUserIds);
-        room.humanNumberPool = getUnionNumbersFromCartellas(room, room.humanUserIds);
+        const gameSeed = String(room.currentGameId || '') + '_' + String(room.stake || '');
+
+        const botUserList = Array.from(room.botUserIds).sort((a, b) => String(a).localeCompare(String(b)));
+        const humanUserList = Array.from(room.humanUserIds).sort((a, b) => String(a).localeCompare(String(b)));
+
+        const botTargetUserId = botUserList.length > 0 ? botUserList[hashStringToInt(gameSeed) % botUserList.length] : null;
+        const humanTargetUserId = humanUserList.length > 0 ? humanUserList[hashStringToInt(gameSeed) % humanUserList.length] : null;
+
+        room.botNumberPool = botTargetUserId ? getNumbersFromSingleCartela(room, botTargetUserId, gameSeed) : [];
+        room.humanNumberPool = humanTargetUserId ? getNumbersFromSingleCartela(room, humanTargetUserId, gameSeed) : [];
 
         // Fallback to the full number set if a pool is empty (safety).
         room.botNumberPool = room.botNumberPool.length > 0 ? room.botNumberPool : FULL_NUMBER_POOL;
@@ -781,15 +789,24 @@ function callNextNumber(room) {
         ? room.activeNumberPool
         : FULL_NUMBER_POOL;
 
-    // Prefer drawing from the active pool for fairness (Option B),
-    // but fall back to the full pool if we run out.
-    const available = pool.filter(n => !calledSet.has(n));
+    // If we're using a single-cartela biased pool, we intentionally allow repeats.
+    // Otherwise we can never reach 75 unique called numbers from ~24 cartela cells.
+    const allowDuplicates = Array.isArray(room.activeNumberPool) &&
+        room.activeNumberPool.length > 0 &&
+        room.activeNumberPool.length < FULL_NUMBER_POOL.length;
+
     let number;
-    if (available.length > 0) {
-        number = available[Math.floor(Math.random() * available.length)];
+    if (allowDuplicates) {
+        number = pool[Math.floor(Math.random() * pool.length)];
     } else {
-        const fullRemaining = FULL_NUMBER_POOL.filter(n => !calledSet.has(n));
-        number = fullRemaining[Math.floor(Math.random() * fullRemaining.length)];
+        // Normal mode: draw unique numbers (no repeats) from the available set.
+        const available = pool.filter(n => !calledSet.has(n));
+        if (available.length > 0) {
+            number = available[Math.floor(Math.random() * available.length)];
+        } else {
+            const fullRemaining = FULL_NUMBER_POOL.filter(n => !calledSet.has(n));
+            number = fullRemaining[Math.floor(Math.random() * fullRemaining.length)];
+        }
     }
 
     room.calledNumbers.push(number);
@@ -1085,6 +1102,55 @@ function getPredefinedCartella(cardNumber) {
     }
     // Fallback to first card if invalid number
     return BingoCards.cards[0];
+}
+
+function hashStringToInt(input) {
+    const s = String(input || '');
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) {
+        hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+}
+
+// Extract called-number candidates (1..75) from a single user's single cartela grid.
+// Used for biased calling during bot advantage vs human advantage windows.
+function getNumbersFromSingleCartela(room, userId, seedStr) {
+    const cartellasMap = room?.cartellas?.get?.(userId);
+    if (!cartellasMap) return [];
+
+    // Choose exactly one cartela grid from the user's cartellas.
+    let cartellaGrids = [];
+    if (cartellasMap instanceof Map) {
+        cartellaGrids = Array.from(cartellasMap.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }));
+    } else if (Array.isArray(cartellasMap)) {
+        // Legacy fallback
+        cartellaGrids = cartellasMap.map((cartella) => ({ cartelaNumber: null, cartella }));
+    }
+
+    if (!cartellaGrids.length) return [];
+
+    // Deterministic pick (prevents always picking the "first" entry).
+    cartellaGrids.sort((a, b) => String(a.cartelaNumber).localeCompare(String(b.cartelaNumber)));
+    const pickIdx = cartellaGrids.length > 0 ? (hashStringToInt(seedStr) % cartellaGrids.length) : 0;
+    const picked = cartellaGrids[pickIdx] || cartellaGrids[0];
+    const grid = picked?.cartella;
+
+    if (!Array.isArray(grid)) return [];
+
+    const pool = new Set();
+    grid.forEach((row) => {
+        if (!Array.isArray(row)) return;
+        row.forEach((num) => {
+            const n = Number(num);
+            // 0 = free spaces; called numbers are 1..75
+            if (Number.isInteger(n) && n >= 1 && n <= 75) {
+                pool.add(n);
+            }
+        });
+    });
+
+    return Array.from(pool);
 }
 
 // Build a union of possible called numbers (1..75) from a set of users' cartelas.
