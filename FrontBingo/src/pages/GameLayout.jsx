@@ -8,6 +8,8 @@ import BottomNav from '../components/BottomNav';
 import '../styles/bingo-balls.css';
 import '../styles/action-buttons.css';
 
+const MISSED_BINGO_MSG = 'ይቅርታ የማሸነፍ እድልዎ አልፏል';
+
 export default function GameLayout({
     stake,
     selectedCartelas,
@@ -106,6 +108,12 @@ export default function GameLayout({
     const claimedBingoRef = useRef(false);
     const lastGameIdRef = useRef(null);
 
+    /** After a new number is drawn: user had a winning pattern on the previous call but did not tap BINGO. */
+    const [missedClaimWindow, setMissedClaimWindow] = useState(false);
+    /** Called numbers snapshot (before the ball that closed the claim window) — drives red pattern cells. */
+    const [missedPatternCalledSnapshot, setMissedPatternCalledSnapshot] = useState(null);
+    const calledLenEvalRef = useRef(-1);
+
     // Connect to WebSocket when component mounts with stake
     useEffect(() => {
         if (stake && sessionId) {
@@ -151,9 +159,42 @@ export default function GameLayout({
         if (currentGameId !== lastGameIdRef.current) {
             claimedBingoRef.current = false;
             lastGameIdRef.current = currentGameId;
+            calledLenEvalRef.current = -1;
+            setMissedClaimWindow(false);
+            setMissedPatternCalledSnapshot(null);
             // Keep manually marked numbers when new game starts (don't clear them)
         }
     }, [currentGameId]);
+
+    // Detect missed BINGO window: had winning pattern before latest call, did not claim
+    useEffect(() => {
+        if (gameState.phase !== 'running' || yourCards.length !== 1) {
+            setMissedClaimWindow(false);
+            setMissedPatternCalledSnapshot(null);
+            return;
+        }
+        const card = yourCards[0]?.card;
+        if (!card) return;
+
+        const len = calledNumbers.length;
+
+        if (calledLenEvalRef.current < 0) {
+            calledLenEvalRef.current = len;
+            return;
+        }
+
+        if (len > calledLenEvalRef.current) {
+            for (let i = calledLenEvalRef.current + 1; i <= len; i++) {
+                const prevCalled = calledNumbers.slice(0, i - 1);
+                if (checkBingoPattern(card, prevCalled) && !claimedBingoRef.current) {
+                    setMissedClaimWindow(true);
+                    setMissedPatternCalledSnapshot([...prevCalled]);
+                    break;
+                }
+            }
+        }
+        calledLenEvalRef.current = len;
+    }, [calledNumbers, gameState.phase, yourCards, currentGameId]);
 
     // Handle manual number marking/unmarking
     const handleNumberToggle = useCallback((cardNumber, number) => {
@@ -182,6 +223,13 @@ export default function GameLayout({
             return;
         }
 
+        if (missedClaimWindow) {
+            setAlertBanners(prev =>
+                prev.includes(MISSED_BINGO_MSG) ? prev : [...prev, MISSED_BINGO_MSG]
+            );
+            return;
+        }
+
         if (claimedBingoRef.current || isManualClaiming) {
             return;
         }
@@ -205,7 +253,7 @@ export default function GameLayout({
         } finally {
             setIsManualClaiming(false);
         }
-    }, [claimBingo, connected, currentGameId, gameState.phase, isManualClaiming, showError, showSuccess]);
+    }, [claimBingo, connected, currentGameId, gameState.phase, isManualClaiming, missedClaimWindow, showError, showSuccess]);
 
     // NO automatic winning or auto-claim: players must always tap the BINGO button.
 
@@ -314,6 +362,9 @@ export default function GameLayout({
             setIsRefreshing(false);
             // Reset bingo claim tracking for new game
             claimedBingoRef.current = false;
+            calledLenEvalRef.current = -1;
+            setMissedClaimWindow(false);
+            setMissedPatternCalledSnapshot(null);
         }
     }, [gameState.phase]);
 
@@ -805,6 +856,11 @@ export default function GameLayout({
                                                 showHeader={true}
                                                 isAutoMarkOn={isAutoMarkOn}
                                                 onNumberToggle={!isAutoMarkOn ? (number) => handleNumberToggle(cardNumber, number) : undefined}
+                                                missedWinningCalledNumbers={
+                                                    missedClaimWindow && missedPatternCalledSnapshot
+                                                        ? missedPatternCalledSnapshot
+                                                        : null
+                                                }
                                             />
                                             <div className="mt-2 text-xs font-semibold text-white/70">
                                                 Board number {cardNumber}
@@ -834,7 +890,12 @@ export default function GameLayout({
                         <button
                             onClick={handleManualBingo}
                             className={`action-button bingo-button game-bingo-button ${isManualClaiming ? 'loading' : ''}`}
-                            disabled={!connected || !currentGameId || claimedBingoRef.current || gameState.phase !== 'running'}
+                            disabled={
+                                !connected ||
+                                !currentGameId ||
+                                claimedBingoRef.current ||
+                                gameState.phase !== 'running'
+                            }
                             style={{ width: 'auto', paddingLeft: '7.75rem', paddingRight: '7.75rem' }}
                         >
                             <div className="button-content">

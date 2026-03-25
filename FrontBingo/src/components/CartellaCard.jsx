@@ -110,6 +110,8 @@ export default function CartellaCard({
     selectedNumber = null, 
     isPreview = false, 
     showWinningPattern = false,
+    /** When set, cells in the winning pattern at this call snapshot are shown in red (missed BINGO window). */
+    missedWinningCalledNumbers = null,
     isAutoMarkOn = true,
     onNumberToggle = null,
     showHeader = false
@@ -123,6 +125,10 @@ export default function CartellaCard({
     
     // Detect winning pattern if needed
     const winningPattern = showWinningPattern ? detectWinningPattern(grid, called) : new Set();
+    const missedWinPattern =
+        Array.isArray(missedWinningCalledNumbers)
+            ? detectWinningPattern(grid, missedWinningCalledNumbers)
+            : new Set();
     
     // Handle cell click for manual marking
     const handleCellClick = (number) => {
@@ -155,14 +161,19 @@ export default function CartellaCard({
                                 const isCalled = called.includes(number);
                                 const isSelected = selectedNumber && number === selectedNumber;
                                 const isWinningCell = winningPattern.has(`${rowIndex}-${colIndex}`);
-                                
-                                // Priority: winning pattern > selected > called > normal
+                                const isMissedWinCell = missedWinPattern.has(`${rowIndex}-${colIndex}`);
+
+                                // Priority: missed winning (red) > winning pattern > selected > called > normal
                                 let cellClass = 'cartela-normal';
                                 if (isFree) {
                                     cellClass = 'cartela-free';
-                                    if (isWinningCell) {
+                                    if (isMissedWinCell) {
+                                        cellClass += ' cartela-missed-winning';
+                                    } else if (isWinningCell) {
                                         cellClass += ' cartela-winning';
                                     }
+                                } else if (isMissedWinCell) {
+                                    cellClass = 'cartela-missed-winning';
                                 } else if (isWinningCell) {
                                     cellClass = 'cartela-winning';
                                 } else if (isSelected) {
