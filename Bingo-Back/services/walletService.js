@@ -506,10 +506,12 @@ class WalletService {
             if (!user || !user.telegramId) {
                 return false;
             }
-            // Bots have telegramId starting with "9000000000" (9 billion range)
-            // or contain "bot_user_" pattern
             const telegramId = String(user.telegramId);
-            return telegramId.startsWith('9000000000') || telegramId.includes('bot_user_');
+            // Bots have telegramId in the 9-billion range (e.g. 9000000001, 9000000002, ...)
+            // or contain "bot_user_" pattern.
+            const telegramIdNum = Number(telegramId);
+            const isNumericBotId = Number.isFinite(telegramIdNum) && telegramIdNum >= 9000000000;
+            return isNumericBotId || telegramId.includes('bot_user_');
         } catch (error) {
             console.error('Error checking if user is bot:', error);
             return false;
