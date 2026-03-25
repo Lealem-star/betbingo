@@ -525,7 +525,7 @@ export default function GameLayout({
     // Use responsive height on mobile; fixed 500px can cause the BINGO button
     // to clip upward into the top control area on short screens.
     const mainContentHeight = (hasSingleCartela || isWatchMode)
-        ? 'calc(100vh - 260px)'
+        ? 'calc(100vh - 330px)'
         : 'calc(100vh - 180px)';
     // Make left BINGO columns narrower and right side larger when showing single cartela,
     // otherwise keep 1:1 split.
@@ -611,7 +611,7 @@ export default function GameLayout({
                         marginBottom: '1.5rem',
                         marginRight: '0.15rem',
                         height: mainContentHeight,
-                        maxHeight: '500px'
+                        maxHeight: (hasSingleCartela || isWatchMode) ? '420px' : '500px'
                     }}>
                     {/* Left Card - BINGO Grid with Square Letters */}
                     <div
