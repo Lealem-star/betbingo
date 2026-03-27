@@ -73,28 +73,32 @@ router.post('/user-sms', async (req, res) => {
         // Try to match with existing receiver SMS
         let verification = await attemptAutoMatching(userSMS);
 
+        const resolveDuplicateVerification = async (err) => {
+            if (!err?.message?.includes('DUPLICATE_VERIFICATION')) return null;
+            return SmsForwarderService.findExistingDepositVerificationAfterDuplicate(err, userId, userSMS, {
+                reference: requestRef != null ? String(requestRef) : undefined
+            });
+        };
+
         // If no verification was created, create a pending one from user SMS so admins get Approve/Deny buttons
         if (!verification) {
             try {
                 verification = await SmsForwarderService.createPendingVerificationFromUserSMS(userSMS);
             } catch (e) {
-                console.error('Failed to create pending verification from user SMS:', e);
-                // If duplicate, find existing verification so bot can show Approve/Deny buttons
-                if (e?.message?.includes('DUPLICATE_VERIFICATION')) {
-                    verification = await DepositVerification.findOne({
-                        userSMS: userSMS._id,
-                        status: { $in: ['pending_review', 'verified', 'approved'] }
-                    });
-                } else {
+                verification = await resolveDuplicateVerification(e);
+                if (!verification) {
+                    console.error('Failed to create pending verification from user SMS:', e);
                     // Fallback: create verification with explicit userId so admins always get Approve/Deny buttons
-                    // Use request amount/reference if backend didn't parse them from the SMS
                     try {
                         verification = await SmsForwarderService.createPendingVerificationWithExplicitUserId(userSMS, userId, {
                             amount: requestAmount != null ? Number(requestAmount) : undefined,
                             reference: requestRef != null ? String(requestRef) : undefined
                         });
                     } catch (fallbackErr) {
-                        console.error('Fallback create verification failed:', fallbackErr);
+                        verification = await resolveDuplicateVerification(fallbackErr);
+                        if (!verification) {
+                            console.error('Fallback create verification failed:', fallbackErr);
+                        }
                     }
                 }
             }
@@ -114,7 +118,10 @@ router.post('/user-sms', async (req, res) => {
                     });
                 }
             } catch (e) {
-                console.error('Final fallback create verification from bot context failed:', e);
+                verification = await resolveDuplicateVerification(e);
+                if (!verification) {
+                    console.error('Final fallback create verification from bot context failed:', e);
+                }
             }
         }
 
@@ -156,7 +163,7 @@ router.post('/create-pending-from-bot', async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(String(userId))) {
             return res.status(400).json({ success: false, error: 'Invalid userId format' });
         }
-        const verification = await SmsForwarderService.createPendingVerificationFromBotContext(userId, {
+        let verification = await SmsForwarderService.createPendingVerificationFromBotContext(userId, {
             amount,
             reference: reference || null,
             phoneNumber: phoneNumber || null,
@@ -164,6 +171,21 @@ router.post('/create-pending-from-bot', async (req, res) => {
         });
         res.json({ success: true, verificationId: verification._id });
     } catch (error) {
+        if (error?.message?.includes('DUPLICATE_VERIFICATION')) {
+            const syntheticUserSMS = {
+                _id: null,
+                parsedData: { reference: reference || null, amount: amount != null ? Number(amount) : null }
+            };
+            const existing = await SmsForwarderService.findExistingDepositVerificationAfterDuplicate(
+                error,
+                userId,
+                syntheticUserSMS,
+                { reference: reference || null }
+            );
+            if (existing) {
+                return res.json({ success: true, verificationId: existing._id, duplicate: true });
+            }
+        }
         console.error('Create pending from bot error:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to create pending verification' });
     }
@@ -551,10 +573,20 @@ async function attemptAutoMatching(newSMS) {
                 } catch (error) {
                     if (error.message && error.message.includes('DUPLICATE_VERIFICATION')) {
                         console.log(`⚠️ Duplicate verification prevented: ${error.message}`);
-                        // Mark SMS as matched to prevent further attempts
+                        const existingDup = await SmsForwarderService.findExistingDepositVerificationAfterDuplicate(
+                            error,
+                            resolvedUserId,
+                            userSMS,
+                            {}
+                        );
+                        if (existingDup) {
+                            userSMS.status = 'matched';
+                            await userSMS.save();
+                            return existingDup;
+                        }
                         userSMS.status = 'matched';
                         await userSMS.save();
-                        continue; // Skip to next potential match
+                        continue;
                     }
                     throw error; // Re-throw other errors
                 }

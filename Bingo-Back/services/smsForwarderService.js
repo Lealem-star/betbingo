@@ -618,6 +618,56 @@ class SmsForwarderService {
         return normalized;
     }
 
+    /** Parse Mongo id from DUPLICATE_VERIFICATION error text. */
+    static extractDuplicateVerificationId(err) {
+        const msg = err && err.message ? String(err.message) : '';
+        const m = msg.match(/Verification ID:\s*([a-f0-9]{24})/i);
+        return m ? m[1] : null;
+    }
+
+    /**
+     * When createDepositVerification throws DUPLICATE_VERIFICATION, resolve the record that already exists.
+     * Needed when the user retries with a new SMS row but the same transaction reference.
+     * @param {object} options - optional { reference } from API request if not on userSMS yet
+     */
+    static async findExistingDepositVerificationAfterDuplicate(err, userId, userSMS, options = {}) {
+        const DepositVerificationModel = require('../models/DepositVerification');
+        const idStr = this.extractDuplicateVerificationId(err);
+        if (idStr) {
+            const v = await DepositVerificationModel.findById(idStr);
+            if (v && String(v.userId) === String(userId)) {
+                return v;
+            }
+        }
+        if (userSMS && userSMS._id) {
+            const bySms = await DepositVerificationModel.findOne({
+                userSMS: userSMS._id,
+                status: { $in: ['pending_review', 'verified', 'approved'] }
+            });
+            if (bySms) return bySms;
+        }
+        const ref =
+            (userSMS && userSMS.parsedData && userSMS.parsedData.reference) ||
+            options.reference ||
+            null;
+        if (userId && ref) {
+            const refNorm = String(ref).trim();
+            const list = await DepositVerificationModel.find({
+                userId,
+                status: { $in: ['pending_review', 'verified', 'approved'] }
+            }).populate('userSMS');
+            for (const ver of list) {
+                const existingRef = ver.userSMS && ver.userSMS.parsedData
+                    ? String(ver.userSMS.parsedData.reference || '').trim()
+                    : '';
+                if (existingRef && existingRef === refNorm) {
+                    return ver;
+                }
+            }
+        }
+        return null;
+    }
+
     // Create deposit verification record
     static async createDepositVerification(userId, userSMS, receiverSMS, matchResult) {
         try {
@@ -703,7 +753,11 @@ class SmsForwarderService {
 
             return verification;
         } catch (error) {
-            console.error('Error creating deposit verification:', error);
+            if (error && error.message && error.message.includes('DUPLICATE_VERIFICATION')) {
+                console.log('Deposit verification duplicate (idempotent, no new row):', error.message);
+            } else {
+                console.error('Error creating deposit verification:', error);
+            }
             throw error;
         }
     }
