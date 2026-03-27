@@ -742,9 +742,17 @@ async function startGame(room) {
         const winnerBotUserId = overrideBotUserId || seededBotUserId;
 
         room.winnerBotUserId = winnerBotUserId || null;
-        room.botNumberPool = winnerBotUserId
-            ? getNumbersFromSingleCartela(room, winnerBotUserId, gameSeed)
-            : FULL_NUMBER_POOL;
+        room.botTargetNumbers = [];
+        if (winnerBotUserId) {
+            // Build pool from one chosen cartela, and also choose a target pattern to complete early.
+            const pickedEntry = pickWinnerBotCartelaEntry(room, winnerBotUserId, gameSeed);
+            room.winnerBotCartelaNumber = pickedEntry?.cartelaNumber ?? null;
+            const grid = pickedEntry?.cartella || null;
+            room.botNumberPool = grid ? getNumbersFromSingleCartela(room, winnerBotUserId, gameSeed) : FULL_NUMBER_POOL;
+            room.botTargetNumbers = grid ? getTargetPatternNumbersFromGrid(grid, gameSeed) : [];
+        } else {
+            room.botNumberPool = FULL_NUMBER_POOL;
+        }
         room.botNumberPool = room.botNumberPool.length > 0 ? room.botNumberPool : FULL_NUMBER_POOL;
 
         // Human-advantage pool: normal 1..75
@@ -761,6 +769,8 @@ async function startGame(room) {
             botUserCount: botUserList.length,
             humanUserCount: humanUserList.length,
             winnerBotUserId: room.winnerBotUserId,
+            winnerBotCartelaNumber: room.winnerBotCartelaNumber,
+            botTargetNumbers: Array.isArray(room.botTargetNumbers) ? room.botTargetNumbers : null,
             botNumberPoolSize: Array.isArray(room.botNumberPool) ? room.botNumberPool.length : null,
             humanNumberPoolSize: Array.isArray(room.humanNumberPool) ? room.humanNumberPool.length : null,
             calledPoolWillBe: room.botCooldownGamesLeft > 0 ? 'humanNumberPool(1-75)' : 'botNumberPool(from winner bot cartela)'
@@ -824,7 +834,26 @@ function callNextNumber(room) {
             forceWinnerBotAnnounceIfPossible(room);
             return;
         }
-        number = available[Math.floor(Math.random() * available.length)];
+        // Soft-bias toward a chosen winning pattern, but keep randomness so rounds don't feel scripted.
+        const target = Array.isArray(room.botTargetNumbers) ? room.botTargetNumbers : [];
+        const targetAvailable = target.filter(n => !calledSet.has(n) && available.includes(n));
+        if (targetAvailable.length > 0) {
+            const callsInRound = room.calledNumbers.length;
+            // More random early, stronger bias later so winner still likely before pool exhaustion.
+            let preferTargetProbability = 0.45;
+            if (callsInRound >= 8) preferTargetProbability = 0.55;
+            if (callsInRound >= 12) preferTargetProbability = 0.65;
+            if (callsInRound >= 16) preferTargetProbability = 0.8;
+
+            const pickTarget = Math.random() < preferTargetProbability;
+            if (pickTarget) {
+                number = targetAvailable[Math.floor(Math.random() * targetAvailable.length)];
+            } else {
+                number = available[Math.floor(Math.random() * available.length)];
+            }
+        } else {
+            number = available[Math.floor(Math.random() * available.length)];
+        }
     } else {
         // Normal mode: draw unique numbers (no repeats) from the available set.
         const available = pool.filter(n => !calledSet.has(n));
@@ -1202,6 +1231,49 @@ function hashStringToInt(input) {
         hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
     }
     return hash;
+}
+
+function pickWinnerBotCartelaEntry(room, userId, seedStr) {
+    const cartellasMap = room?.cartellas?.get?.(userId);
+    if (!cartellasMap) return null;
+    let entries = [];
+    if (cartellasMap instanceof Map) {
+        entries = Array.from(cartellasMap.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }));
+    } else if (Array.isArray(cartellasMap)) {
+        entries = cartellasMap.map((cartella) => ({ cartelaNumber: null, cartella }));
+    }
+    if (!entries.length) return null;
+    entries.sort((a, b) => String(a.cartelaNumber).localeCompare(String(b.cartelaNumber)));
+    const pickIdx = entries.length > 0 ? (hashStringToInt(seedStr) % entries.length) : 0;
+    return entries[pickIdx] || entries[0] || null;
+}
+
+function getTargetPatternNumbersFromGrid(grid, seedStr) {
+    if (!Array.isArray(grid) || grid.length !== 5) return [];
+
+    const patterns = [];
+    // rows
+    for (let r = 0; r < 5; r++) {
+        patterns.push({ type: `ROW_${r}`, cells: Array.from({ length: 5 }, (_, c) => ({ r, c })) });
+    }
+    // cols
+    for (let c = 0; c < 5; c++) {
+        patterns.push({ type: `COL_${c}`, cells: Array.from({ length: 5 }, (_, r) => ({ r, c })) });
+    }
+    // diagonals
+    patterns.push({ type: 'DIAG_MAIN', cells: Array.from({ length: 5 }, (_, i) => ({ r: i, c: i })) });
+    patterns.push({ type: 'DIAG_ANTI', cells: Array.from({ length: 5 }, (_, i) => ({ r: i, c: 4 - i })) });
+    // corners
+    patterns.push({ type: 'FOUR_CORNERS', cells: [{ r: 0, c: 0 }, { r: 0, c: 4 }, { r: 4, c: 0 }, { r: 4, c: 4 }] });
+
+    const idx = patterns.length > 0 ? (hashStringToInt(seedStr + '_pattern') % patterns.length) : 0;
+    const chosen = patterns[idx] || patterns[0];
+    const nums = [];
+    chosen.cells.forEach(({ r, c }) => {
+        const n = Number(grid?.[r]?.[c]);
+        if (Number.isInteger(n) && n >= 1 && n <= 75) nums.push(n);
+    });
+    return Array.from(new Set(nums)); // unique
 }
 
 // Extract called-number candidates (1..75) from a single user's single cartela grid.

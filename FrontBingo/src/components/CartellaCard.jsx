@@ -4,8 +4,13 @@ import React from 'react';
 function detectWinningPattern(card, called) {
     if (!card || !called || called.length === 0) return new Set();
     
-    const winningCells = new Set();
     const calledSet = new Set(called);
+
+    const asSet = (cells) => {
+        const s = new Set();
+        cells.forEach(c => s.add(`${c.row}-${c.col}`));
+        return s;
+    };
     
     // Check rows
     for (let row = 0; row < 5; row++) {
@@ -22,7 +27,7 @@ function detectWinningPattern(card, called) {
             rowCells.push({ row, col });
         }
         if (allCalled) {
-            rowCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+            return asSet(rowCells);
         }
     }
     
@@ -41,7 +46,7 @@ function detectWinningPattern(card, called) {
             colCells.push({ row, col });
         }
         if (allCalled) {
-            colCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+            return asSet(colCells);
         }
     }
     
@@ -59,7 +64,7 @@ function detectWinningPattern(card, called) {
         mainDiagCells.push({ row: i, col: i });
     }
     if (mainDiagAllCalled) {
-        mainDiagCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+        return asSet(mainDiagCells);
     }
     
     // Check anti-diagonal (top-right to bottom-left)
@@ -76,7 +81,7 @@ function detectWinningPattern(card, called) {
         antiDiagCells.push({ row: i, col: 4 - i });
     }
     if (antiDiagAllCalled) {
-        antiDiagCells.forEach(cell => winningCells.add(`${cell.row}-${cell.col}`));
+        return asSet(antiDiagCells);
     }
     
     // Check four corners
@@ -97,10 +102,10 @@ function detectWinningPattern(card, called) {
         }
     }
     if (allCornersCalled) {
-        corners.forEach(corner => winningCells.add(`${corner.row}-${corner.col}`));
+        return asSet(corners);
     }
     
-    return winningCells;
+    return new Set();
 }
 
 export default function CartellaCard({ 
