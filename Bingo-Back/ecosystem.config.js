@@ -29,7 +29,7 @@ module.exports = {
                 SMS_WEBHOOK_SECRET: 'i_secreted_lealem',
 
                 // Bot fairness gate (Option B)
-                BOT_WIN_STREAK_LIMIT: '15',
+                BOT_WIN_STREAK_LIMIT: '30',
                 BOT_HUMAN_ALLOW_GAMES: '3'
             },
             error_file: './logs/api-err.log',

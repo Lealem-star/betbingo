@@ -158,7 +158,7 @@ const FULL_NUMBER_POOL = Array.from({ length: 75 }, (_, i) => i + 1);
 // Bot fairness policy (Option B):
 // - allow bots to win up to BOT_WIN_STREAK_LIMIT consecutive games
 // - then block bot bingo claims for BOT_HUMAN_ALLOW_GAMES games
-const BOT_WIN_STREAK_LIMIT = Number(process.env.BOT_WIN_STREAK_LIMIT || '15');
+const BOT_WIN_STREAK_LIMIT = Number(process.env.BOT_WIN_STREAK_LIMIT || '30');
 const BOT_HUMAN_ALLOW_GAMES = Number(process.env.BOT_HUMAN_ALLOW_GAMES || '3');
 // Optional override: during bot-advantage windows, force choosing this bot (by userId) as the "winner bot".
 // If unset, a winner bot is chosen deterministically per game from the bots who joined.
