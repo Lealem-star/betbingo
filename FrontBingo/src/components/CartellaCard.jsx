@@ -158,7 +158,9 @@ export default function CartellaCard({
                         <div key={rowIndex} className="cartela-row">
                             {row.map((number, colIndex) => {
                                 const isFree = number === 0;
-                                const isCalled = called.includes(number);
+                                // When showing winning pattern (Winner screen), highlight ONLY the pattern cells.
+                                // Otherwise, called numbers would paint the whole card in bot-advantage rounds.
+                                const isCalled = showWinningPattern ? false : called.includes(number);
                                 const isSelected = selectedNumber && number === selectedNumber;
                                 const isWinningCell = winningPattern.has(`${rowIndex}-${colIndex}`);
                                 const isMissedWinCell = missedWinPattern.has(`${rowIndex}-${colIndex}`);
