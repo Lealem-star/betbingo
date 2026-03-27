@@ -752,8 +752,8 @@ export function WebSocketProvider({ children }) {
         return send('deselect_card', { cardNumber });
     }, [send]);
 
-    const claimBingo = useCallback(() => {
-        return send('bingo_claim', {});
+    const claimBingo = useCallback((payload = {}) => {
+        return send('bingo_claim', payload || {});
     }, [send]);
 
     // Debug connection state

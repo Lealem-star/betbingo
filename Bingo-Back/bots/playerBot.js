@@ -411,7 +411,24 @@ class PlayerBot {
         }
 
         console.log('🎉 CLAIMING BINGO!');
-        const sent = this.send('bingo_claim', {});
+        // Bot always "marks" all winning-card numbers it knows about
+        const card = this.gameState.myCard;
+        const markedNumbers = [];
+        if (Array.isArray(card)) {
+            card.forEach(row => {
+                if (!Array.isArray(row)) return;
+                row.forEach(num => {
+                    const n = Number(num);
+                    if (Number.isInteger(n) && n >= 1 && n <= 75) {
+                        markedNumbers.push(n);
+                    }
+                });
+            });
+        }
+        const sent = this.send('bingo_claim', {
+            cardNumber: this.gameState.myCardNumber,
+            markedNumbers
+        });
         if (sent) this.claimSentForGame = true;
         return sent;
     }

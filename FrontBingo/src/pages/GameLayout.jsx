@@ -238,7 +238,15 @@ export default function GameLayout({
             setIsManualClaiming(true);
             console.log('📨 Manual BINGO claim sent by user');
             claimedBingoRef.current = true;
-            const result = claimBingo();
+            // Strict manual mode: send only the numbers the user actually marked on this card
+            let payload = {};
+            if (!isAutoMarkOn && yourCards.length === 1) {
+                const { cardNumber } = yourCards[0] || {};
+                const marksSet = manuallyMarkedNumbers[cardNumber];
+                const marks = marksSet ? Array.from(marksSet) : [];
+                payload = { cardNumber, markedNumbers: marks };
+            }
+            const result = claimBingo(payload);
             if (!result) {
                 console.warn('Manual BINGO claim send failed');
                 claimedBingoRef.current = false;
