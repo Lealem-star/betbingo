@@ -25,6 +25,63 @@ const WebSocket = require('ws');
 const https = require('https');
 const http = require('http');
 
+// Mirrors Bingo-Back/index.js `checkBingoWithWinningPatternIncludingLastCall` — server requires this on bot-advantage rounds.
+function bingoWinIncludesLastCall(cartella, calledNumbers) {
+    if (!cartella || !Array.isArray(cartella) || cartella.length !== 5) return false;
+    if (!calledNumbers || !Array.isArray(calledNumbers) || calledNumbers.length === 0) return false;
+
+    const lastCall = Number(calledNumbers[calledNumbers.length - 1]);
+    if (!Number.isInteger(lastCall)) return false;
+
+    const isMarked = (num) => {
+        const n = Number(num);
+        return n === 0 || calledNumbers.includes(n);
+    };
+
+    for (let i = 0; i < 5; i++) {
+        const row = cartella[i];
+        if (!row || !Array.isArray(row)) continue;
+        if (!row.every((num) => isMarked(num))) continue;
+        if (!row.some((cell) => Number(cell) === lastCall)) continue;
+        return true;
+    }
+
+    for (let j = 0; j < 5; j++) {
+        if (!cartella.every((row) => row && Array.isArray(row) && isMarked(row[j]))) continue;
+        if (!cartella.some((row) => Number(row[j]) === lastCall)) continue;
+        return true;
+    }
+
+    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[i]))) {
+        if (cartella.some((row, i) => Number(row[i]) === lastCall)) return true;
+    }
+    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[4 - i]))) {
+        if (cartella.some((row, i) => Number(row[4 - i]) === lastCall)) return true;
+    }
+
+    const topLeft = cartella[0]?.[0];
+    const topRight = cartella[0]?.[4];
+    const bottomLeft = cartella[4]?.[0];
+    const bottomRight = cartella[4]?.[4];
+    if (
+        isMarked(topLeft) &&
+        isMarked(topRight) &&
+        isMarked(bottomLeft) &&
+        isMarked(bottomRight)
+    ) {
+        if (
+            Number(topLeft) === lastCall ||
+            Number(topRight) === lastCall ||
+            Number(bottomLeft) === lastCall ||
+            Number(bottomRight) === lastCall
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /** POST JSON to URL and return { ok, status, data } (Node built-in, no fetch dependency) */
 function postJson(url, body, extraHeaders = {}) {
     const urlObj = new URL(url);
@@ -434,60 +491,18 @@ class PlayerBot {
     }
 
     /**
-     * Check if the bot has a winning pattern
+     * Check if the bot has a winning pattern that includes the most recent call
+     * (required by the server on bot-advantage rounds).
      */
     checkForWin() {
         if (!this.gameState.myCard || this.gameState.calledNumbers.length === 0) {
             return false;
         }
-
-        const card = this.gameState.myCard;
-        const called = this.gameState.calledNumbers;
-
-        // Check rows
-        for (let i = 0; i < 5; i++) {
-            if (card[i].every(num => num === 0 || called.includes(num))) {
-                console.log(`✅ Winning row ${i + 1}!`);
-                return true;
-            }
+        if (!bingoWinIncludesLastCall(this.gameState.myCard, this.gameState.calledNumbers)) {
+            return false;
         }
-
-        // Check columns
-        for (let j = 0; j < 5; j++) {
-            if (card.every(row => row[j] === 0 || called.includes(row[j]))) {
-                console.log(`✅ Winning column ${j + 1}!`);
-                return true;
-            }
-        }
-
-        // Check main diagonal (top-left to bottom-right)
-        if (card.every((row, i) => row[i] === 0 || called.includes(row[i]))) {
-            console.log('✅ Winning main diagonal!');
-            return true;
-        }
-
-        // Check anti-diagonal (top-right to bottom-left)
-        if (card.every((row, i) => row[4 - i] === 0 || called.includes(row[4 - i]))) {
-            console.log('✅ Winning anti-diagonal!');
-            return true;
-        }
-
-        // Check four corners
-        const topLeft = card[0]?.[0];
-        const topRight = card[0]?.[4];
-        const bottomLeft = card[4]?.[0];
-        const bottomRight = card[4]?.[4];
-        if (
-            (topLeft === 0 || called.includes(topLeft)) &&
-            (topRight === 0 || called.includes(topRight)) &&
-            (bottomLeft === 0 || called.includes(bottomLeft)) &&
-            (bottomRight === 0 || called.includes(bottomRight))
-        ) {
-            console.log('✅ Winning four corners!');
-            return true;
-        }
-
-        return false;
+        console.log('✅ Winning pattern includes last called number — can claim');
+        return true;
     }
 
     /**
@@ -538,6 +553,17 @@ class PlayerBot {
                 this.gameState.playersCount = payload.playersCount || 0;
                 console.log(`✅ Card ${payload.cardNumber} selected! Players: ${payload.playersCount}, Prize Pool: ${payload.prizePool || 0}`);
                 this.clearSelectionTimeout();
+                break;
+
+            case 'bingo_rejected':
+                if (
+                    payload &&
+                    (payload.reason === 'invalid_claim' ||
+                        payload.reason === 'winning_pattern_must_include_last_call')
+                ) {
+                    this.claimSentForGame = false;
+                }
+                console.warn('⚠️  Bingo rejected:', payload && payload.reason);
                 break;
 
             case 'selection_rejected':

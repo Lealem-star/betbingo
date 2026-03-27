@@ -907,9 +907,14 @@ function forceWinnerBotAnnounceIfPossible(room) {
             ? Array.from(cartellasByNumber.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }))
             : [];
 
-        const winning = entries.find(e => e.cartella && checkBingo(e.cartella, room.calledNumbers));
+        const winning = entries.find(e => e.cartella && bingoValidForRoom(room, e.cartella, room.calledNumbers));
         if (!winning) {
-            scheduleAnnounce(room, 'winner_bot_not_winning_unexpected');
+            const anyBingoNoLastCall = entries.some(
+                e => e.cartella &&
+                    checkBingo(e.cartella, room.calledNumbers) &&
+                    !checkBingoWithWinningPatternIncludingLastCall(e.cartella, room.calledNumbers)
+            );
+            scheduleAnnounce(room, anyBingoNoLastCall ? 'winner_bot_forced_stale_bingo' : 'winner_bot_not_winning_unexpected');
             return;
         }
 
@@ -1399,6 +1404,80 @@ function checkBingo(cartella, calledNumbers) {
     return false;
 }
 
+// During BOT_ADVANTAGE rounds (`botCooldownGamesLeft === 0`), a valid bingo must be
+// completed by a pattern that includes the most recently called number (so the win
+// is tied to the latest draw, not a stale board the client never re-checked).
+function checkBingoWithWinningPatternIncludingLastCall(cartella, calledNumbers) {
+    if (!cartella || !Array.isArray(cartella) || cartella.length !== 5) {
+        return false;
+    }
+    if (!calledNumbers || !Array.isArray(calledNumbers) || calledNumbers.length === 0) {
+        return false;
+    }
+
+    const lastCall = Number(calledNumbers[calledNumbers.length - 1]);
+    if (!Number.isInteger(lastCall)) {
+        return false;
+    }
+
+    const isMarked = (num) => {
+        const n = Number(num);
+        return n === 0 || calledNumbers.includes(n);
+    };
+
+    for (let i = 0; i < 5; i++) {
+        const row = cartella[i];
+        if (!row || !Array.isArray(row)) continue;
+        if (!row.every((num) => isMarked(num))) continue;
+        if (!row.some((cell) => Number(cell) === lastCall)) continue;
+        return true;
+    }
+
+    for (let j = 0; j < 5; j++) {
+        if (!cartella.every((row) => row && Array.isArray(row) && isMarked(row[j]))) continue;
+        if (!cartella.some((row) => Number(row[j]) === lastCall)) continue;
+        return true;
+    }
+
+    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[i]))) {
+        if (cartella.some((row, i) => Number(row[i]) === lastCall)) return true;
+    }
+    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[4 - i]))) {
+        if (cartella.some((row, i) => Number(row[4 - i]) === lastCall)) return true;
+    }
+
+    const topLeft = cartella[0]?.[0];
+    const topRight = cartella[0]?.[4];
+    const bottomLeft = cartella[4]?.[0];
+    const bottomRight = cartella[4]?.[4];
+    if (
+        isMarked(topLeft) &&
+        isMarked(topRight) &&
+        isMarked(bottomLeft) &&
+        isMarked(bottomRight)
+    ) {
+        if (
+            Number(topLeft) === lastCall ||
+            Number(topRight) === lastCall ||
+            Number(bottomLeft) === lastCall ||
+            Number(bottomRight) === lastCall
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function bingoValidForRoom(room, cartella, calledNumbers) {
+    if (!room || !cartella || !calledNumbers) return false;
+    const botAdvantage = typeof room.botCooldownGamesLeft === 'number' && room.botCooldownGamesLeft === 0;
+    if (botAdvantage) {
+        return checkBingoWithWinningPatternIncludingLastCall(cartella, calledNumbers);
+    }
+    return checkBingo(cartella, calledNumbers);
+}
+
 // Removed minute-based auto-cycler. Rounds will be chained after each game ends,
 // and initial registration will start at server boot.
 
@@ -1778,13 +1857,49 @@ wss.on('connection', async (ws, request) => {
                             }
 
                             // Now run pattern check using only called numbers (normal rules)
-                            if (checkBingo(card, room.calledNumbers)) {
+                            if (bingoValidForRoom(room, card, room.calledNumbers)) {
                                 winning = entry;
+                            } else if (
+                                typeof room.botCooldownGamesLeft === 'number' &&
+                                room.botCooldownGamesLeft === 0 &&
+                                checkBingo(card, room.calledNumbers)
+                            ) {
+                                if (ws.readyState === 1) {
+                                    ws.send(JSON.stringify({
+                                        type: 'bingo_rejected',
+                                        payload: {
+                                            gameId: room.currentGameId,
+                                            reason: 'winning_pattern_must_include_last_call'
+                                        }
+                                    }));
+                                }
+                                return;
                             }
                         }
                     } else {
                         // Legacy path: accept if any of the user's cartellas has bingo (based on called numbers only)
-                        winning = entries.find(e => e.cartella && checkBingo(e.cartella, room.calledNumbers));
+                        winning = entries.find(e => e.cartella && bingoValidForRoom(room, e.cartella, room.calledNumbers));
+                        if (
+                            !winning &&
+                            typeof room.botCooldownGamesLeft === 'number' &&
+                            room.botCooldownGamesLeft === 0
+                        ) {
+                            const stale = entries.find(
+                                e => e.cartella && checkBingo(e.cartella, room.calledNumbers)
+                            );
+                            if (stale) {
+                                if (ws.readyState === 1) {
+                                    ws.send(JSON.stringify({
+                                        type: 'bingo_rejected',
+                                        payload: {
+                                            gameId: room.currentGameId,
+                                            reason: 'winning_pattern_must_include_last_call'
+                                        }
+                                    }));
+                                }
+                                return;
+                            }
+                        }
                     }
                     if (winning) {
                         if (isBotUser) room.gameHadBotWinner = true;

@@ -1,111 +1,116 @@
 import React from 'react';
 
-// Helper function to detect winning pattern
+// Helper: cell is marked if free (0) or its number was called (number/string tolerant).
+function cellIsMarked(num, calledNums) {
+    const n = Number(num);
+    if (n === 0) return true;
+    return calledNums.has(n);
+}
+
+function cellsToKeySet(cells) {
+    const s = new Set();
+    cells.forEach((c) => s.add(`${c.row}-${c.col}`));
+    return s;
+}
+
+/** True if any non-free cell in this pattern equals the last called number. */
+function patternIncludesLastCall(card, patternKeys, lastCallNum) {
+    if (!Number.isInteger(lastCallNum)) return false;
+    for (const key of patternKeys) {
+        const [r, c] = key.split('-').map(Number);
+        const v = Number(card[r][c]);
+        if (v !== 0 && v === lastCallNum) return true;
+    }
+    return false;
+}
+
+// Collect all valid winning patterns, then prefer one that includes the latest draw
+// so the winner screen matches "the call that made BINGO" (not an older completed line).
 function detectWinningPattern(card, called) {
     if (!card || !called || called.length === 0) return new Set();
-    
-    const calledSet = new Set(called);
 
-    const asSet = (cells) => {
-        const s = new Set();
-        cells.forEach(c => s.add(`${c.row}-${c.col}`));
-        return s;
-    };
-    
-    // Check rows
+    const calledNums = new Set(called.map((x) => Number(x)));
+    const lastCallNum = Number(called[called.length - 1]);
+
+    const candidates = [];
+
+    // Rows
     for (let row = 0; row < 5; row++) {
         let allCalled = true;
         const rowCells = [];
         for (let col = 0; col < 5; col++) {
             const num = card[row][col];
-            const isFree = num === 0;
-            const isCalled = isFree || calledSet.has(num);
-            if (!isCalled) {
+            if (!cellIsMarked(num, calledNums)) {
                 allCalled = false;
                 break;
             }
             rowCells.push({ row, col });
         }
-        if (allCalled) {
-            return asSet(rowCells);
-        }
+        if (allCalled) candidates.push(cellsToKeySet(rowCells));
     }
-    
-    // Check columns
+
+    // Columns
     for (let col = 0; col < 5; col++) {
         let allCalled = true;
         const colCells = [];
         for (let row = 0; row < 5; row++) {
             const num = card[row][col];
-            const isFree = num === 0;
-            const isCalled = isFree || calledSet.has(num);
-            if (!isCalled) {
+            if (!cellIsMarked(num, calledNums)) {
                 allCalled = false;
                 break;
             }
             colCells.push({ row, col });
         }
-        if (allCalled) {
-            return asSet(colCells);
-        }
+        if (allCalled) candidates.push(cellsToKeySet(colCells));
     }
-    
-    // Check main diagonal (top-left to bottom-right)
+
+    // Main diagonal
     let mainDiagAllCalled = true;
     const mainDiagCells = [];
     for (let i = 0; i < 5; i++) {
         const num = card[i][i];
-        const isFree = num === 0;
-        const isCalled = isFree || calledSet.has(num);
-        if (!isCalled) {
+        if (!cellIsMarked(num, calledNums)) {
             mainDiagAllCalled = false;
             break;
         }
         mainDiagCells.push({ row: i, col: i });
     }
-    if (mainDiagAllCalled) {
-        return asSet(mainDiagCells);
-    }
-    
-    // Check anti-diagonal (top-right to bottom-left)
+    if (mainDiagAllCalled) candidates.push(cellsToKeySet(mainDiagCells));
+
+    // Anti-diagonal
     let antiDiagAllCalled = true;
     const antiDiagCells = [];
     for (let i = 0; i < 5; i++) {
         const num = card[i][4 - i];
-        const isFree = num === 0;
-        const isCalled = isFree || calledSet.has(num);
-        if (!isCalled) {
+        if (!cellIsMarked(num, calledNums)) {
             antiDiagAllCalled = false;
             break;
         }
         antiDiagCells.push({ row: i, col: 4 - i });
     }
-    if (antiDiagAllCalled) {
-        return asSet(antiDiagCells);
-    }
-    
-    // Check four corners
+    if (antiDiagAllCalled) candidates.push(cellsToKeySet(antiDiagCells));
+
+    // Four corners
     const corners = [
-        { row: 0, col: 0 }, // top-left
-        { row: 0, col: 4 }, // top-right
-        { row: 4, col: 0 }, // bottom-left
-        { row: 4, col: 4 }  // bottom-right
+        { row: 0, col: 0 },
+        { row: 0, col: 4 },
+        { row: 4, col: 0 },
+        { row: 4, col: 4 }
     ];
     let allCornersCalled = true;
     for (const corner of corners) {
         const num = card[corner.row][corner.col];
-        const isFree = num === 0;
-        const isCalled = isFree || calledSet.has(num);
-        if (!isCalled) {
+        if (!cellIsMarked(num, calledNums)) {
             allCornersCalled = false;
             break;
         }
     }
-    if (allCornersCalled) {
-        return asSet(corners);
-    }
-    
-    return new Set();
+    if (allCornersCalled) candidates.push(cellsToKeySet(corners));
+
+    if (candidates.length === 0) return new Set();
+
+    const withLast = candidates.find((keys) => patternIncludesLastCall(card, keys, lastCallNum));
+    return withLast || candidates[0];
 }
 
 export default function CartellaCard({ 
