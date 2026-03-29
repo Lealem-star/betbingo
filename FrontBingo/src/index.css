@@ -4674,21 +4674,6 @@ body {
     box-sizing: border-box;
 }
 
-/* Single-cartela game: don't let the grid grow to fill extra height — otherwise the card's
-   box extends below the last row and the "Board number" label looks flush to the grid
-   (gap/margin can also be ignored in some Telegram WebViews). */
-.user-cartelas-single .cartela-card {
-    flex: 0 0 auto;
-    height: auto;
-    min-height: 0;
-}
-
-.user-cartelas-single .cartela-grid,
-.user-cartelas-single .cartela-numbers {
-    flex: 0 0 auto;
-    min-height: 0;
-}
-
 /* User Cartelas Container - Inside Right Column (kept for backward compatibility) */
 .user-cartelas-container {
     flex: 1;

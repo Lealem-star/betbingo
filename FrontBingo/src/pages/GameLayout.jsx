@@ -860,7 +860,7 @@ export default function GameLayout({
                                         : (manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : []);
                                     
                                     return (
-                                        <div key={cardNumber} className="w-full flex flex-col items-center">
+                                        <div key={cardNumber} className="w-full flex flex-col items-center gap-8">
                                             <CartellaCard
                                                 id={cardNumber}
                                                 card={card}
@@ -879,8 +879,6 @@ export default function GameLayout({
                                                         : null
                                                 }
                                             />
-                                            {/* Explicit spacer: flex `gap` is unreliable in some Telegram WebViews */}
-                                            <div className="w-full shrink-0" style={{ height: '2rem', minHeight: '2rem' }} aria-hidden />
                                             <div className="text-xs font-semibold text-white/70 shrink-0">
                                                 Board number {cardNumber}
                                             </div>
