@@ -160,9 +160,6 @@ const FULL_NUMBER_POOL = Array.from({ length: 75 }, (_, i) => i + 1);
 // - then block bot bingo claims for BOT_HUMAN_ALLOW_GAMES games
 const BOT_WIN_STREAK_LIMIT = Number(process.env.BOT_WIN_STREAK_LIMIT || '30');
 const BOT_HUMAN_ALLOW_GAMES = Number(process.env.BOT_HUMAN_ALLOW_GAMES || '3');
-// Optional override: during bot-advantage windows, force choosing this bot (by userId) as the "winner bot".
-// If unset, a winner bot is chosen deterministically per game from the bots who joined.
-const BOT_WINNER_USER_ID = String(process.env.BOT_WINNER_USER_ID || '').trim();
 
 function getRoomsForStake(stake) {
     if (!rooms.has(stake)) rooms.set(stake, []);
@@ -715,8 +712,8 @@ async function startGame(room) {
     });
 
     // Option B (biased calling):
-    // - During bot-advantage windows: pick ONE bot as the intended winner, then draw only from that bot's selected cartela numbers.
-    // - During human-advantage (bot cooldown) windows: draw normally from 1..75 (no bias).
+    // - During bot-advantage: pick ONE bot, draw uniformly at random from that bot's cartela number pool until exhausted, then full 1..75.
+    // - During human-advantage (bot cooldown): draw uniformly from full 1..75; bot claims are blocked elsewhere.
     try {
         const selectedUserIds = Array.from(room.selectedPlayers || []);
         room.botUserIds = new Set();
@@ -736,20 +733,15 @@ async function startGame(room) {
         const botUserList = Array.from(room.botUserIds).sort((a, b) => String(a).localeCompare(String(b)));
         const humanUserList = Array.from(room.humanUserIds).sort((a, b) => String(a).localeCompare(String(b)));
         const seededIdx = botUserList.length > 0 ? (hashStringToInt(gameSeed) % botUserList.length) : 0;
-        const seededBotUserId = botUserList.length > 0 ? botUserList[seededIdx] : null;
-        const overrideBotUserId =
-            BOT_WINNER_USER_ID && botUserList.includes(BOT_WINNER_USER_ID) ? BOT_WINNER_USER_ID : null;
-        const winnerBotUserId = overrideBotUserId || seededBotUserId;
+        const winnerBotUserId = botUserList.length > 0 ? botUserList[seededIdx] : null;
 
         room.winnerBotUserId = winnerBotUserId || null;
-        room.botTargetNumbers = [];
         if (winnerBotUserId) {
-            // Build pool from one chosen cartela, and also choose a target pattern to complete early.
+            // Build draw pool from one chosen cartela for this bot (uniform random draws from this set until exhausted).
             const pickedEntry = pickWinnerBotCartelaEntry(room, winnerBotUserId, gameSeed);
             room.winnerBotCartelaNumber = pickedEntry?.cartelaNumber ?? null;
             const grid = pickedEntry?.cartella || null;
             room.botNumberPool = grid ? getNumbersFromSingleCartela(room, winnerBotUserId, gameSeed) : FULL_NUMBER_POOL;
-            room.botTargetNumbers = grid ? getTargetPatternNumbersFromGrid(grid, gameSeed) : [];
         } else {
             room.botNumberPool = FULL_NUMBER_POOL;
         }
@@ -770,7 +762,6 @@ async function startGame(room) {
             humanUserCount: humanUserList.length,
             winnerBotUserId: room.winnerBotUserId,
             winnerBotCartelaNumber: room.winnerBotCartelaNumber,
-            botTargetNumbers: Array.isArray(room.botTargetNumbers) ? room.botTargetNumbers : null,
             botNumberPoolSize: Array.isArray(room.botNumberPool) ? room.botNumberPool.length : null,
             humanNumberPoolSize: Array.isArray(room.humanNumberPool) ? room.humanNumberPool.length : null,
             calledPoolWillBe: room.botCooldownGamesLeft > 0 ? 'humanNumberPool(1-75)' : 'botNumberPool(from winner bot cartela)'
@@ -828,32 +819,19 @@ function callNextNumber(room) {
         room.activeNumberPool.length < FULL_NUMBER_POOL.length;
 
     if (isSingleCartelaPool) {
-        // Bot-advantage mode: NO repeats. When pool is exhausted, force-announce the winner bot.
+        // Bot-advantage mode: draw only from the winner bot's cartela until those numbers are exhausted,
+        // then continue naturally from the full 1..75 pool (wins only via bingo_claim, no forced announce).
         const available = pool.filter(n => !calledSet.has(n));
         if (available.length === 0) {
-            forceWinnerBotAnnounceIfPossible(room);
-            return;
+            room.activeNumberPool = FULL_NUMBER_POOL;
+            console.log('🎯 [Bot advantage] Cartela pool exhausted; continuing draws from full pool', {
+                gameId: room.currentGameId,
+                calledCount: room.calledNumbers.length
+            });
+            return callNextNumber(room);
         }
-        // Soft-bias toward a chosen winning pattern, but keep randomness so rounds don't feel scripted.
-        const target = Array.isArray(room.botTargetNumbers) ? room.botTargetNumbers : [];
-        const targetAvailable = target.filter(n => !calledSet.has(n) && available.includes(n));
-        if (targetAvailable.length > 0) {
-            const callsInRound = room.calledNumbers.length;
-            // More random early, stronger bias later so winner still likely before pool exhaustion.
-            let preferTargetProbability = 0.45;
-            if (callsInRound >= 8) preferTargetProbability = 0.55;
-            if (callsInRound >= 12) preferTargetProbability = 0.65;
-            if (callsInRound >= 16) preferTargetProbability = 0.8;
-
-            const pickTarget = Math.random() < preferTargetProbability;
-            if (pickTarget) {
-                number = targetAvailable[Math.floor(Math.random() * targetAvailable.length)];
-            } else {
-                number = available[Math.floor(Math.random() * available.length)];
-            }
-        } else {
-            number = available[Math.floor(Math.random() * available.length)];
-        }
+        // Uniform random among uncalled numbers still in this cartela pool (any line on this card can complete naturally).
+        number = available[Math.floor(Math.random() * available.length)];
     } else {
         // Normal mode: draw unique numbers (no repeats) from the available set.
         const available = pool.filter(n => !calledSet.has(n));
@@ -884,63 +862,6 @@ function callNextNumber(room) {
         callNextNumber(room);
     }, 5000);
     console.log('✅ Timer scheduled, callTimerId:', room.callTimerId);
-}
-
-function forceWinnerBotAnnounceIfPossible(room) {
-    try {
-        if (!room || room.phase !== 'running') return;
-        if (room.announceProcessed) return;
-        if (room.botCooldownGamesLeft > 0) return; // only force during bot-advantage games
-        if (room.winners && room.winners.length > 0) {
-            scheduleAnnounce(room, 'winner_already_present');
-            return;
-        }
-
-        const winnerBotUserId = room.winnerBotUserId;
-        if (!winnerBotUserId) {
-            scheduleAnnounce(room, 'no_winner_bot_selected');
-            return;
-        }
-
-        const cartellasByNumber = room.cartellas.get(winnerBotUserId);
-        const entries = cartellasByNumber instanceof Map
-            ? Array.from(cartellasByNumber.entries()).map(([cartelaNumber, cartella]) => ({ cartelaNumber, cartella }))
-            : [];
-
-        const winning = entries.find(e => e.cartella && bingoValidForRoom(room, e.cartella, room.calledNumbers));
-        if (!winning) {
-            const anyBingoNoLastCall = entries.some(
-                e => e.cartella &&
-                    checkBingo(e.cartella, room.calledNumbers) &&
-                    !checkBingoWithWinningPatternIncludingLastCall(e.cartella, room.calledNumbers)
-            );
-            scheduleAnnounce(room, anyBingoNoLastCall ? 'winner_bot_forced_stale_bingo' : 'winner_bot_not_winning_unexpected');
-            return;
-        }
-
-        room.gameHadBotWinner = true;
-        room.winners.push({ userId: winnerBotUserId, cartelaNumber: winning.cartelaNumber, cartella: winning.cartella });
-
-        console.log('🚨 [Forced Win] Pool exhausted - forcing winner bot', {
-            gameId: room.currentGameId,
-            winnerBotUserId,
-            winnerCartelaNumber: winning.cartelaNumber,
-            calledCount: room.calledNumbers.length,
-            calledNumbers: room.calledNumbers.slice(-10) // keep logs short
-        });
-
-        broadcast('bingo_accepted', {
-            gameId: room.currentGameId,
-            winners: room.winners,
-            calledNumbers: room.calledNumbers,
-            called: room.calledNumbers
-        }, room);
-
-        scheduleAnnounce(room, 'forced_winner_bot_after_pool_exhausted');
-    } catch (e) {
-        console.error('⚠️ forceWinnerBotAnnounceIfPossible failed:', e);
-        scheduleAnnounce(room, 'force_winner_bot_error');
-    }
 }
 
 async function checkWinners(room) {
@@ -1253,34 +1174,6 @@ function pickWinnerBotCartelaEntry(room, userId, seedStr) {
     return entries[pickIdx] || entries[0] || null;
 }
 
-function getTargetPatternNumbersFromGrid(grid, seedStr) {
-    if (!Array.isArray(grid) || grid.length !== 5) return [];
-
-    const patterns = [];
-    // rows
-    for (let r = 0; r < 5; r++) {
-        patterns.push({ type: `ROW_${r}`, cells: Array.from({ length: 5 }, (_, c) => ({ r, c })) });
-    }
-    // cols
-    for (let c = 0; c < 5; c++) {
-        patterns.push({ type: `COL_${c}`, cells: Array.from({ length: 5 }, (_, r) => ({ r, c })) });
-    }
-    // diagonals
-    patterns.push({ type: 'DIAG_MAIN', cells: Array.from({ length: 5 }, (_, i) => ({ r: i, c: i })) });
-    patterns.push({ type: 'DIAG_ANTI', cells: Array.from({ length: 5 }, (_, i) => ({ r: i, c: 4 - i })) });
-    // corners
-    patterns.push({ type: 'FOUR_CORNERS', cells: [{ r: 0, c: 0 }, { r: 0, c: 4 }, { r: 4, c: 0 }, { r: 4, c: 4 }] });
-
-    const idx = patterns.length > 0 ? (hashStringToInt(seedStr + '_pattern') % patterns.length) : 0;
-    const chosen = patterns[idx] || patterns[0];
-    const nums = [];
-    chosen.cells.forEach(({ r, c }) => {
-        const n = Number(grid?.[r]?.[c]);
-        if (Number.isInteger(n) && n >= 1 && n <= 75) nums.push(n);
-    });
-    return Array.from(new Set(nums)); // unique
-}
-
 // Extract called-number candidates (1..75) from a single user's single cartela grid.
 // Used for biased calling during bot advantage vs human advantage windows.
 function getNumbersFromSingleCartela(room, userId, seedStr) {
@@ -1404,77 +1297,9 @@ function checkBingo(cartella, calledNumbers) {
     return false;
 }
 
-// During BOT_ADVANTAGE rounds (`botCooldownGamesLeft === 0`), a valid bingo must be
-// completed by a pattern that includes the most recently called number (so the win
-// is tied to the latest draw, not a stale board the client never re-checked).
-function checkBingoWithWinningPatternIncludingLastCall(cartella, calledNumbers) {
-    if (!cartella || !Array.isArray(cartella) || cartella.length !== 5) {
-        return false;
-    }
-    if (!calledNumbers || !Array.isArray(calledNumbers) || calledNumbers.length === 0) {
-        return false;
-    }
-
-    const lastCall = Number(calledNumbers[calledNumbers.length - 1]);
-    if (!Number.isInteger(lastCall)) {
-        return false;
-    }
-
-    const isMarked = (num) => {
-        const n = Number(num);
-        return n === 0 || calledNumbers.includes(n);
-    };
-
-    for (let i = 0; i < 5; i++) {
-        const row = cartella[i];
-        if (!row || !Array.isArray(row)) continue;
-        if (!row.every((num) => isMarked(num))) continue;
-        if (!row.some((cell) => Number(cell) === lastCall)) continue;
-        return true;
-    }
-
-    for (let j = 0; j < 5; j++) {
-        if (!cartella.every((row) => row && Array.isArray(row) && isMarked(row[j]))) continue;
-        if (!cartella.some((row) => Number(row[j]) === lastCall)) continue;
-        return true;
-    }
-
-    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[i]))) {
-        if (cartella.some((row, i) => Number(row[i]) === lastCall)) return true;
-    }
-    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[4 - i]))) {
-        if (cartella.some((row, i) => Number(row[4 - i]) === lastCall)) return true;
-    }
-
-    const topLeft = cartella[0]?.[0];
-    const topRight = cartella[0]?.[4];
-    const bottomLeft = cartella[4]?.[0];
-    const bottomRight = cartella[4]?.[4];
-    if (
-        isMarked(topLeft) &&
-        isMarked(topRight) &&
-        isMarked(bottomLeft) &&
-        isMarked(bottomRight)
-    ) {
-        if (
-            Number(topLeft) === lastCall ||
-            Number(topRight) === lastCall ||
-            Number(bottomLeft) === lastCall ||
-            Number(bottomRight) === lastCall
-        ) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
+/** Server-side win check: same rules for every round (bot-advantage only biases *calls*, not claim rules). */
 function bingoValidForRoom(room, cartella, calledNumbers) {
     if (!room || !cartella || !calledNumbers) return false;
-    const botAdvantage = typeof room.botCooldownGamesLeft === 'number' && room.botCooldownGamesLeft === 0;
-    if (botAdvantage) {
-        return checkBingoWithWinningPatternIncludingLastCall(cartella, calledNumbers);
-    }
     return checkBingo(cartella, calledNumbers);
 }
 
@@ -1856,50 +1681,14 @@ wss.on('connection', async (ws, request) => {
                                 return;
                             }
 
-                            // Now run pattern check using only called numbers (normal rules)
+                            // Pattern vs called numbers (same rules as legacy path)
                             if (bingoValidForRoom(room, card, room.calledNumbers)) {
                                 winning = entry;
-                            } else if (
-                                typeof room.botCooldownGamesLeft === 'number' &&
-                                room.botCooldownGamesLeft === 0 &&
-                                checkBingo(card, room.calledNumbers)
-                            ) {
-                                if (ws.readyState === 1) {
-                                    ws.send(JSON.stringify({
-                                        type: 'bingo_rejected',
-                                        payload: {
-                                            gameId: room.currentGameId,
-                                            reason: 'winning_pattern_must_include_last_call'
-                                        }
-                                    }));
-                                }
-                                return;
                             }
                         }
                     } else {
                         // Legacy path: accept if any of the user's cartellas has bingo (based on called numbers only)
                         winning = entries.find(e => e.cartella && bingoValidForRoom(room, e.cartella, room.calledNumbers));
-                        if (
-                            !winning &&
-                            typeof room.botCooldownGamesLeft === 'number' &&
-                            room.botCooldownGamesLeft === 0
-                        ) {
-                            const stale = entries.find(
-                                e => e.cartella && checkBingo(e.cartella, room.calledNumbers)
-                            );
-                            if (stale) {
-                                if (ws.readyState === 1) {
-                                    ws.send(JSON.stringify({
-                                        type: 'bingo_rejected',
-                                        payload: {
-                                            gameId: room.currentGameId,
-                                            reason: 'winning_pattern_must_include_last_call'
-                                        }
-                                    }));
-                                }
-                                return;
-                            }
-                        }
                     }
                     if (winning) {
                         if (isBotUser) room.gameHadBotWinner = true;

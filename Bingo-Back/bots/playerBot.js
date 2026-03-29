@@ -25,38 +25,28 @@ const WebSocket = require('ws');
 const https = require('https');
 const http = require('http');
 
-// Mirrors Bingo-Back/index.js `checkBingoWithWinningPatternIncludingLastCall` — server requires this on bot-advantage rounds.
-function bingoWinIncludesLastCall(cartella, calledNumbers) {
+// Mirrors Bingo-Back/index.js `checkBingo` — same win rules as the server for all rounds.
+function checkBingo(cartella, calledNumbers) {
     if (!cartella || !Array.isArray(cartella) || cartella.length !== 5) return false;
-    if (!calledNumbers || !Array.isArray(calledNumbers) || calledNumbers.length === 0) return false;
-
-    const lastCall = Number(calledNumbers[calledNumbers.length - 1]);
-    if (!Number.isInteger(lastCall)) return false;
-
-    const isMarked = (num) => {
-        const n = Number(num);
-        return n === 0 || calledNumbers.includes(n);
-    };
+    if (!calledNumbers || !Array.isArray(calledNumbers)) return false;
 
     for (let i = 0; i < 5; i++) {
         const row = cartella[i];
         if (!row || !Array.isArray(row)) continue;
-        if (!row.every((num) => isMarked(num))) continue;
-        if (!row.some((cell) => Number(cell) === lastCall)) continue;
-        return true;
+        if (row.every(num => num === 0 || calledNumbers.includes(num))) return true;
     }
 
     for (let j = 0; j < 5; j++) {
-        if (!cartella.every((row) => row && Array.isArray(row) && isMarked(row[j]))) continue;
-        if (!cartella.some((row) => Number(row[j]) === lastCall)) continue;
-        return true;
+        if (cartella.every(row => row && Array.isArray(row) && (row[j] === 0 || calledNumbers.includes(row[j])))) {
+            return true;
+        }
     }
 
-    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[i]))) {
-        if (cartella.some((row, i) => Number(row[i]) === lastCall)) return true;
+    if (cartella.every((row, i) => row && Array.isArray(row) && (row[i] === 0 || calledNumbers.includes(row[i])))) {
+        return true;
     }
-    if (cartella.every((row, i) => row && Array.isArray(row) && isMarked(row[4 - i]))) {
-        if (cartella.some((row, i) => Number(row[4 - i]) === lastCall)) return true;
+    if (cartella.every((row, i) => row && Array.isArray(row) && (row[4 - i] === 0 || calledNumbers.includes(row[4 - i])))) {
+        return true;
     }
 
     const topLeft = cartella[0]?.[0];
@@ -64,19 +54,12 @@ function bingoWinIncludesLastCall(cartella, calledNumbers) {
     const bottomLeft = cartella[4]?.[0];
     const bottomRight = cartella[4]?.[4];
     if (
-        isMarked(topLeft) &&
-        isMarked(topRight) &&
-        isMarked(bottomLeft) &&
-        isMarked(bottomRight)
+        (topLeft === 0 || calledNumbers.includes(topLeft)) &&
+        (topRight === 0 || calledNumbers.includes(topRight)) &&
+        (bottomLeft === 0 || calledNumbers.includes(bottomLeft)) &&
+        (bottomRight === 0 || calledNumbers.includes(bottomRight))
     ) {
-        if (
-            Number(topLeft) === lastCall ||
-            Number(topRight) === lastCall ||
-            Number(bottomLeft) === lastCall ||
-            Number(bottomRight) === lastCall
-        ) {
-            return true;
-        }
+        return true;
     }
 
     return false;
@@ -491,17 +474,16 @@ class PlayerBot {
     }
 
     /**
-     * Check if the bot has a winning pattern that includes the most recent call
-     * (required by the server on bot-advantage rounds).
+     * True when the card has any standard winning pattern vs called numbers (matches server checkBingo).
      */
     checkForWin() {
         if (!this.gameState.myCard || this.gameState.calledNumbers.length === 0) {
             return false;
         }
-        if (!bingoWinIncludesLastCall(this.gameState.myCard, this.gameState.calledNumbers)) {
+        if (!checkBingo(this.gameState.myCard, this.gameState.calledNumbers)) {
             return false;
         }
-        console.log('✅ Winning pattern includes last called number — can claim');
+        console.log('✅ Winning pattern — can claim');
         return true;
     }
 
@@ -556,11 +538,7 @@ class PlayerBot {
                 break;
 
             case 'bingo_rejected':
-                if (
-                    payload &&
-                    (payload.reason === 'invalid_claim' ||
-                        payload.reason === 'winning_pattern_must_include_last_call')
-                ) {
+                if (payload && payload.reason === 'invalid_claim') {
                     this.claimSentForGame = false;
                 }
                 console.warn('⚠️  Bingo rejected:', payload && payload.reason);
