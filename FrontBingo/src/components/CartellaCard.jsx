@@ -139,7 +139,15 @@ export default function CartellaCard({
         Array.isArray(missedWinningCalledNumbers)
             ? detectWinningPattern(grid, missedWinningCalledNumbers)
             : new Set();
-    
+
+    // Mark a cell only if that cell's number was actually drawn (1–75). Free center (0) is never "drawn".
+    const rawDrawn = Array.isArray(called) ? called : [];
+    const drawnSet = new Set(
+        rawDrawn
+            .map((x) => Number(x))
+            .filter((x) => Number.isInteger(x) && x >= 1 && x <= 75)
+    );
+
     // Handle cell click for manual marking
     const handleCellClick = (number) => {
         if (!isAutoMarkOn && onNumberToggle && number !== 0) {
@@ -167,10 +175,9 @@ export default function CartellaCard({
                     {grid.map((row, rowIndex) => (
                         <div key={rowIndex} className="cartela-row">
                             {row.map((number, colIndex) => {
-                                const isFree = number === 0;
-                                // When showing winning pattern (Winner screen), highlight ONLY the pattern cells.
-                                // Otherwise, called numbers would paint the whole card in bot-advantage rounds.
-                                const isCalled = showWinningPattern ? false : called.includes(number);
+                                const n = Number(number);
+                                const isFree = n === 0;
+                                const isCalled = !isFree && drawnSet.has(n);
                                 const isSelected = selectedNumber && number === selectedNumber;
                                 const isWinningCell = winningPattern.has(`${rowIndex}-${colIndex}`);
                                 const isMissedWinCell = missedWinPattern.has(`${rowIndex}-${colIndex}`);

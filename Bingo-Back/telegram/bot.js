@@ -2272,12 +2272,16 @@ Thank you for your dedication! 🙏`;
                                 }
 
                                 const w = userData.wallet;
-                                const mainBalance = (w.main !== null && w.main !== undefined) ? w.main : (w.balance ?? 0);
+                                const mainBalance = Number(
+                                    (w.main !== null && w.main !== undefined) ? w.main : (w.balance ?? 0)
+                                ) || 0;
+                                const maxWithdrawable = WalletService.getMaxWithdrawableMain(mainBalance);
 
-                                // Check if user has sufficient balance
-                                if (mainBalance < amount) {
-                                    withdrawalStates.delete(userId);
-                                    return ctx.reply('በቂ withdraw balance የለዎትም። Deposit በማድረግ ይጫወቱ', {
+                                if (amount > maxWithdrawable) {
+                                    const msg =
+                                        `${WalletService.AMHARIC_MIN_REMAINING_100_MSG}\n\n` +
+                                        `📊 Maximum you can withdraw: ETB ${maxWithdrawable.toFixed(2)}`;
+                                    return ctx.reply(msg, {
                                         reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                                     });
                                 }
@@ -2424,6 +2428,12 @@ Thank you for your dedication! 🙏`;
                             else if (error.error === 'USER_NOT_FOUND') errorMsg = '❌ User not found. Please try again.';
                             else if (error.error === 'NO_DEPOSIT_HISTORY_MIN_300') {
                                 errorMsg = error.message || '❌  ያለምንም ተቀመጭ ታሪክ (deposit history) ለማውጣት ቢያንስ 300 ብር የmain wallet ተቀማጭዎ መድረስ አለበት። በማንኛውም መጠን ማውጣት ለመጠየቅ እባክዎ መጀመሪያ ተቀማጭ ያድርጉ? ይህን የምናደርገው የጭዋታውን መድረክ ፍትሃዊ ለማድረግ ነው። ';
+                            }
+                            else if (error.error === 'MIN_REMAINING_BALANCE_100') {
+                                const maxW = error.maxWithdrawable != null ? Number(error.maxWithdrawable) : 0;
+                                errorMsg =
+                                    `${error.message || WalletService.AMHARIC_MIN_REMAINING_100_MSG}\n\n` +
+                                    `📊 Maximum you can withdraw: ETB ${maxW.toFixed(2)}`;
                             }
                             else if (error.error === 'INTERNAL_ERROR') errorMsg = '❌ Internal server error. Please try again later.';
 

@@ -137,10 +137,13 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
 
         const result = await WalletService.processWithdrawal(user._id, parseFloat(amount), destination.trim());
         if (!result.success) {
-            return res.status(400).json({ 
+            const body = {
                 error: result.error,
                 message: result.message || null
-            });
+            };
+            if (result.maxWithdrawable !== undefined) body.maxWithdrawable = result.maxWithdrawable;
+            if (result.mainBalance !== undefined) body.mainBalance = result.mainBalance;
+            return res.status(400).json(body);
         }
 
         res.json({

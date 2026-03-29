@@ -2,7 +2,18 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
+/** Minimum ETB that must remain in main (withdrawable) wallet after any withdrawal. */
+const MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW = 100;
+
+const AMHARIC_MIN_REMAINING_100_MSG =
+    'ውድ ደንበኛችን ከዋሌትዎ ላይ ቢያንስ መቶ ብር ቀሪ ሊኖረዎት ይገባል። እናም ይህን መቶ ብር ተቀማጭ በማድረግ ቀሪ ሂሳብዎን ያውጡ።';
+
 class WalletService {
+    /** Maximum amount user may withdraw so that at least MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW remains in main. */
+    static getMaxWithdrawableMain(mainBalance) {
+        const m = Number(mainBalance) || 0;
+        return Math.max(0, m - MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW);
+    }
     // Get wallet by user ID
     static async getWallet(userId) {
         try {
@@ -285,9 +296,17 @@ class WalletService {
                 };
             }
 
-            // For users with deposit history, enforce normal balance check
-            if (wallet.main < amount) {
-                return { success: false, error: 'INSUFFICIENT_FUNDS' };
+            // For users with deposit history: main must remain >= 100 ETB after withdrawal
+            const mainBal = Number(wallet.main) || 0;
+            const maxWithdrawable = WalletService.getMaxWithdrawableMain(mainBal);
+            if (amount > maxWithdrawable) {
+                return {
+                    success: false,
+                    error: 'MIN_REMAINING_BALANCE_100',
+                    maxWithdrawable,
+                    mainBalance: mainBal,
+                    message: AMHARIC_MIN_REMAINING_100_MSG
+                };
             }
 
             // Create pending withdrawal transaction
@@ -317,7 +336,8 @@ class WalletService {
         try {
             const wallet = await this.getWallet(userId);
 
-            if (wallet.main < amount) {
+            const mainBal = Number(wallet.main) || 0;
+            if (mainBal < amount + MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW) {
                 return { success: false, error: 'INSUFFICIENT_FUNDS' };
             }
 
@@ -552,5 +572,8 @@ class WalletService {
         }
     }
 }
+
+WalletService.AMHARIC_MIN_REMAINING_100_MSG = AMHARIC_MIN_REMAINING_100_MSG;
+WalletService.MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW = MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW;
 
 module.exports = WalletService;

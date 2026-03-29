@@ -3,6 +3,48 @@ import { useWebSocket } from '../contexts/WebSocketContext';
 import { useAuth } from '../lib/auth/AuthProvider';
 import CartellaCard from '../components/CartellaCard';
 
+function cardDataFromWinner(winner) {
+    if (!winner) return null;
+    try {
+        if (winner.card && Array.isArray(winner.card) && winner.card.length === 5) {
+            return winner.card;
+        }
+        if (winner.cardNumbers && Array.isArray(winner.cardNumbers) && winner.cardNumbers.length === 25) {
+            return [
+                winner.cardNumbers.slice(0, 5),
+                winner.cardNumbers.slice(5, 10),
+                winner.cardNumbers.slice(10, 15),
+                winner.cardNumbers.slice(15, 20),
+                winner.cardNumbers.slice(20, 25)
+            ];
+        }
+    } catch (e) {
+        console.error('Error processing card data:', e);
+    }
+    return null;
+}
+
+function calledNumbersForWinner(winner, gameCalledNumbers) {
+    const winnerCalled = Array.isArray(winner?.called) ? winner.called : [];
+    const gameCalled = Array.isArray(gameCalledNumbers) ? gameCalledNumbers : [];
+    return winnerCalled.length > 0 ? winnerCalled : gameCalled;
+}
+
+/** One entry per distinct winning board (same user can appear twice with two cartelas). */
+function dedupeWinningCartelas(winners) {
+    const out = [];
+    const seen = new Set();
+    for (const w of winners) {
+        const uid = String(w.userId ?? w.sessionId ?? '');
+        const cid = String(w.cartelaNumber ?? w.cartela?.cartelaNumber ?? '');
+        const key = `${uid}::${cid}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(w);
+    }
+    return out;
+}
+
 export default function Winner({ onNavigate, onResetToGame }) {
     const { gameState } = useWebSocket();
     const { sessionId } = useAuth();
@@ -33,8 +75,8 @@ export default function Winner({ onNavigate, onResetToGame }) {
     }, [gameState.phase, onNavigate]);
 
     const winners = gameState.winners || [];
-    const isMulti = winners.length > 1;
-    const main = winners[0] || {};
+    const displayWinners = dedupeWinningCartelas(winners);
+    const isMultiCartelas = displayWinners.length > 1;
 
     // Check if current user is a winner
     const isCurrentUserWinner = sessionId && winners.some(w =>
@@ -121,31 +163,8 @@ export default function Winner({ onNavigate, onResetToGame }) {
     });
 
     const winnerNames = uniqueWinners.map(getWinnerDisplayName);
-    const winnerName = winnerNames[0] || 'Winner';
-    const winnerInitial = winnerName.charAt(0).toUpperCase();
 
-    // Try to get card data
-                            let cardData = null;
-                            try {
-                                if (main.card && Array.isArray(main.card) && main.card.length === 5) {
-                                    cardData = main.card;
-                                } else if (main.cardNumbers && Array.isArray(main.cardNumbers) && main.cardNumbers.length === 25) {
-                                    cardData = [
-                                        main.cardNumbers.slice(0, 5),
-                                        main.cardNumbers.slice(5, 10),
-                                        main.cardNumbers.slice(10, 15),
-                                        main.cardNumbers.slice(15, 20),
-                                        main.cardNumbers.slice(20, 25)
-                                    ];
-                                } else if (main.card && Array.isArray(main.card)) {
-                                    cardData = main.card;
-                                }
-                            } catch (error) {
-                                console.error('Error processing card data:', error);
-                            }
-
-    const calledNumbers = main.called || gameState.calledNumbers || [];
-    const boardNumber = main.cartelaNumber || main.cardId || 'N/A';
+    const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
                                     return (
         <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#e9d5ff' }}>
@@ -192,34 +211,63 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
                     {/* Card Section with Light Purple Background */}
                     <div className="p-6" style={{ background: '#e9d5ff' }}>
-                        {/* Cartella Card */}
-                        <div className="flex justify-center mb-4">
-                            {cardData ? (
-                                        <CartellaCard
-                                    id={boardNumber}
-                                            card={cardData}
-                                    called={calledNumbers}
-                                            isPreview={false}
-                                    showWinningPattern={true}
-                                />
-                            ) : (
-                                <div className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md" style={{ background: '#e9d5ff' }}>
-                                    <div className="text-3xl mb-2">🏆</div>
-                                    <div className="text-purple-700 text-sm font-semibold mb-1">
-                                        Cartella #{boardNumber}
-                                    </div>
-                                    <div className="text-gray-600 text-xs mt-2">
-                                        Card preview not available
-                                    </div>
+                        <div
+                            className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
+                            style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}
+                        >
+                            <div className={`flex flex-col items-center ${isMultiCartelas ? 'gap-8 pb-2' : ''}`}>
+                                {displayWinners.map((w, idx) => {
+                                    const cardData = cardDataFromWinner(w);
+                                    const calledNumbers = calledNumbersForWinner(w, gameCalled);
+                                    const boardNumber = w.cartelaNumber || w.cardId || 'N/A';
+                                    const label = getWinnerDisplayName(w);
+                                    return (
+                                        <div
+                                            key={`${String(w.userId)}-${boardNumber}-${idx}`}
+                                            className="w-full flex flex-col items-center shrink-0"
+                                        >
+                                            {isMultiCartelas && (
+                                                <p className="text-purple-900 text-sm font-bold mb-2 text-center w-full">
+                                                    {label}
+                                                    <span className="text-purple-600 font-semibold"> · Board {boardNumber}</span>
+                                                </p>
+                                            )}
+                                            <div className="flex justify-center mb-2 w-full">
+                                                {cardData ? (
+                                                    <CartellaCard
+                                                        id={boardNumber}
+                                                        card={cardData}
+                                                        called={calledNumbers}
+                                                        isPreview={false}
+                                                        showWinningPattern={true}
+                                                        showHeader={isMultiCartelas}
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
+                                                        style={{ background: '#e9d5ff' }}
+                                                    >
+                                                        <div className="text-3xl mb-2">🏆</div>
+                                                        <div className="text-purple-700 text-sm font-semibold mb-1">
+                                                            Cartella #{boardNumber}
+                                                        </div>
+                                                        <div className="text-gray-600 text-xs mt-2">
+                                                            Card preview not available
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {!isMultiCartelas && (
+                                                <div className="text-center mt-4 w-full">
+                                                    <p className="text-purple-800 text-sm font-semibold">
+                                                        Board number {boardNumber}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-
-                        {/* Board Number */}
-                        <div className="text-center mt-4">
-                            <p className="text-purple-800 text-sm font-semibold">
-                                Board number {boardNumber}
-                            </p>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
