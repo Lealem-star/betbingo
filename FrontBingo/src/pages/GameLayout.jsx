@@ -860,7 +860,7 @@ export default function GameLayout({
                                         : (manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : []);
                                     
                                     return (
-                                        <div key={cardNumber} className="w-full flex flex-col items-center">
+                                        <div key={cardNumber} className="w-full flex flex-col gap-2 items-center">
                                             <CartellaCard
                                                 id={cardNumber}
                                                 card={card}
