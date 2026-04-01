@@ -198,7 +198,9 @@ export default function CartellaCard({
                                 } else if (isSelected) {
                                     cellClass = 'cartela-selected';
                                 } else if (isCalled) {
-                                    cellClass = 'cartela-called';
+                                    // Winner screen: drawn but not part of the winning line → yellow; in-game → green
+                                    cellClass =
+                                        showWinningPattern ? 'cartela-called-secondary' : 'cartela-called';
                                 }
 
                                 // Make cell clickable if auto-mark is OFF and it's not a free space

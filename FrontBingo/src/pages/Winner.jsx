@@ -109,7 +109,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                         No Winner This Game
                                     </p>
                                 </div>
-                    </div>
+                            </div>
                         </div>
 
                         {/* Countdown Section - Orange Background with Large Number */}
@@ -120,13 +120,13 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                 </div>
                                 <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
                                     {countdown > 0 ? countdown : '0'}
-                        </div>
+                                </div>
                                 <div className="text-white text-xs font-medium mt-2 opacity-90">
-                            {countdown > 0 ? (
+                                    {countdown > 0 ? (
                                         <>Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}</>
-                            ) : (
-                                <>Navigating to next game...</>
-                            )}
+                                    ) : (
+                                        <>Navigating to next game...</>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -166,7 +166,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
     const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
-                                    return (
+    return (
         <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#e9d5ff' }}>
             <div className="w-full max-w-md">
                 {/* Main Card Container with Light Purple Background */}
@@ -196,7 +196,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                             {(name || 'W').charAt(0).toUpperCase()}
                                         </div>
                                         <p className="text-white text-lg md:text-xl font-semibold">
-                                            {name}
+                                            {name} has won the game!
                                         </p>
                                     </div>
                                 ))}
@@ -240,7 +240,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                                         called={calledNumbers}
                                                         isPreview={false}
                                                         showWinningPattern={true}
-                                                        showHeader={isMultiCartelas}
+                                                        showHeader={true}
                                                     />
                                                 ) : (
                                                     <div
@@ -277,7 +277,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                             <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
                                 {countdown > 0 ? countdown : '0'}
                             </div>
-                    </div>
+                        </div>
                     </div>
                 </div>
             </div>
