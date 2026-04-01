@@ -236,7 +236,7 @@ function makeRoom(stake) {
         callTimerId: null,
         announceTimerId: null,
         startTime: Date.now(),
-        registrationEndTime: Date.now() + 45000, // 45 seconds from now
+        registrationEndTime: Date.now() + 30000, // 30 seconds from now
         gameEndTime: null,
 
         // Fairness tracking across rounds (same room per stake)
@@ -347,7 +347,7 @@ function broadcast(type, payload, targetRoom = null) {
 async function startRegistration(room) {
     console.log('startRegistration called for room:', room.stake);
     room.phase = 'registration';
-    room.registrationEndTime = Date.now() + 45000; // 45 seconds
+    room.registrationEndTime = Date.now() + 30000; // 30 seconds
     room.startTime = Date.now();
     room.announceProcessed = false;
     // Clear any pending number-calling timer when restarting registration
@@ -373,7 +373,7 @@ async function startRegistration(room) {
         gameId: room.currentGameId,
         stake: room.stake,
         playersCount: 0, // Start with 0, will update as players join
-        duration: 45000, // 45 seconds
+        duration: 30000, // 30 seconds
         endsAt: room.registrationEndTime,
         availableCards: Array.from({ length: BingoCards.cards.length }, (_, i) => i + 1), // Generate available cards based on actual card count
         takenCards: [],
@@ -399,7 +399,7 @@ async function startRegistration(room) {
             // IMPORTANT: only broadcast registration_closed when we will actually start the game.
             startGame(room);
         }
-    }, 45000); // 45 seconds
+    }, 30000); // 30 seconds
 }
 
 async function startGame(room) {
@@ -415,11 +415,11 @@ async function startGame(room) {
 
     if (selectedPlayersCount < 2) {
         // Not enough players yet to start a game – extend registration until we have at least 2 players.
-        console.log(`Only ${selectedPlayersCount} player(s) joined game ${room.currentGameId}. Extending registration by 45 seconds.`);
+        console.log(`Only ${selectedPlayersCount} player(s) joined game ${room.currentGameId}. Extending registration by 30 seconds.`);
 
         // Keep existing selections/takenCards and just extend the timer
         room.phase = 'registration';
-        room.registrationEndTime = Date.now() + 45000; // extend by 45 seconds
+        room.registrationEndTime = Date.now() + 30000; // extend by 30 seconds
         room.startTime = Date.now();
 
         const currentPrizePool = Math.floor(selectedCount * room.stake * 0.8);
@@ -429,19 +429,19 @@ async function startGame(room) {
             gameId: room.currentGameId,
             stake: room.stake,
             playersCount: selectedPlayersCount,
-            duration: 45000,
+            duration: 30000,
             endsAt: room.registrationEndTime,
             takenCards: Array.from(room.takenCards),
             prizePool: currentPrizePool
         }, room);
 
         // Schedule another check after the extended period.
-        // This will keep extending every 45s until there are 0 or 2+ selections.
+        // This will keep extending every 30s until there are 0 or 2+ selections.
         setTimeout(() => {
             if (room.phase === 'registration' && room.currentGameId) {
                 startGame(room);
             }
-        }, 45000);
+        }, 30000);
         return;
     }
 
