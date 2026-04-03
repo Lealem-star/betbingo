@@ -7,8 +7,9 @@
  * 3. Joining a game room
  * 4. Selecting a card during registration
  * 5. Monitoring called numbers
- * 6. Detecting winning patterns and claiming bingo
- * 
+ * 6. Auto-claim: on each `number_called`, if `checkBingo` matches the server rules,
+ *    sends `bingo_claim` with `cardNumber` only (legacy path — matches server validation).
+ *
  * Usage:
  *   node bots/playerBot.js
  *   Or: npm run bot:start
@@ -18,6 +19,7 @@
  *   STAKE - Stake amount: 10, 25, 50, or 100 (default: 10)
  *   API_BASE - API base URL (default: http://localhost:3001)
  *   WS_BASE - WebSocket base URL (default: ws://localhost:3001)
+ *   AUTO_CLAIM - if "false", do not send bingo_claim when a pattern is detected (default: true)
  */
 
 require('dotenv').config();
@@ -151,6 +153,8 @@ class PlayerBot {
             totalWinnings: 0
         };
         this.claimSentForGame = false;
+        this.autoClaim =
+            String(process.env.AUTO_CLAIM || 'true').toLowerCase() !== 'false';
     }
 
     /**
@@ -442,6 +446,9 @@ class PlayerBot {
      * Claim bingo when winning pattern is detected
      */
     claimBingo() {
+        if (!this.autoClaim) {
+            return false;
+        }
         if (this.gameState.phase !== 'running') {
             console.warn('⚠️  Cannot claim bingo - game not running');
             return false;
@@ -450,24 +457,11 @@ class PlayerBot {
             return true;
         }
 
-        console.log('🎉 CLAIMING BINGO!');
-        // Bot always "marks" all winning-card numbers it knows about
-        const card = this.gameState.myCard;
-        const markedNumbers = [];
-        if (Array.isArray(card)) {
-            card.forEach(row => {
-                if (!Array.isArray(row)) return;
-                row.forEach(num => {
-                    const n = Number(num);
-                    if (Number.isInteger(n) && n >= 1 && n <= 75) {
-                        markedNumbers.push(n);
-                    }
-                });
-            });
-        }
+        console.log('🎉 AUTO-CLAIM: sending bingo_claim');
+        // Legacy payload: cardNumber only. Server then validates with checkBingo vs calledNumbers.
+        // Do NOT send markedNumbers with all cells — server requires every mark to be already called.
         const sent = this.send('bingo_claim', {
-            cardNumber: this.gameState.myCardNumber,
-            markedNumbers
+            cardNumber: this.gameState.myCardNumber
         });
         if (sent) this.claimSentForGame = true;
         return sent;
@@ -499,18 +493,38 @@ class PlayerBot {
         }
 
         switch (type) {
-            case 'snapshot':
+            case 'snapshot': {
                 this.gameState.phase = payload.phase || this.gameState.phase;
                 this.gameState.gameId = payload.gameId || this.gameState.gameId;
                 this.gameState.playersCount = payload.playersCount || 0;
-                this.gameState.calledNumbers = payload.calledNumbers || [];
+                const snapCalled = payload.calledNumbers || payload.called || [];
+                this.gameState.calledNumbers = Array.isArray(snapCalled) ? [...snapCalled] : [];
                 this.gameState.takenCards = payload.takenCards || [];
-                this.gameState.myCardNumber = payload.yourSelection;
+
+                const sel = payload.yourSelections;
+                if (Array.isArray(sel) && sel.length > 0) {
+                    this.gameState.myCardNumber = sel[0];
+                } else if (payload.yourSelection != null) {
+                    this.gameState.myCardNumber = payload.yourSelection;
+                }
+
+                if (this.gameState.phase === 'running' && Array.isArray(payload.cards) && payload.cards.length > 0) {
+                    this.gameState.myCard = payload.cards[0].card || null;
+                    if (payload.cards[0].cardNumber != null) {
+                        this.gameState.myCardNumber = payload.cards[0].cardNumber;
+                    }
+                }
 
                 if (this.gameState.phase === 'registration' && !this.gameState.myCardNumber) {
                     this.scheduleCardSelection();
                 }
+
+                // Rejoin mid-game: if we already have bingo on snapshot, claim immediately
+                if (this.gameState.phase === 'running' && this.checkForWin()) {
+                    this.claimBingo();
+                }
                 break;
+            }
 
             case 'registration_open':
                 this.gameState.phase = 'registration';
@@ -538,7 +552,11 @@ class PlayerBot {
                 break;
 
             case 'bingo_rejected':
-                if (payload && payload.reason === 'invalid_claim') {
+                if (
+                    payload &&
+                    (payload.reason === 'invalid_claim' ||
+                        payload.reason === 'invalid_marked_numbers')
+                ) {
                     this.claimSentForGame = false;
                 }
                 console.warn('⚠️  Bingo rejected:', payload && payload.reason);
@@ -586,7 +604,7 @@ class PlayerBot {
                 }
                 process.stdout.write(`🔢 ${newNumber} `);
 
-                if (this.checkForWin()) {
+                if (this.autoClaim && this.checkForWin()) {
                     this.claimBingo();
                 }
                 break;
