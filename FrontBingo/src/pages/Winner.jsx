@@ -167,7 +167,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
     const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
     return (
-        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
+        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4 gap-4" style={{ background: '#cfade0' }}>
             <div className="w-full max-w-md">
                 {/* Main Card Container with Light Purple Background */}
                 <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
