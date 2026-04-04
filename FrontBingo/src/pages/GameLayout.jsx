@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth/AuthProvider';
 import { useToast } from '../contexts/ToastContext';
 import { playNumberSound, preloadNumberSounds } from '../lib/audio/numberSounds';
 import BottomNav from '../components/BottomNav';
+import Winner from './Winner.jsx';
 import '../styles/bingo-balls.css';
 import '../styles/action-buttons.css';
 
@@ -331,10 +332,9 @@ export default function GameLayout({
                 showSuccess('🏆 Game Over!');
             }
 
-            // Navigate to winner page for all users
-            onNavigate?.('winner');
+            // Winner UI is shown as overlay (same route); do not navigate away from game-layout.
         }
-    }, [gameState.phase, gameState.winners, sessionId, onNavigate, isRefreshing, showSuccess]);
+    }, [gameState.phase, gameState.winners, sessionId, isRefreshing, showSuccess]);
 
     // Timeout mechanism for when gameId is not available
     useEffect(() => {
@@ -927,6 +927,10 @@ export default function GameLayout({
                 {/* <BottomNav current="game" onNavigate={onNavigate} /> */}
 
             </div>
+
+            {gameState.phase === 'announce' && gameState.gameId ? (
+                <Winner variant="overlay" onNavigate={onNavigate} />
+            ) : null}
         </div>
     );
 }

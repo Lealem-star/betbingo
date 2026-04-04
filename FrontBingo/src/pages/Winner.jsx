@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useWebSocket } from '../contexts/WebSocketContext';
-import { useAuth } from '../lib/auth/AuthProvider';
 import CartellaCard from '../components/CartellaCard';
 
 function cardDataFromWinner(winner) {
@@ -45,12 +44,40 @@ function dedupeWinningCartelas(winners) {
     return out;
 }
 
-export default function Winner({ onNavigate, onResetToGame }) {
+/** Full-page (#cfade0) vs modal overlay (dimmed game still visible behind). */
+function winnerChrome(variant, children) {
+    if (variant === 'overlay') {
+        return (
+            <div
+                className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain"
+                style={{ background: 'rgba(36, 24, 54, 0.78)' }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="winner-bingo-title"
+            >
+                <div className="w-full max-w-md my-auto shrink-0 py-2">{children}</div>
+            </div>
+        );
+    }
+    return (
+        <div
+            className="app-container flex items-center justify-center min-h-screen py-4 px-4"
+            style={{ background: '#cfade0' }}
+        >
+            <div className="w-full max-w-md">{children}</div>
+        </div>
+    );
+}
+
+/**
+ * @param {{ onNavigate?: (page: string) => void, variant?: 'page' | 'overlay' }} props
+ * - `overlay`: on top of GameLayout during announce (dimmed backdrop + centered card).
+ * - `page`: standalone route (`App` `case 'winner'`) if needed.
+ */
+export default function Winner({ onNavigate, variant = 'page' }) {
     const { gameState } = useWebSocket();
-    const { sessionId } = useAuth();
     const [countdown, setCountdown] = useState(0);
 
-    // Server-synchronized countdown timer - uses only server's nextRegistrationStart timestamp
     useEffect(() => {
         const updateCountdown = () => {
             if (gameState.nextRegistrationStart) {
@@ -67,7 +94,6 @@ export default function Winner({ onNavigate, onResetToGame }) {
         return () => clearInterval(interval);
     }, [gameState.nextRegistrationStart]);
 
-    // Navigate when backend starts new registration
     useEffect(() => {
         if (gameState.phase === 'registration') {
             onNavigate?.('cartela-selection');
@@ -78,83 +104,70 @@ export default function Winner({ onNavigate, onResetToGame }) {
     const displayWinners = dedupeWinningCartelas(winners);
     const isMultiCartelas = displayWinners.length > 1;
 
-    // Check if current user is a winner
-    const isCurrentUserWinner = sessionId && winners.some(w =>
-        w.userId === sessionId ||
-        w.sessionId === sessionId ||
-        (w.user && w.user.id && w.user.id.toString() === sessionId?.toString())
-    );
-
-    // Handle case when no winners (shouldn't happen, but handle gracefully)
     const hasWinners = winners.length > 0;
 
-    // Show "no winner" state if no winners data
     if (!hasWinners) {
-        return (
-            <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
-                <div className="w-full max-w-md">
-                    {/* Main Card Container with Light Purple Background */}
-                    <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
-                        {/* Large Orange BINGO! Banner */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                            <div className="text-center">
-                                <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
-                                    BINGO!
-                                </h1>
-                                <div className="flex items-center justify-center gap-3">
-                                    <div className="px-4 py-2 rounded-lg bg-gray-500 border-2 border-gray-600 flex items-center justify-center text-white font-bold text-lg shadow-lg" style={{ backgroundColor: '#6b7280', borderColor: '#4b5563', padding: '0.5rem 1rem' }}>
-                                        🎯
-                                    </div>
-                                    <p className="text-white text-lg md:text-xl font-semibold">
-                                        No Winner This Game
-                                    </p>
-                                </div>
+        const card = (
+            <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
+                <div
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8"
+                    style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}
+                >
+                    <div className="text-center">
+                        <h1
+                            id="winner-bingo-title"
+                            className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg"
+                        >
+                            BINGO!
+                        </h1>
+                        <div className="flex items-center justify-center gap-3">
+                            <div
+                                className="px-4 py-2 rounded-lg bg-gray-500 border-2 border-gray-600 flex items-center justify-center text-white font-bold text-lg shadow-lg"
+                                style={{ backgroundColor: '#6b7280', borderColor: '#4b5563', padding: '0.5rem 1rem' }}
+                            >
+                                🎯
                             </div>
+                            <p className="text-white text-lg md:text-xl font-semibold">No Winner This Game</p>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Countdown Section - Orange Background with Large Number */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                            <div className="text-center">
-                                <div className="text-white text-sm font-semibold mb-2">
-                                    አዲስ ጭዋታ ለመጀመር
-                                </div>
-                                <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
-                                    {countdown > 0 ? countdown : '0'}
-                                </div>
-                                <div className="text-white text-xs font-medium mt-2 opacity-90">
-                                    {countdown > 0 ? (
-                                        <>Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}</>
-                                    ) : (
-                                        <>Navigating to next game...</>
-                                    )}
-                                </div>
-                            </div>
+                <div
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8"
+                    style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}
+                >
+                    <div className="text-center">
+                        <div className="text-white text-sm font-semibold mb-2">አዲስ ጭዋታ ለመጀመር</div>
+                        <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
+                            {countdown > 0 ? countdown : '0'}
+                        </div>
+                        <div className="text-white text-xs font-medium mt-2 opacity-90">
+                            {countdown > 0 ? (
+                                <>
+                                    Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}
+                                </>
+                            ) : (
+                                <>Navigating to next game...</>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
         );
+        return winnerChrome(variant, card);
     }
 
-
-    // Get winner name/identifier for each winner
     const getWinnerDisplayName = (winner) =>
         winner.name ||
         winner.playerName ||
         winner.firstName ||
         (winner.cartelaNumber ? `Cartella #${winner.cartelaNumber}` : 'Winner');
 
-    // Build a unique winner list by user identity (userId / sessionId),
-    // falling back to display name if needed
     const uniqueWinners = [];
     const seenKeys = new Set();
 
     winners.forEach((w) => {
-        const key =
-            w.userId ||
-            w.sessionId ||
-            (w.user && w.user.id) ||
-            getWinnerDisplayName(w);
+        const key = w.userId || w.sessionId || (w.user && w.user.id) || getWinnerDisplayName(w);
 
         if (!seenKeys.has(key)) {
             seenKeys.add(key);
@@ -166,123 +179,125 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
     const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
-    return (
-        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
-            <div className="w-full max-w-md">
-                {/* Main Card Container with Light Purple Background */}
-                <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
-                    {/* Large Orange BINGO! Banner */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                        <div className="text-center">
-                            <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
-                                BINGO!
-                            </h1>
-                            {/* Winner count summary */}
-                            <div className="flex items-center justify-center gap-3 w-full rounded-lg px-4 py-3 mb-4">
-                                <span className="text-2xl" aria-hidden>🎉</span>
-                                <span className="text-white font-semibold text-lg drop-shadow-sm">
-                                    {uniqueWinners.length === 1
-                                        ? '1 player won!'
-                                        : `${uniqueWinners.length} players won!`}
-                                </span>
+    const card = (
+        <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
+            <div
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8"
+                style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}
+            >
+                <div className="text-center">
+                    <h1
+                        id="winner-bingo-title"
+                        className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg"
+                    >
+                        BINGO!
+                    </h1>
+                    <div className="flex items-center justify-center gap-3 w-full rounded-lg px-4 py-3 mb-4">
+                        <span className="text-2xl" aria-hidden>
+                            🎉
+                        </span>
+                        <span className="text-white font-semibold text-lg drop-shadow-sm">
+                            {uniqueWinners.length === 1 ? '1 player won!' : `${uniqueWinners.length} players won!`}
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        {winnerNames.slice(0, 3).map((name, idx) => (
+                            <div key={`${name}-${idx}`} className="flex items-center justify-center gap-3">
+                                <div
+                                    className="px-4 py-2 rounded-lg bg-green-500 border-2 border-green-600 flex items-center justify-center text-white font-bold text-lg shadow-lg"
+                                    style={{ backgroundColor: '#22c55e', borderColor: '#16a34a', padding: '0.5rem 1rem' }}
+                                >
+                                    {(name || 'W').charAt(0).toUpperCase()}
+                                </div>
+                                <p className="text-white text-lg md:text-xl font-semibold">{name} has won the game!</p>
                             </div>
-                            <div className="flex flex-col items-center justify-center gap-2">
-                                {winnerNames.slice(0, 3).map((name, idx) => (
-                                    <div key={`${name}-${idx}`} className="flex items-center justify-center gap-3">
-                                        <div
-                                            className="px-4 py-2 rounded-lg bg-green-500 border-2 border-green-600 flex items-center justify-center text-white font-bold text-lg shadow-lg"
-                                            style={{ backgroundColor: '#22c55e', borderColor: '#16a34a', padding: '0.5rem 1rem' }}
-                                        >
-                                            {(name || 'W').charAt(0).toUpperCase()}
-                                        </div>
-                                        <p className="text-white text-lg md:text-xl font-semibold">
-                                            {name} has won the game!
+                        ))}
+                        {winnerNames.length > 3 && (
+                            <p className="text-white text-lg font-semibold opacity-90">+{winnerNames.length - 3} more</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-6" style={{ background: '#cfade0' }}>
+                <div
+                    className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
+                    style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}
+                >
+                    <div className={`flex flex-col items-center ${isMultiCartelas ? 'gap-8 pb-2' : ''}`}>
+                        {displayWinners.map((w, idx) => {
+                            const cardData = cardDataFromWinner(w);
+                            const calledNumbers = calledNumbersForWinner(w, gameCalled);
+                            const boardNumber = w.cartelaNumber || w.cardId || 'N/A';
+                            const label = getWinnerDisplayName(w);
+                            return (
+                                <div
+                                    key={`${String(w.userId)}-${boardNumber}-${idx}`}
+                                    className="w-full flex flex-col items-center shrink-0"
+                                >
+                                    {isMultiCartelas && (
+                                        <p className="text-purple-900 text-sm font-bold mb-2 text-center w-full">
+                                            {label}
+                                            <span className="text-purple-600 font-semibold"> · Board {boardNumber}</span>
                                         </p>
-                                    </div>
-                                ))}
-                                {winnerNames.length > 3 && (
-                                    <p className="text-white text-lg font-semibold opacity-90">
-                                        +{winnerNames.length - 3} more
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Card Section with Light Purple Background */}
-                    <div className="p-6" style={{ background: '#cfade0' }}>
-                        <div
-                            className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
-                            style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}
-                        >
-                            <div className={`flex flex-col items-center ${isMultiCartelas ? 'gap-8 pb-2' : ''}`}>
-                                {displayWinners.map((w, idx) => {
-                                    const cardData = cardDataFromWinner(w);
-                                    const calledNumbers = calledNumbersForWinner(w, gameCalled);
-                                    const boardNumber = w.cartelaNumber || w.cardId || 'N/A';
-                                    const label = getWinnerDisplayName(w);
-                                    return (
-                                        <div
-                                            key={`${String(w.userId)}-${boardNumber}-${idx}`}
-                                            className="w-full flex flex-col items-center shrink-0"
-                                        >
-                                            {isMultiCartelas && (
-                                                <p className="text-purple-900 text-sm font-bold mb-2 text-center w-full">
-                                                    {label}
-                                                    <span className="text-purple-600 font-semibold"> · Board {boardNumber}</span>
-                                                </p>
-                                            )}
-                                            <div className="flex justify-center mb-2 w-full">
-                                                {cardData ? (
-                                                    <CartellaCard
-                                                        id={boardNumber}
-                                                        card={cardData}
-                                                        called={calledNumbers}
-                                                        isPreview={false}
-                                                        showWinningPattern={true}
-                                                        showHeader={true}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
-                                                        style={{ background: '#cfade0' }}
-                                                    >
-                                                        <div className="text-3xl mb-2">🏆</div>
-                                                        <div className="text-purple-700 text-sm font-semibold mb-1">
-                                                            Cartella #{boardNumber}
-                                                        </div>
-                                                        <div className="text-gray-600 text-xs mt-2">
-                                                            Card preview not available
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {!isMultiCartelas && (
-                                                <div className="text-center mt-4 w-full">
-                                                    <p className="text-purple-800 text-sm font-semibold">
-                                                        Board number {boardNumber}
-                                                    </p>
+                                    )}
+                                    <div className="flex justify-center mb-2 w-full">
+                                        {cardData ? (
+                                            <CartellaCard
+                                                id={boardNumber}
+                                                card={cardData}
+                                                called={calledNumbers}
+                                                isPreview={false}
+                                                showWinningPattern={true}
+                                                showHeader={true}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
+                                                style={{ background: '#cfade0' }}
+                                            >
+                                                <div className="text-3xl mb-2">🏆</div>
+                                                <div className="text-purple-700 text-sm font-semibold mb-1">
+                                                    Cartella #{boardNumber}
                                                 </div>
-                                            )}
+                                                <div className="text-gray-600 text-xs mt-2">Card preview not available</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!isMultiCartelas && (
+                                        <div className="text-center mt-4 w-full">
+                                            <p className="text-purple-800 text-sm font-semibold">Board number {boardNumber}</p>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
+                </div>
+            </div>
 
-                    {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                        <div className="text-center">
-                            <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
-                                {countdown > 0 ? countdown : '0'}
-                            </div>
-                        </div>
+            <div
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8"
+                style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}
+            >
+                <div className="text-center">
+                    <div className="text-white text-sm font-semibold mb-2">አዲስ ጭዋታ ለመጀመር</div>
+                    <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
+                        {countdown > 0 ? countdown : '0'}
+                    </div>
+                    <div className="text-white text-xs font-medium mt-2 opacity-90">
+                        {countdown > 0 ? (
+                            <>
+                                Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}
+                            </>
+                        ) : (
+                            <>Navigating to next game...</>
+                        )}
                     </div>
                 </div>
             </div>
         </div>
     );
 
-
+    return winnerChrome(variant, card);
 }
