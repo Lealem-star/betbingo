@@ -94,9 +94,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
             <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
                 <div className="w-full max-w-md">
                     {/* Main Card Container with Light Purple Background */}
-                    <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
+                    <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4" style={{ background: '#cfade0' }}>
                         {/* Large Orange BINGO! Banner */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                             <div className="text-center">
                                 <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
                                     BINGO!
@@ -113,7 +113,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                         </div>
 
                         {/* Countdown Section - Orange Background with Large Number */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                             <div className="text-center">
                                 <div className="text-white text-sm font-semibold mb-2">
                                     አዲስ ጭዋታ ለመጀመር
@@ -167,12 +167,12 @@ export default function Winner({ onNavigate, onResetToGame }) {
     const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
     return (
-        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4 gap-4" style={{ background: '#cfade0' }}>
+        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
             <div className="w-full max-w-md">
                 {/* Main Card Container with Light Purple Background */}
-                <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
+                <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4" style={{ background: '#cfade0' }}>
                     {/* Large Orange BINGO! Banner */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
                             <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
                                 BINGO!
@@ -201,7 +201,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Card Section with Light Purple Background */}
-                    <div className="p-6 mt-4" style={{ background: '#cfade0' }}>
+                    <div className="p-6 shrink-0" style={{ background: '#cfade0' }}>
                         <div
                             className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
                             style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}>
@@ -262,7 +262,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-10 h-20" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-10 h-20 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
                             <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
                                 {countdown > 0 ? countdown : '0'}
