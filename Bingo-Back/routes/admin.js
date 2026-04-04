@@ -664,9 +664,7 @@ router.post('/balances/deposits/:id/approve', adminMiddleware, async (req, res) 
 
         res.json({
             success: true,
-            message: 'Deposit approved successfully',
-            bonus: result.bonus,
-            totalPlayCredited: result.totalPlayCredited
+            message: 'Deposit approved successfully'
         });
     } catch (error) {
         console.error('Deposit approval error:', error);

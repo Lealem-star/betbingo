@@ -5,9 +5,6 @@ const User = require('../models/User');
 /** Minimum ETB that must remain in main (withdrawable) wallet after any withdrawal. */
 const MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW = 100;
 
-/** Extra play-wallet credit as a fraction of each completed deposit (e.g. 0.1 = 10%). */
-const DEPOSIT_PLAY_BONUS_RATE = 0.1;
-
 const AMHARIC_MIN_REMAINING_100_MSG =
     'ውድ ደንበኛችን ከዋሌትዎ ላይ ቢያንስ መቶ ብር ቀሪ ሊኖረዎት ይገባል። እናም ይህን መቶ ብር ተቀማጭ በማድረግ ቀሪ ሂሳብዎን ያውጡ።';
 
@@ -103,18 +100,7 @@ class WalletService {
         }
     }
 
-    /** 10% of deposit (rounded to 2 decimals) credited to play wallet on top of the deposit. */
-    static computeDepositPlayBonus(depositAmount) {
-        const base = Number(depositAmount);
-        if (!Number.isFinite(base) || base <= 0) {
-            return { bonus: 0 };
-        }
-        const raw = base * DEPOSIT_PLAY_BONUS_RATE;
-        const bonus = Math.round(raw * 100) / 100;
-        return { bonus: bonus > 0 ? bonus : 0 };
-    }
-
-    // Process deposit (play wallet += amount + 10% bonus)
+    // Process deposit — credit play wallet by deposit amount only (no percentage bonus)
     static async processDeposit(userId, amount, smsData = null) {
         try {
             const base = Number(amount);
@@ -122,9 +108,7 @@ class WalletService {
                 throw new Error('INVALID_DEPOSIT_AMOUNT');
             }
 
-            const { bonus } = this.computeDepositPlayBonus(base);
-
-            let result = await this.updateBalance(userId, { play: base });
+            const result = await this.updateBalance(userId, { play: base });
 
             const transaction = new Transaction({
                 userId,
@@ -138,20 +122,6 @@ class WalletService {
             });
             await transaction.save();
 
-            if (bonus > 0) {
-                const beforeBonus = { ...result.balanceAfter };
-                result = await this.updateBalance(userId, { play: bonus });
-                const bonusTx = new Transaction({
-                    userId,
-                    type: 'bonus',
-                    amount: bonus,
-                    description: `10% deposit bonus: ETB ${bonus} (play wallet)`,
-                    balanceBefore: beforeBonus,
-                    balanceAfter: result.balanceAfter
-                });
-                await bonusTx.save();
-            }
-
             await Wallet.findOneAndUpdate(
                 { userId },
                 {
@@ -160,12 +130,7 @@ class WalletService {
                 }
             );
 
-            return {
-                wallet: result.wallet,
-                transaction,
-                bonus,
-                totalPlayCredited: base + bonus
-            };
+            return { wallet: result.wallet, transaction };
         } catch (error) {
             console.error('Error processing deposit:', error);
             throw error;
@@ -387,7 +352,7 @@ class WalletService {
         }
     }
 
-    // Process deposit approval (admin) — same play credit as processDeposit: principal + 10% bonus
+    // Process deposit approval (admin) — same as processDeposit: principal to play only
     static async processDepositApproval(userId, amount) {
         try {
             await this.getWallet(userId);
@@ -397,21 +362,7 @@ class WalletService {
                 return { success: false, error: 'INVALID_AMOUNT' };
             }
 
-            const { bonus } = this.computeDepositPlayBonus(base);
-
-            let result = await this.updateBalance(userId, { play: base });
-            if (bonus > 0) {
-                const beforeBonus = { ...result.balanceAfter };
-                result = await this.updateBalance(userId, { play: bonus });
-                await new Transaction({
-                    userId,
-                    type: 'bonus',
-                    amount: bonus,
-                    description: `10% deposit bonus: ETB ${bonus} (play wallet)`,
-                    balanceBefore: beforeBonus,
-                    balanceAfter: result.balanceAfter
-                }).save();
-            }
+            const result = await this.updateBalance(userId, { play: base });
 
             await Wallet.findOneAndUpdate(
                 { userId },
@@ -421,12 +372,7 @@ class WalletService {
                 }
             );
 
-            return {
-                success: true,
-                wallet: result.wallet,
-                bonus,
-                totalPlayCredited: base + bonus
-            };
+            return { success: true, wallet: result.wallet };
         } catch (error) {
             console.error('Error processing deposit approval:', error);
             return { success: false, error: 'INTERNAL_ERROR' };

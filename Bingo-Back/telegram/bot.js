@@ -1811,19 +1811,7 @@ Thank you for your dedication! 🙏`;
                 });
                 if (response.ok) {
                     await ctx.answerCbQuery('✅ Deposit approved');
-                    let bonus = Math.round(Number(amount) * 0.1 * 100) / 100;
-                    try {
-                        const body = await response.json();
-                        if (body && Number(body.bonus) >= 0) {
-                            bonus = Number(body.bonus);
-                        }
-                    } catch (_) { /* use computed bonus */ }
-                    const totalPlay = Number(amount) + bonus;
-                    await ctx.reply(
-                        bonus > 0
-                            ? `✅ Image deposit approved. ETB ${amount} + ETB ${bonus} (10% bonus) = ETB ${totalPlay} to play wallet.`
-                            : `✅ Image deposit approved. ETB ${amount} credited to play wallet.`
-                    );
+                    await ctx.reply(`✅ Image deposit approved. ETB ${amount} credited to play wallet.`);
 
                     // Notify other admins
                     try {
@@ -2105,7 +2093,7 @@ Thank you for your dedication! 🙏`;
                     // Private welcome message to the registering user (no broadcast, no phone number)
                     if (isNewRegistration) {
                         await ctx.reply(
-                            `${displayName} እንኳን ደህና መጡ!\n\nዲፖዚት በማድረግ 10% የመጫወቻ ዋሌት ተጨማሪ ያግኙ`,
+                            `${displayName} እንኳን ደህና መጡ!\n\nMark Bingo ይደሰቱ።`,
                             { reply_markup: { remove_keyboard: true } }
                         );
                     } else {
@@ -2119,7 +2107,7 @@ Thank you for your dedication! 🙏`;
                         (ctx.from?.first_name || '').trim() ||
                         'User';
                     ctx.reply(
-                        `${displayName} እንኳን ደህና መጡ!\n\nዲፖዚት በማድረግ 10% የመጫወቻ ዋሌት ተጨማሪ ያግኙ\n\n⚠️ ሰርቨር ለጊዜው አይገኝም — እባክዎ ቆይተው እንደገና ይሞክሩ።`,
+                        `${displayName} እንኳን ደህና መጡ!\n\n⚠️ ሰርቨር ለጊዜው አይገኝም — እባክዎ ቆይተው እንደገና ይሞክሩ።`,
                         { reply_markup: { remove_keyboard: true } }
                     );
                 }
