@@ -4385,8 +4385,8 @@ body {
     /* Single outer pill background for STARTED text */
     background: #cec2eb !important;
     border-radius: 12px;
-    padding: 10px 16px;
-    min-height: 60px;
+    padding: 5px 8px;
+    min-height: 40px;
     border: none;
     box-shadow: 0 2px 6px rgba(148, 27, 176, 0.15);
 }
@@ -4543,7 +4543,7 @@ body {
 .current-call-bar {
     background: #800080;
     border-radius: 24px;
-    padding: 12px 16px;
+    padding: 6px 8px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -4581,7 +4581,7 @@ body {
     display: inline-flex;
     gap: 8px;
     margin: 0 auto 8px;
-    padding: 6px 10px;
+    padding: 8px 12px;
     background: #cec2eb;
     border-radius: 12px;
     justify-content: center;

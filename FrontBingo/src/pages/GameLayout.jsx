@@ -432,7 +432,7 @@ export default function GameLayout({
     // Show refreshing state to prevent black page
     if (isRefreshing) {
         return (
-            <div className="app-container flex items-center justify-center p-4">
+            <div className="app-container joy-bingo-bg flex items-center justify-center p-4">
                 <div className="text-center text-white">
                     <div className="relative">
                         <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4"></div>
@@ -453,7 +453,7 @@ export default function GameLayout({
     // If we don't have a gameId and we're not connected, show loading state
     if (!currentGameId && !connected && !isRefreshing) {
         return (
-            <div className="app-container flex items-center justify-center">
+            <div className="app-container joy-bingo-bg flex items-center justify-center">
                 <div className="text-center text-white">
                     <div className="text-2xl mb-4">🎮</div>
                     <div className="text-lg mb-2">Connecting to game...</div>
@@ -481,7 +481,7 @@ export default function GameLayout({
     // This handles both 'waiting' phase and 'running' phase where gameId hasn't arrived yet
     if (!currentGameId && connected && (gameState.phase === 'waiting' || gameState.phase === 'running')) {
         return (
-            <div className="app-container flex items-center justify-center">
+            <div className="app-container joy-bingo-bg flex items-center justify-center">
                 <div className="text-center text-white">
                     <div className="relative">
                         <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4"></div>
@@ -505,7 +505,7 @@ export default function GameLayout({
     // If we have a gameId but it's still loading, show a different loading state
     if (!currentGameId && connected) {
         return (
-            <div className="app-container flex items-center justify-center">
+            <div className="app-container joy-bingo-bg flex items-center justify-center">
                 <div className="text-center text-white">
                     <div className="relative">
                         <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4"></div>

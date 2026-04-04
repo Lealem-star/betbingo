@@ -549,7 +549,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     if (loading || !cardsReady) {
         console.log('Showing loading screen');
         return (
-            <div className="app-container">
+            <div className="app-container joy-bingo-bg">
                 <header className="p-4">
                     {/* Wallet info during loading */}
                     <div className="flex items-center justify-between">
@@ -594,7 +594,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     if (error) {
         console.log('Showing error screen:', error);
         return (
-            <div className="app-container">
+            <div className="app-container joy-bingo-bg">
                 <header className="p-4">
                     {/* Wallet info during error */}
                     <div className="flex items-center justify-between">
@@ -658,7 +658,7 @@ export default function CartelaSelection({ onNavigate, onResetToGame, stake, onC
     }
 
     return (
-        <div className="app-container relative">
+        <div className="app-container relative joy-bingo-bg">
             {/* Alert Banners - Fixed at top, stacked vertically with animations */}
             {Array.isArray(alertBanners) && alertBanners.length > 0 && (
                 <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">

@@ -91,10 +91,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
     // Show "no winner" state if no winners data
     if (!hasWinners) {
         return (
-            <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#e9d5ff' }}>
+            <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
                 <div className="w-full max-w-md">
                     {/* Main Card Container with Light Purple Background */}
-                    <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#e9d5ff' }}>
+                    <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
                         {/* Large Orange BINGO! Banner */}
                         <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                             <div className="text-center">
@@ -167,10 +167,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
     const gameCalled = Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [];
 
     return (
-        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#e9d5ff' }}>
+        <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
             <div className="w-full max-w-md">
                 {/* Main Card Container with Light Purple Background */}
-                <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#e9d5ff' }}>
+                <div className="rounded-2xl overflow-hidden shadow-2xl" style={{ background: '#cfade0' }}>
                     {/* Large Orange BINGO! Banner */}
                     <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
@@ -210,7 +210,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Card Section with Light Purple Background */}
-                    <div className="p-6" style={{ background: '#e9d5ff' }}>
+                    <div className="p-6" style={{ background: '#cfade0' }}>
                         <div
                             className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
                             style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}
@@ -245,7 +245,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                                 ) : (
                                                     <div
                                                         className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
-                                                        style={{ background: '#e9d5ff' }}
+                                                        style={{ background: '#cfade0' }}
                                                     >
                                                         <div className="text-3xl mb-2">🏆</div>
                                                         <div className="text-purple-700 text-sm font-semibold mb-1">
