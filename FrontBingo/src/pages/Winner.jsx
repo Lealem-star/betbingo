@@ -177,15 +177,6 @@ export default function Winner({ onNavigate, onResetToGame }) {
                             <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
                                 BINGO!
                             </h1>
-                            {/* Winner count summary */}
-                            <div className="flex items-center justify-center gap-3 w-full rounded-lg px-4 py-3 mb-4">
-                                <span className="text-2xl" aria-hidden>🎉</span>
-                                <span className="text-white font-semibold text-lg drop-shadow-sm">
-                                    {uniqueWinners.length === 1
-                                        ? '1 player won!'
-                                        : `${uniqueWinners.length} players won!`}
-                                </span>
-                            </div>
                             <div className="flex flex-col items-center justify-center gap-2">
                                 {winnerNames.slice(0, 3).map((name, idx) => (
                                     <div key={`${name}-${idx}`} className="flex items-center justify-center gap-3">
@@ -210,11 +201,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Card Section with Light Purple Background */}
-                    <div className="p-6" style={{ background: '#cfade0' }}>
+                    <div className="p-6 mt-4" style={{ background: '#cfade0' }}>
                         <div
                             className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
-                            style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}
-                        >
+                            style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}>
                             <div className={`flex flex-col items-center ${isMultiCartelas ? 'gap-8 pb-2' : ''}`}>
                                 {displayWinners.map((w, idx) => {
                                     const cardData = cardDataFromWinner(w);
@@ -272,13 +262,14 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-10 h-20" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
                             <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
                                 {countdown > 0 ? countdown : '0'}
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
