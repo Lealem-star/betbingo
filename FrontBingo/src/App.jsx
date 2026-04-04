@@ -121,10 +121,10 @@ function AppContent() {
       return 'game-layout';
     }
 
-    // Announce phase: stay on game layout; Winner is shown as overlay there
+    // If we have a game in announce phase (finished), go to winner page
     if (gameState.phase === 'announce' && gameState.gameId) {
-      console.log('→ Routing to game-layout (announce / results overlay)');
-      return 'game-layout';
+      console.log('→ Routing to winner (game finished)');
+      return 'winner';
     }
 
     // If we have a stake and game is in registration, go to cartela selection
@@ -214,9 +214,9 @@ function AppContent() {
       (gameState.phase === 'starting' || gameState.phase === 'running') && gameState.gameId && hasPlayers;
     const isGameFinished = gameState.phase === 'announce' && gameState.gameId;
     
-    const shouldNavigate =
+    const shouldNavigate = 
       (isGameStartingOrRunning && currentPage !== 'game-layout') ||
-      (isGameFinished && currentPage !== 'game-layout');
+      (isGameFinished && currentPage !== 'winner');
     
     console.log('🤔 Should navigate?', shouldNavigate, {
       phase: gameState.phase,
@@ -233,7 +233,7 @@ function AppContent() {
     if (shouldNavigate) {
       console.log('✅ NAVIGATING! Auto-navigating based on game state:', {
         from: currentPage,
-        to: 'game-layout',
+        to: isGameStartingOrRunning ? 'game-layout' : 'winner',
         phase: gameState.phase,
         gameId: gameState.gameId,
         hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
@@ -258,9 +258,7 @@ function AppContent() {
         // If no cards/selections, that's fine - GameLayout will show watch mode
       }
       
-      if (isGameStartingOrRunning || isGameFinished) {
-        setCurrentPage('game-layout');
-      }
+      setCurrentPage(isGameStartingOrRunning ? 'game-layout' : 'winner');
     } else {
       console.log('⏸️ Not navigating - conditions not met');
     }

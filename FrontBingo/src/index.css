@@ -4542,7 +4542,7 @@ body {
 /* Current Call Bar - Joy Bingo style: label left, placeholder circle right */
 .current-call-bar {
     background: #800080;
-    border-radius: 50px;
+    border-radius: 24px;
     padding: 6px 8px;
     display: flex;
     align-items: center;
@@ -4560,8 +4560,8 @@ body {
 .current-call-ball {
     background: #f97316;
     color: white;
-    width: 45px;
-    height: 45px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     display: flex;
     align-items: center;
