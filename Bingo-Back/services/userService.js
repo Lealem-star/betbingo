@@ -176,31 +176,15 @@ class UserService {
             user.isRegistered = true;
             await user.save();
 
-            // Award welcome / referral bonuses only on first successful registration (first contact share)
-            let welcomeBonusAmount = 0;
+            // Referral bonus only on first successful registration (first contact share). No welcome bonus.
+            const welcomeBonusAmount = 0;
             let inviterRewardAmount = 0;
             let inviterRewarded = false;
             let inviterId = null;
 
             if (isFirstRegistration) {
-                // Ensure wallet exists
                 await WalletService.getWallet(user._id);
 
-                // 1) Welcome bonus: +10 ETB to Play Wallet
-                welcomeBonusAmount = 10;
-                const welcomeResult = await WalletService.updateBalance(user._id, { play: welcomeBonusAmount });
-
-                const welcomeTx = new Transaction({
-                    userId: user._id,
-                    type: 'registration_bonus',
-                    amount: welcomeBonusAmount,
-                    description: `Welcome bonus: ETB ${welcomeBonusAmount} added to play wallet`,
-                    balanceBefore: welcomeResult.balanceBefore,
-                    balanceAfter: welcomeResult.balanceAfter
-                });
-                await welcomeTx.save();
-
-                // 2) Referral bonus: +1 ETB to inviter's Play Wallet (only if this user was invited)
                 if (user.invitedBy) {
                     inviterId = user.invitedBy;
                     const inviter = await User.findById(inviterId);

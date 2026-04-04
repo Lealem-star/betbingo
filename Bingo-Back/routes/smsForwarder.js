@@ -346,7 +346,12 @@ router.post('/approve-image-deposit/:id', async (req, res) => {
         const WEBAPP_URL = process.env.WEBAPP_URL || 'https://markbingo.com';
         const userTelegramId = request.userId?.telegramId || request.telegramId;
         if (BOT_TOKEN && userTelegramId) {
-            const text = `✅ Deposit Approved!\n\n💰 Amount: ETB ${depositAmount.toFixed(2)}\n✅ Credited to: Play Wallet\n\nYour balance has been updated. Good luck!`;
+            const bonus = Number(result.bonus || 0);
+            const totalPlay = Number(result.totalPlayCredited ?? depositAmount + bonus);
+            const text =
+                bonus > 0
+                    ? `✅ Deposit Approved!\n\n💰 Deposit: ETB ${depositAmount.toFixed(2)}\n🎁 10% bonus: ETB ${bonus.toFixed(2)}\n✅ Total to play wallet: ETB ${totalPlay.toFixed(2)}\n\nGood luck!`
+                    : `✅ Deposit Approved!\n\n💰 Amount: ETB ${depositAmount.toFixed(2)}\n✅ Credited to: Play Wallet\n\nYour balance has been updated. Good luck!`;
             const reply_markup = {
                 inline_keyboard: [
                     [{ text: '🎮 Play Now', web_app: { url: WEBAPP_URL + '?stake=10' } }],
@@ -363,7 +368,9 @@ router.post('/approve-image-deposit/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'Image deposit approved and credited',
-            wallet: result.wallet
+            wallet: result.wallet,
+            bonus: result.bonus,
+            totalPlayCredited: result.totalPlayCredited
         });
     } catch (error) {
         console.error('Approve image deposit error:', error);

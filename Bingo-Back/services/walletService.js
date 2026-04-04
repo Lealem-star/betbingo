@@ -5,6 +5,9 @@ const User = require('../models/User');
 /** Minimum ETB that must remain in main (withdrawable) wallet after any withdrawal. */
 const MIN_MAIN_REMAINING_ETB_AFTER_WITHDRAW = 100;
 
+/** Extra play-wallet credit as a fraction of each completed deposit (e.g. 0.1 = 10%). */
+const DEPOSIT_PLAY_BONUS_RATE = 0.1;
+
 const AMHARIC_MIN_REMAINING_100_MSG =
     'ውድ ደንበኛችን ከዋሌትዎ ላይ ቢያንስ መቶ ብር ቀሪ ሊኖረዎት ይገባል። እናም ይህን መቶ ብር ተቀማጭ በማድረግ ቀሪ ሂሳብዎን ያውጡ።';
 
@@ -100,18 +103,34 @@ class WalletService {
         }
     }
 
-    // Process deposit
+    /** 10% of deposit (rounded to 2 decimals) credited to play wallet on top of the deposit. */
+    static computeDepositPlayBonus(depositAmount) {
+        const base = Number(depositAmount);
+        if (!Number.isFinite(base) || base <= 0) {
+            return { bonus: 0 };
+        }
+        const raw = base * DEPOSIT_PLAY_BONUS_RATE;
+        const bonus = Math.round(raw * 100) / 100;
+        return { bonus: bonus > 0 ? bonus : 0 };
+    }
+
+    // Process deposit (play wallet += amount + 10% bonus)
     static async processDeposit(userId, amount, smsData = null) {
         try {
-            // Add deposits to play wallet by default (gaming balance)
-            const result = await this.updateBalance(userId, { play: amount });
+            const base = Number(amount);
+            if (!Number.isFinite(base) || base <= 0) {
+                throw new Error('INVALID_DEPOSIT_AMOUNT');
+            }
 
-            // Create transaction record
+            const { bonus } = this.computeDepositPlayBonus(base);
+
+            let result = await this.updateBalance(userId, { play: base });
+
             const transaction = new Transaction({
                 userId,
                 type: 'deposit',
-                amount,
-                description: `Deposit via SMS: ETB ${amount} (credited to play wallet)`,
+                amount: base,
+                description: `Deposit: ETB ${base} credited to play wallet`,
                 reference: smsData?.ref || null,
                 smsData,
                 balanceBefore: result.balanceBefore,
@@ -119,18 +138,34 @@ class WalletService {
             });
             await transaction.save();
 
-            // Update wallet total deposited
+            if (bonus > 0) {
+                const beforeBonus = { ...result.balanceAfter };
+                result = await this.updateBalance(userId, { play: bonus });
+                const bonusTx = new Transaction({
+                    userId,
+                    type: 'bonus',
+                    amount: bonus,
+                    description: `10% deposit bonus: ETB ${bonus} (play wallet)`,
+                    balanceBefore: beforeBonus,
+                    balanceAfter: result.balanceAfter
+                });
+                await bonusTx.save();
+            }
+
             await Wallet.findOneAndUpdate(
                 { userId },
                 {
-                    $inc: { totalDeposited: amount },
+                    $inc: { totalDeposited: base },
                     $set: { lastDepositDate: new Date() }
                 }
             );
 
-            // NOTE: Referral reward is handled on invitee registration (contact share), not on deposits.
-
-            return { wallet: result.wallet, transaction };
+            return {
+                wallet: result.wallet,
+                transaction,
+                bonus,
+                totalPlayCredited: base + bonus
+            };
         } catch (error) {
             console.error('Error processing deposit:', error);
             throw error;
@@ -352,15 +387,46 @@ class WalletService {
         }
     }
 
-    // Process deposit approval (admin)
+    // Process deposit approval (admin) — same play credit as processDeposit: principal + 10% bonus
     static async processDepositApproval(userId, amount) {
         try {
-            const wallet = await this.getWallet(userId);
+            await this.getWallet(userId);
 
-            // Add deposits to play wallet by default
-            const result = await this.updateBalance(userId, { play: amount });
+            const base = Number(amount);
+            if (!Number.isFinite(base) || base <= 0) {
+                return { success: false, error: 'INVALID_AMOUNT' };
+            }
 
-            return { success: true, wallet: result.wallet };
+            const { bonus } = this.computeDepositPlayBonus(base);
+
+            let result = await this.updateBalance(userId, { play: base });
+            if (bonus > 0) {
+                const beforeBonus = { ...result.balanceAfter };
+                result = await this.updateBalance(userId, { play: bonus });
+                await new Transaction({
+                    userId,
+                    type: 'bonus',
+                    amount: bonus,
+                    description: `10% deposit bonus: ETB ${bonus} (play wallet)`,
+                    balanceBefore: beforeBonus,
+                    balanceAfter: result.balanceAfter
+                }).save();
+            }
+
+            await Wallet.findOneAndUpdate(
+                { userId },
+                {
+                    $inc: { totalDeposited: base },
+                    $set: { lastDepositDate: new Date() }
+                }
+            );
+
+            return {
+                success: true,
+                wallet: result.wallet,
+                bonus,
+                totalPlayCredited: base + bonus
+            };
         } catch (error) {
             console.error('Error processing deposit approval:', error);
             return { success: false, error: 'INTERNAL_ERROR' };

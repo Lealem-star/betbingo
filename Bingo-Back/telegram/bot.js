@@ -464,10 +464,11 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 }
             });
 
+            // Only completed deposits (actually credited), same as admin /stats/daily — not pending requests
             const deposits = await Transaction.find({
                 type: 'deposit',
-                createdAt: { $gte: start, $lte: end },
-                status: { $ne: 'failed' }
+                status: 'completed',
+                createdAt: { $gte: start, $lte: end }
             }).lean();
             const totalDeposits = deposits.reduce((s, t) => s + (t.amount || 0), 0);
             
@@ -1810,7 +1811,19 @@ Thank you for your dedication! 🙏`;
                 });
                 if (response.ok) {
                     await ctx.answerCbQuery('✅ Deposit approved');
-                    await ctx.reply(`✅ Image deposit approved. ETB ${amount} credited to user.`);
+                    let bonus = Math.round(Number(amount) * 0.1 * 100) / 100;
+                    try {
+                        const body = await response.json();
+                        if (body && Number(body.bonus) >= 0) {
+                            bonus = Number(body.bonus);
+                        }
+                    } catch (_) { /* use computed bonus */ }
+                    const totalPlay = Number(amount) + bonus;
+                    await ctx.reply(
+                        bonus > 0
+                            ? `✅ Image deposit approved. ETB ${amount} + ETB ${bonus} (10% bonus) = ETB ${totalPlay} to play wallet.`
+                            : `✅ Image deposit approved. ETB ${amount} credited to play wallet.`
+                    );
 
                     // Notify other admins
                     try {
@@ -2092,7 +2105,7 @@ Thank you for your dedication! 🙏`;
                     // Private welcome message to the registering user (no broadcast, no phone number)
                     if (isNewRegistration) {
                         await ctx.reply(
-                            `${displayName} welcome to Mark Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
+                            `${displayName} እንኳን ደህና መጡ!\n\nዲፖዚት በማድረግ 10% የመጫወቻ ዋሌት ተጨማሪ ያግኙ`,
                             { reply_markup: { remove_keyboard: true } }
                         );
                     } else {
@@ -2106,7 +2119,7 @@ Thank you for your dedication! 🙏`;
                         (ctx.from?.first_name || '').trim() ||
                         'User';
                     ctx.reply(
-                        `${displayName} welcome to Mark Bingo and enjoy 🎁 Welcome Bonus: 10 ETB added to your Play Wallet!\n\nአዋጅ ፡ በእንኳን ደህና መጡ የአስር ብር ስጦታ ቢያሸንፉ ለተጨማሪ የመጫወቻ ዋሌት ብቻ እንደሚያገኙ ልብ ይለዋል። ሆኖም የበሉትን ወደ withdrawable wallet የመጨመር ፍላጎት ካልዎት የdeposit ታሪክ ብቻ መፍጠር እንደሚጠብቅዎ እንዲገነዘቡ እናሳስባለን ውድ ደንበኛችን።`,
+                        `${displayName} እንኳን ደህና መጡ!\n\nዲፖዚት በማድረግ 10% የመጫወቻ ዋሌት ተጨማሪ ያግኙ\n\n⚠️ ሰርቨር ለጊዜው አይገኝም — እባክዎ ቆይተው እንደገና ይሞክሩ።`,
                         { reply_markup: { remove_keyboard: true } }
                     );
                 }
@@ -3173,10 +3186,11 @@ async function getWeeklyStats() {
             }
         });
 
+        // Only completed deposits (credited), not pending deposit requests
         const weekDeposits = await Transaction.find({
             type: 'deposit',
-            createdAt: { $gte: start, $lt: end },
-            status: { $ne: 'failed' }
+            status: 'completed',
+            createdAt: { $gte: start, $lt: end }
         }).lean();
         const totalDeposits = weekDeposits.reduce((sum, t) => sum + (t.amount || 0), 0);
 

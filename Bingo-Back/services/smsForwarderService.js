@@ -986,10 +986,15 @@ class SmsForwarderService {
                 const amount = Number(verification.amount || 0);
                 const wallet = depositResult?.wallet || {};
                 const totalBalance = ((wallet.main || 0) + (wallet.play || 0));
+                const bonus = Number(depositResult?.bonus || 0);
+                const totalPlay = Number(depositResult?.totalPlayCredited ?? amount + bonus);
 
                 const text =
-                    `Your balance has been credited with ${amount.toFixed(1)} birr.\n\n` +
-                    `<pre>Current Balance:      ${totalBalance.toFixed(1)}</pre>`;
+                    bonus > 0
+                        ? `Play wallet credited: ETB ${amount.toFixed(2)} deposit + ETB ${bonus.toFixed(2)} (10% bonus) = ETB ${totalPlay.toFixed(2)}.\n\n` +
+                          `<pre>Current Balance:      ${totalBalance.toFixed(2)}</pre>`
+                        : `Your balance has been credited with ${amount.toFixed(2)} birr.\n\n` +
+                          `<pre>Current Balance:      ${totalBalance.toFixed(2)}</pre>`;
 
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
