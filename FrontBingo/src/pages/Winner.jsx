@@ -170,7 +170,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
         <div className="app-container flex items-center justify-center min-h-screen py-4 px-4" style={{ background: '#cfade0' }}>
             <div className="w-full max-w-md">
                 {/* Main Card Container with Light Purple Background */}
-                <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4" style={{ background: '#cfade0' }}>
+                <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4">
                     {/* Large Orange BINGO! Banner */}
                     <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
@@ -201,7 +201,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Card Section with Light Purple Background */}
-                    <div className="p-6 shrink-0" style={{ background: '#cfade0' }}>
+                    <div className="p-6 shrink-0">
                         <div
                             className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
                             style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}>
