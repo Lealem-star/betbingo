@@ -181,10 +181,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                 {winnerNames.slice(0, 3).map((name, idx) => (
                                     <div key={`${name}-${idx}`} className="flex items-center justify-center gap-3">
                                         <div
-                                            className="px-4 py-2 rounded-lg bg-green-500 border-2 border-green-600 flex items-center justify-center text-white font-bold text-lg shadow-lg"
+                                            className="px-4 py-2 rounded-lg bg-green-500 border-2 border-green-600 flex items-center justify-center text-white font-bold text-lg shadow-lg max-w-[220px] truncate"
                                             style={{ backgroundColor: '#22c55e', borderColor: '#16a34a', padding: '0.5rem 1rem' }}
                                         >
-                                            {(name || 'W').charAt(0).toUpperCase()}
+                                            {name}
                                         </div>
                                         <p className="text-white text-lg md:text-xl font-semibold">
                                             {name} has won the game!
@@ -222,30 +222,41 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                                     <span className="text-purple-600 font-semibold"> · Board {boardNumber}</span>
                                                 </p>
                                             )}
-                                            <div className="flex justify-center mb-2 w-full">
-                                                {cardData ? (
-                                                    <CartellaCard
-                                                        id={boardNumber}
-                                                        card={cardData}
-                                                        called={calledNumbers}
-                                                        isPreview={false}
-                                                        showWinningPattern={true}
-                                                        showHeader={true}
-                                                    />
-                                                ) : (
-                                                    <div
-                                                        className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
-                                                        style={{ background: '#cfade0' }}
-                                                    >
-                                                        <div className="text-3xl mb-2">🏆</div>
-                                                        <div className="text-purple-700 text-sm font-semibold mb-1">
-                                                            Cartella #{boardNumber}
+                                            <div className="w-full" style={{ padding: '15px 30px', boxSizing: 'border-box' }}>
+                                                <div
+                                                    className="w-full flex justify-center"
+                                                    style={{
+                                                        background: '#cec2eb',
+                                                        border: '2px solid #ffffff',
+                                                        borderRadius: '12px',
+                                                        padding: '8px',
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                >
+                                                    {cardData ? (
+                                                        <CartellaCard
+                                                            id={boardNumber}
+                                                            card={cardData}
+                                                            called={calledNumbers}
+                                                            isPreview={false}
+                                                            showWinningPattern={true}
+                                                            showHeader={true}
+                                                        />
+                                                    ) : (
+                                                        <div
+                                                            className="text-center p-8 rounded-xl border-2 border-purple-200/50 shadow-md w-full max-w-xs"
+                                                            style={{ background: '#cec2eb' }}
+                                                        >
+                                                            <div className="text-3xl mb-2">🏆</div>
+                                                            <div className="text-purple-700 text-sm font-semibold mb-1">
+                                                                Cartella #{boardNumber}
+                                                            </div>
+                                                            <div className="text-gray-600 text-xs mt-2">
+                                                                Card preview not available
+                                                            </div>
                                                         </div>
-                                                        <div className="text-gray-600 text-xs mt-2">
-                                                            Card preview not available
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
                                             {!isMultiCartelas && (
                                                 <div className="text-center mt-4 w-full">
@@ -262,9 +273,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-10 h-20 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
-                            <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
+                            <div className="text-white font-extrabold text-5xl md:text-6xl tracking-wider drop-shadow-lg leading-none">
                                 {countdown > 0 ? countdown : '0'}
                             </div>
                         </div>

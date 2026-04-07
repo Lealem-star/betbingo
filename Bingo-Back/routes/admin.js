@@ -9,6 +9,7 @@ const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const WalletService = require('../services/walletService');
 const InviteService = require('../services/inviteService');
+const { getDepositTotalsBetween } = require('../utils/depositTotals');
 const { authMiddleware } = require('./auth');
 
 const router = express.Router();
@@ -791,6 +792,28 @@ router.get('/stats/revenue/by-day', adminMiddleware, async (req, res) => {
     } catch { res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' }); }
 });
 
+// Single source of truth for deposit totals within a date range.
+// Completed totals are counted by credit time (processedAt fallback createdAt).
+// Pending/failed/cancelled are counted by request time (createdAt).
+router.get('/stats/deposits-total', adminMiddleware, async (req, res) => {
+    try {
+        const from = req.query.from;
+        const to = req.query.to;
+        if (!from || !to) {
+            return res.status(400).json({ error: 'FROM_TO_REQUIRED' });
+        }
+
+        const result = await getDepositTotalsBetween(from, to);
+        res.json(result);
+    } catch (error) {
+        if (error && error.message === 'INVALID_DATE_RANGE') {
+            return res.status(400).json({ error: 'INVALID_DATE_RANGE' });
+        }
+        console.error('Deposit totals error:', error);
+        res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' });
+    }
+});
+
 // Daily aggregated stats for admin table (games + finance), server-local day (Africa/Addis_Ababa)
 router.get('/stats/daily', adminMiddleware, async (req, res) => {
     try {
@@ -862,13 +885,22 @@ router.get('/stats/daily', adminMiddleware, async (req, res) => {
             }
         }
 
-        // Deposits (completed, grouped by createdAt local day)
+        // Deposits (completed, grouped by credit time local day:
+        // processedAt fallback createdAt)
         const deposits = await Transaction.find(
-            { type: 'deposit', status: 'completed', createdAt: { $gte: since } },
-            { amount: 1, createdAt: 1 }
+            {
+                type: 'deposit',
+                status: 'completed',
+                $or: [
+                    { processedAt: { $gte: since } },
+                    { processedAt: null, createdAt: { $gte: since } }
+                ]
+            },
+            { amount: 1, createdAt: 1, processedAt: 1 }
         ).lean();
         for (const d of deposits) {
-            const key = dayKeyLocal(d.createdAt);
+            const creditTime = d.processedAt || d.createdAt;
+            const key = dayKeyLocal(creditTime);
             if (!key) continue;
             const row = ensureDay(key);
             row.totalDeposits += Number(d.amount) || 0;

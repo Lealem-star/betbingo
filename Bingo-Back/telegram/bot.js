@@ -6,6 +6,7 @@ const WalletService = require('../services/walletService');
 const Game = require('../models/Game');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const { getDepositTotalsBetween } = require('../utils/depositTotals');
 const connectDB = require('../config/database');
 
 // Shared bot-detection helpers (keep logic consistent with admin routes)
@@ -464,13 +465,8 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 }
             });
 
-            // Only completed deposits (actually credited), same as admin /stats/daily — not pending requests
-            const deposits = await Transaction.find({
-                type: 'deposit',
-                status: 'completed',
-                createdAt: { $gte: start, $lte: end }
-            }).lean();
-            const totalDeposits = deposits.reduce((s, t) => s + (t.amount || 0), 0);
+            const depositTotals = await getDepositTotalsBetween(start, end);
+            const totalDeposits = Number(depositTotals.completedTotal) || 0;
             
             // Get new users registered
             const User = require('../models/User');
@@ -3174,13 +3170,8 @@ async function getWeeklyStats() {
             }
         });
 
-        // Only completed deposits (credited), not pending deposit requests
-        const weekDeposits = await Transaction.find({
-            type: 'deposit',
-            status: 'completed',
-            createdAt: { $gte: start, $lt: end }
-        }).lean();
-        const totalDeposits = weekDeposits.reduce((sum, t) => sum + (t.amount || 0), 0);
+        const weekDepositTotals = await getDepositTotalsBetween(start, end);
+        const totalDeposits = Number(weekDepositTotals.completedTotal) || 0;
 
         const newUsers = await User.find({
             registrationDate: { $gte: start, $lt: end },
@@ -3374,20 +3365,9 @@ function setupDailyAdminNotifications(bot) {
 
             console.log('📊 Total revenue:', totalRevenue);
 
-            // Get today's deposits - use createdAt as the primary date field
-            // Only count completed deposits, to match AdminStats logic
-            const todayDeposits = await Transaction.find({
-                type: 'deposit',
-                createdAt: { $gte: start, $lte: end },
-                status: 'completed'
-            }).lean();
-
-            console.log('📊 Found deposits:', todayDeposits.length);
-
-            // Calculate total deposits
-            const totalDeposits = todayDeposits.reduce((sum, transaction) => {
-                return sum + (transaction.amount || 0);
-            }, 0);
+            const todayDepositTotals = await getDepositTotalsBetween(start, end);
+            const totalDeposits = Number(todayDepositTotals.completedTotal) || 0;
+            console.log('📊 Found completed deposits:', todayDepositTotals.completedCount || 0);
 
             // Get pending withdrawal requests
             const pendingWithdrawals = await Transaction.find({

@@ -10,6 +10,7 @@ export default function AdminStats() {
     const [dailyStats, setDailyStats] = useState([]);
     const [gameHistory, setGameHistory] = useState([]);
     const [todayFinance, setTodayFinance] = useState({ totalGames: 0, totalDeposit: 0, totalWithdraw: 0 });
+    const [todayDepositMeta, setTodayDepositMeta] = useState({ pendingCount: 0, pendingTotal: 0 });
     const [totalMainWallet, setTotalMainWallet] = useState(0);
     const [totalPlayWallet, setTotalPlayWallet] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function AdminStats() {
                 dailyRes,
                 gameHistoryRes,
                 overviewRes,
-                depositsRes,
+                depositTotalsRes,
                 withdrawalsCompletedRes,
                 totalMainRes,
                 totalPlayRes
@@ -48,7 +49,7 @@ export default function AdminStats() {
                 apiFetch('/admin/stats/daily?days=14', { timeoutMs: 30000 }),
                 apiFetch('/admin/stats/game-history?days=2', { timeoutMs: 20000 }),
                 apiFetch('/admin/stats/overview', { timeoutMs: 20000 }),
-                apiFetch(`/admin/balances/deposits?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { timeoutMs: 20000 }),
+                apiFetch(`/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { timeoutMs: 20000 }),
                 apiFetch('/admin/balances/withdrawals?status=completed', { timeoutMs: 20000 }),
                 apiFetch('/admin/stats/wallets/total-main', { timeoutMs: 20000 }),
                 apiFetch('/admin/stats/wallets/total-play', { timeoutMs: 20000 })
@@ -77,18 +78,13 @@ export default function AdminStats() {
             }
 
             const overview = overviewRes.status === 'fulfilled' ? overviewRes.value : null;
-            const deposits = depositsRes.status === 'fulfilled' ? (depositsRes.value?.deposits || []) : [];
+            const depositTotals = depositTotalsRes.status === 'fulfilled' ? (depositTotalsRes.value || {}) : {};
             const withdrawalsCompleted = withdrawalsCompletedRes.status === 'fulfilled'
                 ? (withdrawalsCompletedRes.value?.withdrawals || [])
                 : [];
 
             const totalGames = overview?.today?.totalGames || 0;
-            const totalDeposit = deposits
-                .filter((d) => (d.status || 'completed') === 'completed'
-                    && d.createdAt
-                    && new Date(d.createdAt) >= startUTC
-                    && new Date(d.createdAt) <= endUTC)
-                .reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+            const totalDeposit = Number(depositTotals.completedTotal) || 0;
 
             const totalWithdraw = withdrawalsCompleted
                 .filter((w) => {
@@ -98,6 +94,10 @@ export default function AdminStats() {
                 .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
 
             const nextTodayFinance = { totalGames, totalDeposit, totalWithdraw };
+            const nextTodayDepositMeta = {
+                pendingCount: Number(depositTotals.pendingCount) || 0,
+                pendingTotal: Number(depositTotals.pendingTotal) || 0
+            };
             const nextTotalMain = totalMainRes.status === 'fulfilled' ? (totalMainRes.value?.totalMain || 0) : 0;
             const nextTotalPlay = totalPlayRes.status === 'fulfilled' ? (totalPlayRes.value?.totalPlay || 0) : 0;
 
@@ -106,6 +106,7 @@ export default function AdminStats() {
             setDailyStats(nextDailyStats);
             setGameHistory(nextGameHistory);
             setTodayFinance(nextTodayFinance);
+            setTodayDepositMeta(nextTodayDepositMeta);
             setTotalMainWallet(nextTotalMain);
             setTotalPlayWallet(nextTotalPlay);
             setIsLoading(false);
@@ -181,6 +182,11 @@ export default function AdminStats() {
                     <div>
                         <div className="admin-stats-label">Total Deposits Today</div>
                         <div className="admin-stats-value admin-stats-value-green">ETB {isLoading ? '...' : todayFinance.totalDeposit}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                            {isLoading
+                                ? 'Pending: ...'
+                                : `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`}
+                        </div>
                     </div>
                 </div>
                 <div className="admin-stats-card">
