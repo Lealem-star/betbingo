@@ -4328,7 +4328,6 @@ body {
     font-size: 16px;
     transition: all 0.2s ease;
     width: 100%;
-    aspect-ratio: 1 / 1;
     outline: none;
     box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.75),

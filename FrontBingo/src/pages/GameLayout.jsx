@@ -655,6 +655,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
+                                                flex: '1',
                                                 minHeight: '20px'
                                             }}
                                         >
@@ -682,6 +683,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
+                                                flex: '1',
                                                 minHeight: '20px'
                                             }}
                                         >
@@ -709,6 +711,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
+                                                flex: '1',
                                                 minHeight: '20px'
                                             }}
                                         >
@@ -736,6 +739,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
+                                                flex: '1',
                                                 minHeight: '20px'
                                             }}
                                         >
@@ -763,6 +767,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
+                                                flex: '1',
                                                 minHeight: '20px'
                                             }}
                                         >
