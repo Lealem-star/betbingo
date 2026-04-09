@@ -879,7 +879,7 @@ export default function GameLayout({
                                                         : null
                                                 }
                                             />
-                                            <div className="text-xs font-semibold text-white/70 shrink-0">
+                                            <div className="text-xs font-semibold text-white/70 shrink-0 p-8 m-8">
                                                 Board number {cardNumber}
                                             </div>
                                         </div>

@@ -172,12 +172,12 @@ export default function Winner({ onNavigate, onResetToGame }) {
                 {/* Main Card Container with Light Purple Background */}
                 <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4">
                     {/* Large Orange BINGO! Banner */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-6 shrink-0 rounded-xl mx-2 mt-2" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
-                            <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
+                            <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-2 drop-shadow-lg">
                                 BINGO!
                             </h1>
-                            <div className="flex flex-col items-center justify-center gap-2">
+                            <div className="flex flex-col items-center justify-center gap-1">
                                 {winnerNames.slice(0, 3).map((name, idx) => (
                                     <div key={`${name}-${idx}`} className="flex items-center justify-center gap-3">
                                         <div
@@ -201,7 +201,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Card Section with Light Purple Background */}
-                    <div className="p-6 shrink-0">
+                    <div className="p-4 shrink-0">
                         <div
                             className={isMultiCartelas ? 'max-h-[min(58vh,520px)] overflow-y-auto overflow-x-hidden pr-1 -mr-1' : ''}
                             style={isMultiCartelas ? { WebkitOverflowScrolling: 'touch' } : undefined}>
@@ -259,7 +259,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                                 </div>
                                             </div>
                                             {!isMultiCartelas && (
-                                                <div className="text-center mt-4 w-full">
+                                                <div className="text-center mt-2 w-full">
                                                     <p className="text-purple-800 text-sm font-semibold">
                                                         Board number {boardNumber}
                                                     </p>
@@ -273,10 +273,12 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full h-20px bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-32 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                        <div className="text-center">
-                            <div className="text-white font-extrabold text-5xl md:text-6xl tracking-wider drop-shadow-lg leading-none">
-                                {countdown > 0 ? countdown : '0'}
+                    <div className="px-4 pb-4 shrink-0">
+                        <div className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                            <div className="text-center">
+                                <div className="text-white font-extrabold text-4xl md:text-5xl tracking-wider drop-shadow-lg leading-none">
+                                    {countdown > 0 ? countdown : '0'}
+                                </div>
                             </div>
                         </div>
                     </div>
