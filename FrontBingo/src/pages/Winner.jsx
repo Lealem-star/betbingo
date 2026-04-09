@@ -187,7 +187,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                             {name}
                                         </div>
                                         <p className="text-white text-lg md:text-xl font-semibold">
-                                            {name} has won the game!
+                                            has won the game!
                                         </p>
                                     </div>
                                 ))}
@@ -273,7 +273,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                    <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                         <div className="text-center">
                             <div className="text-white font-extrabold text-5xl md:text-6xl tracking-wider drop-shadow-lg leading-none">
                                 {countdown > 0 ? countdown : '0'}
