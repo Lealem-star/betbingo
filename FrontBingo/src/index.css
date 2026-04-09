@@ -290,7 +290,7 @@ body {
 }
 
 .admin-select:focus {
-    ring: 2px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
     border-color: rgba(245, 158, 11, 0.5);
 }
 
@@ -308,7 +308,7 @@ body {
 }
 
 .admin-file-input:focus {
-    ring: 2px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
     border-color: rgba(245, 158, 11, 0.5);
 }
 
@@ -328,7 +328,7 @@ body {
 }
 
 .admin-textarea:focus {
-    ring: 2px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
     border-color: rgba(245, 158, 11, 0.5);
 }
 
@@ -357,7 +357,7 @@ body {
 }
 
 .admin-checkbox:focus {
-    ring: 2px solid rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
 }
 
 .admin-checkbox-label {
@@ -1164,8 +1164,9 @@ body {
 .admin-balance-button-active {
     background: linear-gradient(to right, #10b981, #059669);
     color: white;
-    box-shadow: 0 20px 25px rgba(16, 185, 129, 0.25);
-    ring: 2px solid rgba(16, 185, 129, 0.5);
+    box-shadow:
+        0 20px 25px rgba(16, 185, 129, 0.25),
+        0 0 0 2px rgba(16, 185, 129, 0.5);
 }
 
 .admin-balance-button-inactive {
@@ -1902,8 +1903,6 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
-
-.mechanics-item {}
 
 .mechanics-item-title {
     font-weight: 700;
@@ -4389,11 +4388,6 @@ body {
     min-height: 60px;
     border: none;
     box-shadow: 0 2px 6px rgba(148, 27, 176, 0.15);
-}
-
-/* Reduced Size Status Box */
-.game-status-box-small {
-    /* no-op: inner box no longer used; pill styling is on .game-controls-bar */
 }
 
 .game-status-text-small {
