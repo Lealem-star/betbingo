@@ -96,9 +96,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     {/* Main Card Container with Light Purple Background */}
                     <div className="rounded-2xl overflow-hidden shadow-2xl flex flex-col gap-4" style={{ background: '#cfade0' }}>
                         {/* Large Orange BINGO! Banner */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-6 shrink-0 rounded-xl mx-2 mt-2" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
                             <div className="text-center">
-                                <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-4 drop-shadow-lg">
+                                <h1 className="text-white font-extrabold text-5xl md:text-6xl tracking-wider mb-2 drop-shadow-lg">
                                     BINGO!
                                 </h1>
                                 <div className="flex items-center justify-center gap-3">
@@ -113,20 +113,22 @@ export default function Winner({ onNavigate, onResetToGame }) {
                         </div>
 
                         {/* Countdown Section - Orange Background with Large Number */}
-                        <div className="w-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-8 shrink-0" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                            <div className="text-center">
-                                <div className="text-white text-sm font-semibold mb-2">
-                                    አዲስ ጭዋታ ለመጀመር
-                                </div>
-                                <div className="text-white font-extrabold text-6xl md:text-7xl tracking-wider drop-shadow-lg">
-                                    {countdown > 0 ? countdown : '0'}
-                                </div>
-                                <div className="text-white text-xs font-medium mt-2 opacity-90">
-                                    {countdown > 0 ? (
-                                        <>Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}</>
-                                    ) : (
-                                        <>Navigating to next game...</>
-                                    )}
+                        <div className="px-4 pb-4 shrink-0">
+                            <div className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
+                                <div className="text-center">
+                                    <div className="text-white text-sm font-semibold mb-1">
+                                        አዲስ ጭዋታ ለመጀመር
+                                    </div>
+                                    <div className="text-white font-extrabold text-4xl md:text-5xl tracking-wider drop-shadow-lg leading-none">
+                                        {countdown > 0 ? countdown : '0'}
+                                    </div>
+                                    <div className="text-white text-xs font-medium mt-1 opacity-90">
+                                        {countdown > 0 ? (
+                                            <>Auto-starting next game in {countdown} second{countdown !== 1 ? 's' : ''}</>
+                                        ) : (
+                                            <>Navigating to next game...</>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

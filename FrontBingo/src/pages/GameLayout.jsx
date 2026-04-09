@@ -655,9 +655,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: '1',
-                                                minHeight: '20px',
-                                                marginBottom: 4
+                                                minHeight: '20px'
                                             }}
                                         >
                                             {n}
@@ -684,9 +682,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: '1',
-                                                minHeight: '20px',
-                                                marginBottom: 4
+                                                minHeight: '20px'
                                             }}
                                         >
                                             {n}
@@ -713,9 +709,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: '1',
-                                                minHeight: '20px',
-                                                marginBottom: 4
+                                                minHeight: '20px'
                                             }}
                                         >
                                             {n}
@@ -742,9 +736,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: '1',
-                                                minHeight: '20px',
-                                                marginBottom: 4
+                                                minHeight: '20px'
                                             }}
                                         >
                                             {n}
@@ -771,9 +763,7 @@ export default function GameLayout({
                                             key={n}
                                             className={`bingo-number-btn ${className}`}
                                             style={{
-                                                flex: '1',
-                                                minHeight: '20px',
-                                                marginBottom: 4
+                                                minHeight: '20px'
                                             }}
                                         >
                                             {n}
