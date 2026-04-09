@@ -226,7 +226,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                             )}
                                             <div className="w-full" style={{ padding: '15px 30px', boxSizing: 'border-box' }}>
                                                 <div
-                                                    className="w-full flex justify-center"
+                                                    className="w-full flex flex-col items-center justify-center"
                                                     style={{
                                                         background: '#cec2eb',
                                                         border: '2px solid #ffffff',
