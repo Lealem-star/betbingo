@@ -847,7 +847,16 @@ export default function GameLayout({
 
                         {/* Single Cartela or Watch Mode - Render in Right Column */}
                         {yourCards.length === 1 ? (
-                            <div className="user-cartelas-single">
+                            <div
+                                className="user-cartelas-single"
+                                style={{
+                                    background: '#cec2eb',
+                                    border: '2px solid #ffffff',
+                                    borderRadius: '12px',
+                                    padding: '10px',
+                                    boxSizing: 'border-box'
+                                }}
+                            >
                                 {yourCards.map(({ cardNumber, card }) => {
                                     // Determine which numbers to show as marked
                                     const markedNumbers = isAutoMarkOn 
@@ -874,7 +883,7 @@ export default function GameLayout({
                                                         : null
                                                 }
                                             />
-                                            <div className="text-xs font-semibold text-white/70 shrink-0 p-8 m-8">
+                                            <div className="text-xs font-semibold text-white/70 shrink-0 mt-2">
                                                 Board number {cardNumber}
                                             </div>
                                         </div>
@@ -883,7 +892,16 @@ export default function GameLayout({
                                 })}
                             </div>
                         ) : yourCards.length === 0 ? (
-                            <div className="user-cartelas-single">
+                            <div
+                                className="user-cartelas-single"
+                                style={{
+                                    background: '#cec2eb',
+                                    border: '2px solid #ffffff',
+                                    borderRadius: '12px',
+                                    padding: '10px',
+                                    boxSizing: 'border-box'
+                                }}
+                            >
                                 <div className="watch-mode-indicator">
                                     <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />

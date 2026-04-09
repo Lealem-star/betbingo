@@ -258,15 +258,15 @@ export default function Winner({ onNavigate, onResetToGame }) {
                                                             </div>
                                                         </div>
                                                     )}
+                                                    {!isMultiCartelas && (
+                                                        <div className="text-center mt-2 w-full">
+                                                            <p className="text-purple-800 text-sm font-semibold">
+                                                                Board number {boardNumber}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                            {!isMultiCartelas && (
-                                                <div className="text-center mt-2 w-full">
-                                                    <p className="text-purple-800 text-sm font-semibold">
-                                                        Board number {boardNumber}
-                                                    </p>
-                                                </div>
-                                            )}
                                         </div>
                                     );
                                 })}
