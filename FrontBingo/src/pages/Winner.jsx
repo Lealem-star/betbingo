@@ -275,12 +275,19 @@ export default function Winner({ onNavigate, onResetToGame }) {
                     </div>
 
                     {/* Countdown Section - Orange Background with Large Number */}
-                    <div className="px-4 pb-4 shrink-0">
-                        <div className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-3" style={{ background: 'linear-gradient(to right, #f97316, #ea580c)' }}>
-                            <div className="text-center">
-                                <div className="text-white font-extrabold text-4xl md:text-5xl tracking-wider drop-shadow-lg leading-none">
-                                    {countdown > 0 ? countdown : '0'}
-                                </div>
+                    <div className="px-3 pb-3 shrink-0">
+                        <div
+                            className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600"
+                            style={{
+                                background: 'linear-gradient(to right, #f97316, #ea580c)',
+                                minHeight: '72px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <div className="text-white font-extrabold text-5xl md:text-6xl tracking-wider drop-shadow-lg leading-none">
+                                {countdown > 0 ? countdown : '0'}
                             </div>
                         </div>
                     </div>
