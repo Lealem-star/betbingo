@@ -2444,6 +2444,17 @@ Thank you for your dedication! 🙏`;
                     return;
                 }
 
+            // If user pastes an SMS receipt at ANY time, accept it and route into deposit flow
+            // (instead of replying "Unknown text" or blocking on a specific step).
+            try {
+                const pastedReceipt = parseReceipt(messageText);
+                if (pastedReceipt) {
+                    depositStates.set(userId, 'awaiting_receipt');
+                }
+            } catch (e) {
+                console.error('Receipt pre-parse error:', e);
+            }
+
                 // Check if user is in deposit image amount flow (image already sent, just need amount)
                 const depositState = depositStates.get(userId);
                 const isAwaitingImageAmount = depositState === 'awaiting_image_amount' ||
@@ -2556,12 +2567,9 @@ Thank you for your dedication! 🙏`;
                 }
 
                 // Check if user is in deposit receipt flow
-                let parsed = null;
-
-                if (depositState === 'awaiting_receipt') {
-                    // User is in deposit flow - process receipt
-                    parsed = parseReceipt(messageText);
-                    if (!parsed) {
+                const parsed = parseReceipt(messageText);
+                if (!parsed) {
+                    if (depositState === 'awaiting_receipt') {
                         // Log the message for debugging
                         console.log('❌ Failed to parse SMS receipt:', {
                             messagePreview: messageText.substring(0, 200),
@@ -2574,17 +2582,7 @@ Thank you for your dedication! 🙏`;
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }
-                } else {
-                    // NOT in deposit flow - check if it looks like a receipt
-                    parsed = parseReceipt(messageText);
-                    if (parsed) {
-                        // Looks like a receipt but deposit process is finished
-                        // Show "unknown text" message
-                        return ctx.reply('❓ Unknown text. What do you want?\n\n💡 If you want to make a deposit, use /deposit command.\n\n📋 Available commands:\n/deposit - Make a deposit\n/withdraw - Withdraw funds\n/balance - Check balance\n/play - Play game', {
-                            reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
-                        });
-                    }
-                    // Not a receipt and not in deposit flow, continue normal flow
+                    // Not a receipt (and not in receipt step), continue normal flow
                     return;
                 }
 
