@@ -1937,7 +1937,7 @@ Thank you for your dedication! 🙏`;
 3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
 \`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+የሚያጋጥማቹ የክፍያ ችግር ካለ @Betbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
             
             depositStates.set(userId, 'awaiting_receipt');
             ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
@@ -1981,7 +1981,7 @@ Thank you for your dedication! 🙏`;
 3. የደረሳችሁን አጭር የጹሁፍ መለክት(sms) ሙሉዉን ኮፒ(copy) በማረግ አልያም ያነሳችሁትን ስክሪንሻት ከታሽ ባለው የቴሌግራም የጹሁፍ ማስገቢአው ላይ ፔስት(paste) በማረግ ይላኩት
 \`\`\`
 
-የሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+የሚያጋጥማቹ የክፍያ ችግር ካለ @Betbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
             
             ctx.reply(telebirrMessage, { parse_mode: 'Markdown' });
         });
@@ -2039,7 +2039,7 @@ Thank you for your dedication! 🙏`;
         bot.action('deposit_cbe', (ctx) => {
             const userId = String(ctx.from.id);
             ctx.answerCbQuery('💳 CBE Birr deposit...');
-            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Yonas AYALNEH\n💳 CBE Birr: \`0962284410\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 0962284410\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Yonas AYALNEH\n💳 CBE Birr: \`0962284410\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 0962284410\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @Betbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
             if (typeof depositStates !== 'undefined' && depositStates instanceof Map) {
                 depositStates.set(userId, 'awaiting_receipt');
             }
@@ -2523,7 +2523,7 @@ Thank you for your dedication! 🙏`;
                                     depositStates.delete(userId);
                                     const msg = forwardedCount > 0
                                         ? '📷 Receipt image received!\n\n✅ Your deposit receipt has been forwarded to admin for manual review.\n\n⏳ You will be notified when your deposit is approved or denied.'
-                    : '❌ Failed to forward receipt. Please contact support @markbingosupport1';
+                    : '❌ Failed to forward receipt. Please contact support @Betbingosupport1';
                                     return ctx.reply(msg, { reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] } });
                                 } catch (error) {
                                     console.error('Error processing deposit image:', error);
@@ -2784,7 +2784,7 @@ Thank you for your dedication! 🙏`;
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     } else {
-                        await ctx.reply('❌ Failed to forward receipt. Please contact support @markbingosupport1', {
+                        await ctx.reply('❌ Failed to forward receipt. Please contact support @Betbingosupport1', {
                             reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]] }
                         });
                     }
