@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Mark Bingo Server Setup Script
+# Bet Bingo Server Setup Script
 # Run this script on your VPS server after connecting via SSH
 # This script will:
 # - Install Node.js, PM2, Nginx, Certbot
@@ -10,7 +10,7 @@
 
 set -e  # Exit on error
 
-echo "🚀 Starting Mark Bingo Server Setup..."
+echo "🚀 Starting Bet Bingo Server Setup..."
 echo "======================================"
 
 # Update system

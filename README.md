@@ -1,10 +1,10 @@
-# 🎯 Mark Bingo - Full Stack Bingo Game Platform
+# 🎯 Bet Bingo - Full Stack Bingo Game Platform
 
 A modern, real-time multiplayer Bingo game platform with integrated payment system, Telegram bot support, and comprehensive admin dashboard.
 
 ## 📋 Overview
 
-Mark Bingo is a complete web-based bingo game application that allows users to play bingo games in real-time, manage their wallet, view game history, and compete on leaderboards. The platform includes a Telegram bot for game management and notifications, along with a robust admin panel for game administration.
+Bet Bingo is a complete web-based bingo game application that allows users to play bingo games in real-time, manage their wallet, view game history, and compete on leaderboards. The platform includes a Telegram bot for game management and notifications, along with a robust admin panel for game administration.
 
 ## ✨ Features
 

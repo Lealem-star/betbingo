@@ -318,7 +318,7 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                             if (inviter.telegramId) {
                                 await ctx.telegram.sendMessage(
                                     inviter.telegramId,
-                                    `🎉 Great news! Someone joined Mark Bingo using your invite link!`
+                                    `🎉 Great news! Someone joined Bet Bingo using your invite link!`
                                 ).catch(() => { }); // Ignore errors if user blocked bot
                             }
                         }
@@ -359,12 +359,12 @@ function startTelegramBot({ BOT_TOKEN, WEBAPP_URL }) {
                 registered = !!(user && (user.isRegistered || user.phone));
                 if (!registered) {
                     const regKeyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
-                    const regText = '👋 Welcome to Mark Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
+                    const regText = '👋 Welcome to Bet Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
                     const photoPath = path.join(__dirname, '..', 'static', 'lb.png');
                     const photo = fs.existsSync(photoPath) ? { source: fs.createReadStream(photoPath) } : (WEBAPP_URL || '').replace(/\/$/, '') + '/lb.png';
                     return ctx.replyWithPhoto(photo, { caption: regText, reply_markup: regKeyboard.reply_markup });
                 }
-                const welcomeText = `👋 Welcome to Mark Bingo! Choose an Option below.`;
+                const welcomeText = `👋 Welcome to Bet Bingo! Choose an Option below.`;
                 const playBtn = isHttpsWebApp
                     ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
                     : [{ text: '🎮 Play-10', callback_data: 'play' }];
@@ -827,7 +827,7 @@ Thank you for your dedication! 🙏`;
 
                 if (!registered) {
                     const regKeyboard = { reply_markup: { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } };
-                    const regText = '👋 Welcome to Mark Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
+                    const regText = '👋 Welcome to Bet Bingo!\n\n📝 Please complete registration to continue.\n\n📱 Tap "Share Contact" below to provide your phone number.';
                     return ctx.reply(regText, regKeyboard);
                 }
 
@@ -850,7 +850,7 @@ Thank you for your dedication! 🙏`;
                             ]
                         }
                     };
-                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\nTo play Mark Bingo, tap Play-10 below.', keyboard);
+                    return ctx.reply('🍀 Best of luck on your gaming adventure!\n\nTo play Bet Bingo, tap Play-10 below.', keyboard);
                 }
             } catch {
                 return ctx.reply('❌ Database unavailable. Please try again later.');
@@ -981,7 +981,7 @@ Thank you for your dedication! 🙏`;
             try {
                 if (!(await ensureNotBlocked(ctx))) return;
                 const inviteLink = `https://t.me/${ctx.botInfo.username}?start=invite_${ctx.from.id}`;
-                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Mark Bingo!')}`;
+                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Bet Bingo!')}`;
                 return ctx.reply('Here is your referral link', {
                     reply_markup: {
                         inline_keyboard: [
@@ -1892,7 +1892,7 @@ Thank you for your dedication! 🙏`;
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('🔗 Invite friends...');
             const inviteLink = `https://t.me/${ctx.botInfo.username}?start=invite_${ctx.from.id}`;
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Mark Bingo!')}`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('Join me in Bet Bingo!')}`;
             return ctx.reply('Here is your referral link', {
                 reply_markup: {
                     inline_keyboard: [
@@ -1905,7 +1905,7 @@ Thank you for your dedication! 🙏`;
         bot.action('back_to_menu', async (ctx) => {
             if (!(await requireRegistration(ctx))) return;
             ctx.answerCbQuery('🔙 Back to menu');
-            const welcomeText = `👋 Welcome to Mark Bingo! Choose an Option below.`;
+            const welcomeText = `👋 Welcome to Bet Bingo! Choose an Option below.`;
             const playBtn = isHttpsWebApp
                 ? [{ text: '🎮 Play-10', web_app: { url: webAppUrl + '?stake=10' } }]
                 : [{ text: '🎮 Play-10', callback_data: 'play' }];
@@ -1927,7 +1927,7 @@ Thank you for your dedication! 🙏`;
             const userId = String(ctx.from.id);
             ctx.answerCbQuery('📱 Telebirr deposit...');
             // Using inline code for the Telebirr account so it is tap‑to‑copy, and a code block for the instructions
-            const telebirrMessage = `የ Telebirr አካውንት (Eyob Mengist): \`0967606087\`
+            const telebirrMessage = `የ Telebirr አካውንት (Yonas AYALNEH): \`0962284410\`
 
 መመሪያ
 
@@ -1967,10 +1967,10 @@ Thank you for your dedication! 🙏`;
             depositStates.set(userId, 'awaiting_receipt');
             ctx.answerCbQuery('📱 Telebirr deposit...');
             // Using code block formatting to create a styled box effect
-            const telebirrMessage = `የ Telebirr አካውንት (Eyob Mengist)
+            const telebirrMessage = `የ Telebirr አካውንት (Yonas AYALNEH)
 
 \`\`\`
-0967606087
+0962284410
 \`\`\`
 
 መመሪያ
@@ -2022,7 +2022,7 @@ Thank you for your dedication! 🙏`;
         // Copy button handlers
         bot.action('copy_telebirr', (ctx) => {
             ctx.answerCbQuery('📋 Telebirr number copied!');
-            ctx.reply('📱 Telebirr Number (Eyob Mengist):\n\n```\n0967606087\n```\n\n💡 Tap and hold to select, then copy!', { parse_mode: 'Markdown' });
+            ctx.reply('📱 Telebirr Number (Yonas AYALNEH):\n\n```\n0962284410\n```\n\n💡 Tap and hold to select, then copy!', { parse_mode: 'Markdown' });
         });
         // Temporarily disabled - Commercial Bank copy handler
         // bot.action('copy_commercial', (ctx) => {
@@ -2039,7 +2039,7 @@ Thank you for your dedication! 🙏`;
         bot.action('deposit_cbe', (ctx) => {
             const userId = String(ctx.from.id);
             ctx.answerCbQuery('💳 CBE Birr deposit...');
-            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Eyob Mengist\n💳 CBE Birr: \`096 509 0929\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 096 509 0929\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
+            const cbeMessage = `💳 CBE Birr Deposit\n\n📋 Agent Details:\n👤 Account Holder: Yonas AYALNEH\n💳 CBE Birr: \`0962284410\`\n🏦 Bank: Commercial Bank of Ethiopia\n\nመመሪያ\n\n\`\`\`\n1. Open CBE Birr app ወይም አጭር ቁጥር 847 ይጠቀሙ\n2. Select "Send Money"\n3. Enter agent number: 0962284410\n4. Enter the amount you want to deposit\n5. Complete the transaction\n6. ከCBEBirr የሚደርስዎትን የአጭር መልዕክት (SMS) ሙሉ በሙሉ ኮፒ አድርጉ ወይም ስክሪንሻት ይውሰዱ እና በቦቱ ላይ ያስገቡ\n\`\`\`\n\nየሚያጋጥማቹ የክፍያ ችግር ካለ @markbingosupport1  በዚ ሳፖርት ማዉራት ይችላሉ`;
             if (typeof depositStates !== 'undefined' && depositStates instanceof Map) {
                 depositStates.set(userId, 'awaiting_receipt');
             }
@@ -2089,7 +2089,7 @@ Thank you for your dedication! 🙏`;
                     // Private welcome message to the registering user (no broadcast, no phone number)
                     if (isNewRegistration) {
                         await ctx.reply(
-                            `${displayName} እንኳን ደህና መጡ!\n\nMark Bingo ይደሰቱ።`,
+                            `${displayName} እንኳን ደህና መጡ!\n\nBet Bingo ይደሰቱ።`,
                             { reply_markup: { remove_keyboard: true } }
                         );
                     } else {
