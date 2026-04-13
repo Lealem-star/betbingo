@@ -617,8 +617,7 @@ export default function GameLayout({
                         gap: '0.1rem',
                         padding: '0.15rem',
                         marginTop: '0.75rem',
-                        /* Was 10.5rem — that reserved ~168px of empty space below the grid (likely for a bottom nav that is not shown), which made the BINGO button look tiny and far away. */
-                        marginBottom: '0.75rem',
+                        marginBottom: '10.5rem',
                         marginRight: '0.15rem',
                         height: mainContentHeight,
                         maxHeight: (hasSingleCartela || isWatchMode) ? '420px' : '500px'
@@ -787,21 +786,12 @@ export default function GameLayout({
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
+                            gap: '0.75rem',
                             marginLeft: '0.25rem',
                             height: '100%',
-                            minHeight: 0,
-                            gap: 0
+                            justifyContent: 'space-between'
                         }}
                     >
-                        {/* Top stack: avoid space-between on 4 siblings — that stretched huge gaps between rows on tall viewports. */}
-                        <div
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem',
-                                flexShrink: 0
-                            }}
-                        >
                         {/* Control Bar - Joy Bingo style STARTED pill (single box) */}
                         <div className="game-controls-bar">
                             {startCountdown > 0 ? (
@@ -854,20 +844,9 @@ export default function GameLayout({
                                 })()
                             )}
                         </div>
-                        </div>
 
-                        {/* Board area: fills remaining column height and sits on the lower part (Joy Bingo–style, no giant flex gaps). */}
+                        {/* Single Cartela or Watch Mode - Render in Right Column */}
                         {yourCards.length === 1 ? (
-                            <div
-                                style={{
-                                    flex: 1,
-                                    minHeight: 0,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'flex-end',
-                                    marginTop: '0.35rem'
-                                }}
-                            >
                             <div
                                 className="user-cartelas-single"
                                 style={{
@@ -885,7 +864,7 @@ export default function GameLayout({
                                         : (manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : []);
                                     
                                     return (
-                                        <div key={cardNumber} className="w-full flex flex-col items-center gap-2">
+                                        <div key={cardNumber} className="w-full flex flex-col items-center gap-8">
                                             <CartellaCard
                                                 id={cardNumber}
                                                 card={card}
@@ -904,7 +883,7 @@ export default function GameLayout({
                                                         : null
                                                 }
                                             />
-                                            <div className="text-xs font-semibold text-white shrink-0 mt-2">
+                                            <div className="text-xs font-semibold text-white/70 shrink-0 mt-2">
                                                 Board number {cardNumber}
                                             </div>
                                         </div>
@@ -912,18 +891,7 @@ export default function GameLayout({
                                     );
                                 })}
                             </div>
-                            </div>
                         ) : yourCards.length === 0 ? (
-                            <div
-                                style={{
-                                    flex: 1,
-                                    minHeight: 0,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'flex-end',
-                                    marginTop: '0.35rem'
-                                }}
-                            >
                             <div
                                 className="user-cartelas-single"
                                 style={{
@@ -942,23 +910,23 @@ export default function GameLayout({
                                     <p className="waiting-message-text text-sm mt-1 opacity-90">የዚህ ዙር ጨዋታ ተጀምሯል። አዲስ ዙር እስኪጀምር እዚሁ ይጠብቁ</p>
                                 </div>
                             </div>
-                            </div>
                         ) : null}
                     </div>
                 </div>
 
                 {/* Manual BINGO button for single cartela (below main content) */}
                 {hasSingleCartela && gameState.phase === 'running' && (
-                    <div className="mt-2 mb-[max(0.75rem,env(safe-area-inset-bottom))] flex justify-center px-0.5">
+                    <div className="mt-10 mb-4 flex justify-center">
                         <button
                             onClick={handleManualBingo}
-                            className={`action-button bingo-button game-bingo-button w-full max-w-full ${isManualClaiming ? 'loading' : ''}`}
+                            className={`action-button bingo-button game-bingo-button ${isManualClaiming ? 'loading' : ''}`}
                             disabled={
                                 !connected ||
                                 !currentGameId ||
                                 claimedBingoRef.current ||
                                 gameState.phase !== 'running'
                             }
+                            style={{ width: 'auto', paddingLeft: '7.75rem', paddingRight: '7.75rem' }}
                         >
                             <div className="button-content">
                                 <span className="button-text">BINGO!</span>

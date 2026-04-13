@@ -126,15 +126,13 @@
     font-weight: 800;
 }
 
-/* GameLayout BINGO button (Joy Bingo style) — tall bar, full width via GameLayout classes */
+/* GameLayout BINGO button (Joy Bingo style) */
 .game-bingo-button {
     background: #f97316;
     border-radius: 12px;
     border: none;
-    min-height: 4.25rem;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-    font-size: 22px;
+    min-height: 56px;
+    font-size: 20px;
     letter-spacing: 0.5px;
     box-shadow: 0 10px 24px rgba(249, 115, 22, 0.35);
 }
