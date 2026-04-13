@@ -4876,14 +4876,16 @@ body {
     transform: translateY(0);
 }
 
+/* Prefer styles in action-buttons.css (.game-bingo-button); keep animation optional if both load */
 .game-bingo-button {
     background: linear-gradient(135deg, #f97316, #ea580c);
     background-size: 200% 200%;
     animation: gradientShift 3s ease infinite;
-    border-radius: 9999px;
+    border-radius: 12px;
     font-size: 1rem;
     font-weight: 800;
-    padding: 0.85rem 1rem;
+    padding: 1rem 1.25rem;
+    min-height: 4.25rem;
 }
 
 @keyframes gradientShift {
