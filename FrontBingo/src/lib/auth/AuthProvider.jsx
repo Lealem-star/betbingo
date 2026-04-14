@@ -13,7 +13,7 @@ async function verifyTelegram(initData) {
     const apiBase = import.meta.env.VITE_API_URL ||
         (window.location.hostname === 'localhost'
             ? 'http://localhost:3001'
-            : 'https://markbingo.com');
+            : 'https://betbingonow.com');
 
     console.log('🔐 Verifying Telegram auth:', {
         apiBase,
