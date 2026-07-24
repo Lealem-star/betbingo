@@ -12,7 +12,7 @@ module.exports = {
                 NODE_ENV: 'production',
                 PORT: 3001,
                 TZ: 'Africa/Addis_Ababa',
-                BOT_TOKEN: '8512490914:AAG3z6LF0boPTqJLGTp4HEQ_Zki9mZ0tpHw',
+                BOT_TOKEN: '8638984239:AAEGHmedi4etAjjUs8KBgAh4WEkRS6CDFuc',
                 RUN_TELEGRAM_BOT: 'false',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingonow.com',
@@ -53,7 +53,7 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 TZ: 'Africa/Addis_Ababa',
-                BOT_TOKEN: '8512490914:AAG3z6LF0boPTqJLGTp4HEQ_Zki9mZ0tpHw',
+                BOT_TOKEN: '8638984239:AAEGHmedi4etAjjUs8KBgAh4WEkRS6CDFuc',
                 RUN_TELEGRAM_BOT: 'true',
                 ADMIN_BOOT_CODE: 'SuperSecret2018',
                 WEBAPP_URL: 'https://betbingonow.com',
